@@ -18,7 +18,7 @@ class SemaforoUiStateMapper(
     private val disponibilidad: List<AvailabilityBlock>
 ) {
     fun construir(lunes: LocalDate, needsDeLaSemana: List<CoverageNeed>): SemaforoUiState {
-        val calcularHuecos = CalcularHuecosDelDia(patrones, anulaciones, disponibilidad)
+        val calcularHuecos = CalcularHuecosDelDia(caregivers, patrones, anulaciones, disponibilidad)
         val huecos = calcularHuecos(needsDeLaSemana)
         val huecosPorFecha = huecos.groupBy { it.need.fecha }
         val needsPorFecha = needsDeLaSemana.groupBy { it.fecha }

@@ -19,6 +19,10 @@ class CalcularHuecosDelDiaTest {
     private val victor = Caregiver(CaregiverId("victor"), "Víctor Oliver", CaregiverRole.ADMIN)
     private val silvia = Caregiver(CaregiverId("silvia"), "Sílvia Izquierdo", CaregiverRole.ADMIN)
     private val josefa = Caregiver(CaregiverId("josefa"), "Josefa Fernández", CaregiverRole.CUIDADOR)
+    private val dolors = Caregiver(
+        CaregiverId("dolors"), "Dolors Vila", CaregiverRole.CUIDADOR, puedeDesplazarse = false
+    )
+    private val todos = listOf(victor, silvia, josefa, dolors)
     private val etna = ChildId("etna")
     private val martes = LocalDate.of(2026, 9, 15)
 
@@ -40,7 +44,7 @@ class CalcularHuecosDelDiaTest {
 
     @Test
     fun `cuidador asignado y disponible no genera hueco`() {
-        val huecos = CalcularHuecosDelDia(patrones, emptyList(), disponibilidadBase)(listOf(futbol))
+        val huecos = CalcularHuecosDelDia(todos, patrones, emptyList(), disponibilidadBase)(listOf(futbol))
         assertTrue(huecos.isEmpty())
     }
 
@@ -49,7 +53,7 @@ class CalcularHuecosDelDiaTest {
         val disponibilidad = disponibilidadBase + AvailabilityBlock(
             josefa.id, martes, LocalTime.of(18, 0), LocalTime.of(19, 0), MotivoNoDisponibilidad.MEDICO
         )
-        val huecos = CalcularHuecosDelDia(patrones, emptyList(), disponibilidad)(listOf(futbol))
+        val huecos = CalcularHuecosDelDia(todos, patrones, emptyList(), disponibilidad)(listOf(futbol))
 
         assertEquals(1, huecos.size)
         assertEquals(MotivoHueco.ASIGNADO_NO_DISPONIBLE, huecos.first().motivo)
@@ -57,10 +61,28 @@ class CalcularHuecosDelDiaTest {
 
     @Test
     fun `sin patron ni anulacion genera hueco por SIN_ASIGNACION`() {
-        val huecos = CalcularHuecosDelDia(emptyList(), emptyList(), disponibilidadBase)(listOf(futbol))
+        val huecos = CalcularHuecosDelDia(todos, emptyList(), emptyList(), disponibilidadBase)(listOf(futbol))
 
         assertEquals(1, huecos.size)
         assertEquals(MotivoHueco.SIN_ASIGNACION, huecos.first().motivo)
+    }
+
+    @Test
+    fun `cuidador asignado y libre pero que no puede desplazarse genera hueco por ASIGNADO_SIN_DESPLAZAMIENTO`() {
+        val patronDolors = listOf(PatronCuidado(DayOfWeek.TUESDAY, dolors.id))
+        val huecos = CalcularHuecosDelDia(todos, patronDolors, emptyList(), emptyList())(listOf(futbol))
+
+        assertEquals(1, huecos.size)
+        assertEquals(MotivoHueco.ASIGNADO_SIN_DESPLAZAMIENTO, huecos.first().motivo)
+    }
+
+    @Test
+    fun `un cuidador que no puede desplazarse SI cubre una tarea que no lo requiere`() {
+        val patronDolors = listOf(PatronCuidado(DayOfWeek.TUESDAY, dolors.id))
+        val estarConEtna = futbol.copy(requiereDesplazamiento = false)
+        val huecos = CalcularHuecosDelDia(todos, patronDolors, emptyList(), emptyList())(listOf(estarConEtna))
+
+        assertTrue(huecos.isEmpty())
     }
 
     @Test

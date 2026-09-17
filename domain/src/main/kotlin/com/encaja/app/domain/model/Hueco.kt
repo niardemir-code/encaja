@@ -14,5 +14,7 @@ enum class MotivoHueco {
     /** Nadie tiene el cuidado asignado ese día (no hay patrón ni anulación). */
     SIN_ASIGNACION,
     /** Hay alguien asignado, pero esa persona no está disponible a esa hora. */
-    ASIGNADO_NO_DISPONIBLE
+    ASIGNADO_NO_DISPONIBLE,
+    /** Hay alguien asignado y disponible, pero no puede desplazarse y la tarea lo requiere. */
+    ASIGNADO_SIN_DESPLAZAMIENTO
 }
