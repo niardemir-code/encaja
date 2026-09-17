@@ -11,7 +11,7 @@ import java.time.LocalDate
  */
 class CalcularRepartoSemanal(
     private val patrones: List<PatronCuidado>,
-    private val anulaciones: List<AnulacionAsignacion>
+    private val anulaciones: Anulaciones
 ) {
     operator fun invoke(lunes: LocalDate): Map<CaregiverId, Int> {
         val dias = (0..6).map { lunes.plusDays(it.toLong()) }

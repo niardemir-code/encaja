@@ -37,8 +37,8 @@ object DatosEjemploFamilia {
     )
 
     /** El miércoles no tiene patrón fijo; esta semana lo cubre Sílvia a mano. */
-    val anulaciones = listOf(
-        AnulacionAsignacion(lunes.plusDays(2), silvia.id)
+    val anulaciones = mapOf(
+        lunes.plusDays(2) to silvia.id
     )
 
     /** Víctor de turno de tarde toda la semana; Josefa con médico justo el martes por la tarde. */

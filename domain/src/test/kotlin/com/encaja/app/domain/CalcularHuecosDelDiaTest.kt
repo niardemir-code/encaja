@@ -44,7 +44,7 @@ class CalcularHuecosDelDiaTest {
 
     @Test
     fun `cuidador asignado y disponible no genera hueco`() {
-        val huecos = CalcularHuecosDelDia(todos, patrones, emptyList(), disponibilidadBase)(listOf(futbol))
+        val huecos = CalcularHuecosDelDia(todos, patrones, emptyMap(), disponibilidadBase)(listOf(futbol))
         assertTrue(huecos.isEmpty())
     }
 
@@ -53,7 +53,7 @@ class CalcularHuecosDelDiaTest {
         val disponibilidad = disponibilidadBase + AvailabilityBlock(
             josefa.id, martes, LocalTime.of(18, 0), LocalTime.of(19, 0), MotivoNoDisponibilidad.MEDICO
         )
-        val huecos = CalcularHuecosDelDia(todos, patrones, emptyList(), disponibilidad)(listOf(futbol))
+        val huecos = CalcularHuecosDelDia(todos, patrones, emptyMap(), disponibilidad)(listOf(futbol))
 
         assertEquals(1, huecos.size)
         assertEquals(MotivoHueco.ASIGNADO_NO_DISPONIBLE, huecos.first().motivo)
@@ -61,7 +61,7 @@ class CalcularHuecosDelDiaTest {
 
     @Test
     fun `sin patron ni anulacion genera hueco por SIN_ASIGNACION`() {
-        val huecos = CalcularHuecosDelDia(todos, emptyList(), emptyList(), disponibilidadBase)(listOf(futbol))
+        val huecos = CalcularHuecosDelDia(todos, emptyList(), emptyMap(), disponibilidadBase)(listOf(futbol))
 
         assertEquals(1, huecos.size)
         assertEquals(MotivoHueco.SIN_ASIGNACION, huecos.first().motivo)
@@ -70,7 +70,7 @@ class CalcularHuecosDelDiaTest {
     @Test
     fun `cuidador asignado y libre pero que no puede desplazarse genera hueco por ASIGNADO_SIN_DESPLAZAMIENTO`() {
         val patronDolors = listOf(PatronCuidado(DayOfWeek.TUESDAY, dolors.id))
-        val huecos = CalcularHuecosDelDia(todos, patronDolors, emptyList(), emptyList())(listOf(futbol))
+        val huecos = CalcularHuecosDelDia(todos, patronDolors, emptyMap(), emptyList())(listOf(futbol))
 
         assertEquals(1, huecos.size)
         assertEquals(MotivoHueco.ASIGNADO_SIN_DESPLAZAMIENTO, huecos.first().motivo)
@@ -80,14 +80,14 @@ class CalcularHuecosDelDiaTest {
     fun `un cuidador que no puede desplazarse SI cubre una tarea que no lo requiere`() {
         val patronDolors = listOf(PatronCuidado(DayOfWeek.TUESDAY, dolors.id))
         val estarConEtna = futbol.copy(requiereDesplazamiento = false)
-        val huecos = CalcularHuecosDelDia(todos, patronDolors, emptyList(), emptyList())(listOf(estarConEtna))
+        val huecos = CalcularHuecosDelDia(todos, patronDolors, emptyMap(), emptyList())(listOf(estarConEtna))
 
         assertTrue(huecos.isEmpty())
     }
 
     @Test
     fun `una anulacion manual gana al patron recurrente`() {
-        val anulacion = listOf(AnulacionAsignacion(martes, silvia.id))
+        val anulacion = mapOf(martes to silvia.id)
         val asignado = resolverAsignacion(martes, patrones, anulacion)
 
         assertEquals(silvia.id, asignado)
@@ -116,7 +116,7 @@ class CalcularHuecosDelDiaTest {
             PatronCuidado(DayOfWeek.THURSDAY, silvia.id),
             PatronCuidado(DayOfWeek.FRIDAY, victor.id)
         )
-        val reparto = CalcularRepartoSemanal(patronesSemana, emptyList())(martes.lunesDeEstaSemana())
+        val reparto = CalcularRepartoSemanal(patronesSemana, emptyMap())(martes.lunesDeEstaSemana())
 
         assertEquals(2, reparto[victor.id])
         assertEquals(2, reparto[silvia.id])

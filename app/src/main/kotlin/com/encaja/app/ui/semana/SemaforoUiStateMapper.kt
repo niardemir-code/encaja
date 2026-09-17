@@ -14,7 +14,7 @@ import java.time.LocalDate
 class SemaforoUiStateMapper(
     private val caregivers: List<Caregiver>,
     private val patrones: List<PatronCuidado>,
-    private val anulaciones: List<AnulacionAsignacion>,
+    private val anulaciones: Anulaciones,
     private val disponibilidad: List<AvailabilityBlock>
 ) {
     fun construir(lunes: LocalDate, needsDeLaSemana: List<CoverageNeed>): SemaforoUiState {

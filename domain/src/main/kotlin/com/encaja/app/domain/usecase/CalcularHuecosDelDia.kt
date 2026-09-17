@@ -12,7 +12,7 @@ import com.encaja.app.domain.model.*
 class CalcularHuecosDelDia(
     private val caregivers: List<Caregiver>,
     private val patrones: List<PatronCuidado>,
-    private val anulaciones: List<AnulacionAsignacion>,
+    private val anulaciones: Anulaciones,
     private val disponibilidad: List<AvailabilityBlock>
 ) {
     operator fun invoke(needs: List<CoverageNeed>): List<Hueco> {

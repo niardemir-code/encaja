@@ -13,14 +13,12 @@ data class PatronCuidado(
 )
 
 /**
- * Cambio manual para UNA fecha concreta, que anula el patrón solo esa
- * semana sin tocar la regla de fondo. La semana siguiente el día vuelve
- * a resolverse por el patrón.
+ * Cambios manuales para fechas concretas, que anulan el patrón solo esa
+ * semana sin tocar la regla de fondo. Un Map en vez de una lista: como
+ * mucho una anulación por fecha, así el tipo ya lo garantiza y no hace
+ * falta decidir "cuál gana" si hubiera dos para el mismo día.
  */
-data class AnulacionAsignacion(
-    val fecha: LocalDate,
-    val caregiverId: CaregiverId
-)
+typealias Anulaciones = Map<LocalDate, CaregiverId>
 
 /**
  * Resuelve, para una fecha dada, quién tiene asignado el cuidado según
@@ -29,8 +27,8 @@ data class AnulacionAsignacion(
 fun resolverAsignacion(
     fecha: LocalDate,
     patrones: List<PatronCuidado>,
-    anulaciones: List<AnulacionAsignacion>
+    anulaciones: Anulaciones
 ): CaregiverId? {
-    anulaciones.firstOrNull { it.fecha == fecha }?.let { return it.caregiverId }
+    anulaciones[fecha]?.let { return it }
     return patrones.firstOrNull { it.diaSemana == fecha.dayOfWeek }?.caregiverId
 }
