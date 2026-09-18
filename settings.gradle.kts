@@ -18,3 +18,4 @@ rootProject.name = "encaja"
 
 include(":domain")
 include(":app")
+include(":data")
