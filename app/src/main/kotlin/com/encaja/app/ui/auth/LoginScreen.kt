@@ -5,10 +5,12 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import kotlinx.coroutines.launch
 
 @Composable
 fun LoginScreen(
@@ -16,6 +18,9 @@ fun LoginScreen(
     viewModel: LoginViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var modoRegistro by remember { mutableStateOf(false) }
@@ -77,6 +82,22 @@ fun LoginScreen(
 
         TextButton(onClick = { modoRegistro = !modoRegistro }) {
             Text(if (modoRegistro) "¿Ya tienes cuenta? Inicia sesión" else "¿No tienes cuenta? Regístrate")
+        }
+
+        Spacer(Modifier.height(16.dp))
+        HorizontalDivider()
+        Spacer(Modifier.height(16.dp))
+
+        OutlinedButton(
+            onClick = {
+                coroutineScope.launch {
+                    iniciarSesionConGoogle(context, viewModel, onLoginExitoso)
+                }
+            },
+            enabled = !uiState.cargando,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Continuar con Google")
         }
     }
 }

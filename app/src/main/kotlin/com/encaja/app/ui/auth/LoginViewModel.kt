@@ -53,6 +53,21 @@ class LoginViewModel @Inject constructor(
         }
     }
 
+    fun iniciarSesionConGoogle(idToken: String, alConseguirlo: () -> Unit) {
+        _uiState.value = LoginUiState(cargando = true)
+        viewModelScope.launch {
+            authRepository.iniciarSesionConGoogle(idToken).fold(
+                onSuccess = {
+                    _uiState.value = LoginUiState(cargando = false)
+                    alConseguirlo()
+                },
+                onFailure = { error ->
+                    _uiState.value = LoginUiState(cargando = false, error = mensajeDeError(error))
+                }
+            )
+        }
+    }
+
     /** Traduce los mensajes de error en inglés del SDK de Firebase a algo legible. */
     private fun mensajeDeError(error: Throwable): String = when {
         error.message?.contains("badly formatted", ignoreCase = true) == true -> "El correo no tiene un formato válido"
