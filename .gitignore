@@ -13,3 +13,6 @@ local.properties
 
 # Logs
 *.log
+
+# Firebase
+app/google-services.json
