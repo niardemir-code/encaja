@@ -65,4 +65,7 @@ abstract class RepositoryModule {
 
     @Binds
     abstract fun enlazarAuthRepository(impl: AuthRepositoryImpl): AuthRepository
+
+    @Binds
+    abstract fun enlazarFamilyMembershipRepository(impl: FamilyMembershipRepositoryImpl): FamilyMembershipRepository
 }

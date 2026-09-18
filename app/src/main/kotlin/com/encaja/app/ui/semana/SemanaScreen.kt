@@ -3,7 +3,8 @@ package com.encaja.app.ui.semana
 // NOTA: igual que el ViewModel, este archivo depende de Jetpack Compose
 // y no ha podido compilarse en este entorno (sin acceso al repositorio
 // de Google). Reproduce fielmente la maqueta de "Esta semana": círculos
-// de día, tarjeta de hueco con acciones y barra de reparto.
+// de día, tarjeta de hueco con acciones y barra de reparto — ahora
+// además con los tres estados: cargando, sin familia, con datos.
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -27,35 +28,61 @@ import java.util.Locale
 
 @Composable
 fun SemanaScreen(viewModel: SemaforoViewModel = hiltViewModel()) {
-    val uiState by viewModel.uiState.collectAsState()
+    val pantalla by viewModel.pantalla.collectAsState()
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        item {
-            val formatter = java.time.format.DateTimeFormatter.ofPattern("dd-MM")
-            val rango = if (uiState.dias.isNotEmpty()) {
-                " (${uiState.dias.first().fecha.format(formatter)} al ${uiState.dias.last().fecha.format(formatter)})"
-            } else ""
-            Text("Esta semana$rango", style = MaterialTheme.typography.headlineSmall)
-        }
-
-        // TEMPORAL — botón de desarrollo, se quitará cuando exista una
-        // forma real de dar de alta datos desde la app.
-        item {
-            OutlinedButton(onClick = { viewModel.sembrarDatosDeEjemplo() }) {
-                Text("Cargar datos de ejemplo (temporal)")
+    when (val estadoActual = pantalla) {
+        is SemaforoPantallaEstado.Cargando -> {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
             }
         }
 
-        item { FilaDeDias(uiState.dias) }
-
-        items(uiState.huecosDeLaSemana) { hueco ->
-            TarjetaHueco(hueco = hueco)
+        is SemaforoPantallaEstado.SinFamilia -> {
+            Column(
+                modifier = Modifier.fillMaxSize().padding(24.dp),
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text("Todavía no perteneces a ninguna familia", style = MaterialTheme.typography.headlineSmall)
+                Spacer(Modifier.height(8.dp))
+                Text("El sistema de invitación por código aún no existe. Mientras tanto, puedes vincularte a la familia de ejemplo para seguir probando.")
+                Spacer(Modifier.height(16.dp))
+                OutlinedButton(onClick = { viewModel.vincularmeAFamiliaDeEjemplo() }) {
+                    Text("Vincularme a la familia de ejemplo (temporal)")
+                }
+            }
         }
 
-        item { BarraDeReparto(uiState.reparto, uiState.totalTramos) }
+        is SemaforoPantallaEstado.ConDatos -> {
+            val uiState = estadoActual.estado
+            LazyColumn(
+                modifier = Modifier.fillMaxSize().padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                item {
+                    val formatter = java.time.format.DateTimeFormatter.ofPattern("dd-MM")
+                    val rango = if (uiState.dias.isNotEmpty()) {
+                        " (${uiState.dias.first().fecha.format(formatter)} al ${uiState.dias.last().fecha.format(formatter)})"
+                    } else ""
+                    Text("Esta semana$rango", style = MaterialTheme.typography.headlineSmall)
+                }
+
+                // TEMPORAL — botón de desarrollo, se quitará cuando exista una
+                // forma real de dar de alta datos desde la app.
+                item {
+                    OutlinedButton(onClick = { viewModel.sembrarDatosDeEjemplo() }) {
+                        Text("Cargar datos de ejemplo (temporal)")
+                    }
+                }
+
+                item { FilaDeDias(uiState.dias) }
+
+                items(uiState.huecosDeLaSemana) { hueco ->
+                    TarjetaHueco(hueco = hueco)
+                }
+
+                item { BarraDeReparto(uiState.reparto, uiState.totalTramos) }
+            }
+        }
     }
 }
 
