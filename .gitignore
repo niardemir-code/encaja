@@ -16,3 +16,4 @@ local.properties
 
 # Firebase
 app/google-services.json
+*.hprof

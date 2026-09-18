@@ -5,6 +5,7 @@ import androidx.room.Room
 import com.encaja.app.data.local.*
 import com.encaja.app.data.repository.*
 import com.encaja.app.domain.repository.*
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import dagger.Binds
 import dagger.Module
@@ -14,6 +15,8 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
+// NOTA: depende de Hilt, Room y Firebase; no compilado en este entorno.
+
 @Module
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
@@ -21,6 +24,10 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun proveerFirestore(): FirebaseFirestore = FirebaseFirestore.getInstance()
+
+    @Provides
+    @Singleton
+    fun proveerFirebaseAuth(): FirebaseAuth = FirebaseAuth.getInstance()
 
     @Provides
     @Singleton
@@ -55,4 +62,7 @@ abstract class RepositoryModule {
 
     @Binds
     abstract fun enlazarAssignmentRepository(impl: AssignmentRepositoryImpl): AssignmentRepository
+
+    @Binds
+    abstract fun enlazarAuthRepository(impl: AuthRepositoryImpl): AuthRepository
 }
