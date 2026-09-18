@@ -8,9 +8,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.encaja.app.ui.EncajaApp
 import com.encaja.app.ui.auth.AuthViewModel
 import com.encaja.app.ui.auth.LoginScreen
-import com.encaja.app.ui.semana.SemanaScreen
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -24,7 +24,7 @@ class MainActivity : ComponentActivity() {
                     val autenticado by authViewModel.autenticado.collectAsState()
 
                     if (autenticado) {
-                        SemanaScreen()
+                        EncajaApp(onCerrarSesion = { authViewModel.cerrarSesion() })
                     } else {
                         LoginScreen(onLoginExitoso = { authViewModel.marcarAutenticado() })
                     }
