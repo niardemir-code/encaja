@@ -19,6 +19,17 @@ class InviteRepositoryImpl @Inject constructor(
 
     override suspend fun generarInvitacion(familyId: FamilyId, caregiverId: CaregiverId): Result<String> {
         return try {
+            // Si ese cuidador ya tiene a alguien vinculado, no generamos un código nuevo:
+            // evita que dos personas distintas acaben siendo "la misma" Sílvia.
+            val yaVinculado = firestore.collection("users")
+                .whereEqualTo("familyId", familyId.value)
+                .whereEqualTo("caregiverId", caregiverId.value)
+                .get()
+                .await()
+            if (!yaVinculado.isEmpty) {
+                return Result.failure(IllegalStateException("Ese cuidador ya tiene una cuenta vinculada"))
+            }
+
             // Hasta 5 intentos por si el código generado ya existiera (muy improbable con 6 caracteres).
             repeat(5) {
                 val codigo = generarCodigo()
