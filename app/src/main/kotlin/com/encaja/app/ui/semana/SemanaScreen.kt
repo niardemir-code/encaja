@@ -13,9 +13,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,14 +36,41 @@ fun SemanaScreen(viewModel: SemaforoViewModel = hiltViewModel()) {
         }
 
         is SemaforoPantallaEstado.SinFamilia -> {
+            var codigo by remember { mutableStateOf("") }
+            var error by remember { mutableStateOf<String?>(null) }
+
             Column(
                 modifier = Modifier.fillMaxSize().padding(24.dp),
                 verticalArrangement = Arrangement.Center
             ) {
                 Text("Todavía no perteneces a ninguna familia", style = MaterialTheme.typography.headlineSmall)
-                Spacer(Modifier.height(8.dp))
-                Text("El sistema de invitación por código aún no existe. Mientras tanto, puedes vincularte a la familia de ejemplo para seguir probando.")
                 Spacer(Modifier.height(16.dp))
+
+                OutlinedTextField(
+                    value = codigo,
+                    onValueChange = { codigo = it.uppercase(); error = null },
+                    label = { Text("Código de invitación") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                if (error != null) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(error!!, color = MaterialTheme.colorScheme.error)
+                }
+                Spacer(Modifier.height(8.dp))
+                Button(
+                    onClick = { viewModel.canjearCodigo(codigo) { mensaje -> error = mensaje } },
+                    enabled = codigo.isNotBlank(),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Unirme con este código")
+                }
+
+                Spacer(Modifier.height(24.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(24.dp))
+                Text("O, mientras se prueba la app:", style = MaterialTheme.typography.labelSmall)
+                Spacer(Modifier.height(8.dp))
                 OutlinedButton(onClick = { viewModel.vincularmeAFamiliaDeEjemplo() }) {
                     Text("Vincularme a la familia de ejemplo (temporal)")
                 }
@@ -81,8 +106,69 @@ fun SemanaScreen(viewModel: SemaforoViewModel = hiltViewModel()) {
                 }
 
                 item { BarraDeReparto(uiState.reparto, uiState.totalTramos) }
+
+                item { InvitarSeccion(viewModel) }
             }
         }
+    }
+}
+
+@Composable
+private fun InvitarSeccion(viewModel: SemaforoViewModel) {
+    var mostrarSelector by remember { mutableStateOf(false) }
+    var codigoGenerado by remember { mutableStateOf<String?>(null) }
+    var errorInvitacion by remember { mutableStateOf<String?>(null) }
+    val cuidadores by viewModel.cuidadores.collectAsState()
+
+    OutlinedButton(onClick = { mostrarSelector = true }) {
+        Text("Invitar a alguien")
+    }
+
+    if (mostrarSelector) {
+        AlertDialog(
+            onDismissRequest = {
+                mostrarSelector = false
+                codigoGenerado = null
+                errorInvitacion = null
+            },
+            title = { Text(if (codigoGenerado != null) "Código generado" else "¿Para quién es la invitación?") },
+            text = {
+                Column {
+                    when {
+                        codigoGenerado != null -> {
+                            Text(codigoGenerado!!, style = MaterialTheme.typography.headlineMedium)
+                            Spacer(Modifier.height(8.dp))
+                            Text("Compártelo con esa persona. Deja de funcionar en cuanto se use una vez.")
+                        }
+                        errorInvitacion != null -> {
+                            Text(errorInvitacion!!, color = MaterialTheme.colorScheme.error)
+                        }
+                        else -> {
+                            cuidadores.forEach { caregiver ->
+                                TextButton(onClick = {
+                                    viewModel.generarInvitacion(
+                                        caregiver.id,
+                                        alConseguirlo = { codigo -> codigoGenerado = codigo },
+                                        alFallar = { mensaje -> errorInvitacion = mensaje }
+                                    )
+                                }) {
+                                    Text(caregiver.nombre)
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    mostrarSelector = false
+                    codigoGenerado = null
+                    errorInvitacion = null
+                }) {
+                    Text("Cerrar")
+                }
+            }
+        )
     }
 }
 
