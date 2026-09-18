@@ -41,6 +41,14 @@ fun SemanaScreen(viewModel: SemaforoViewModel = hiltViewModel()) {
             Text("Esta semana$rango", style = MaterialTheme.typography.headlineSmall)
         }
 
+        // TEMPORAL — botón de desarrollo, se quitará cuando exista una
+        // forma real de dar de alta datos desde la app.
+        item {
+            OutlinedButton(onClick = { viewModel.sembrarDatosDeEjemplo() }) {
+                Text("Cargar datos de ejemplo (temporal)")
+            }
+        }
+
         item { FilaDeDias(uiState.dias) }
 
         items(uiState.huecosDeLaSemana) { hueco ->

@@ -6,4 +6,5 @@ import java.time.LocalDate
 
 interface CoverageNeedRepository {
     suspend fun obtenerNeeds(familyId: FamilyId, desde: LocalDate, hasta: LocalDate): List<CoverageNeed>
+    suspend fun guardarNeeds(familyId: FamilyId, needs: List<CoverageNeed>)
 }

@@ -33,4 +33,14 @@ class CaregiverRepositoryImpl @Inject constructor(
             dao.obtener(familyId.value).map { it.aDominio() }
         }
     }
+
+    override suspend fun guardarCuidadores(familyId: FamilyId, caregivers: List<Caregiver>) {
+        val coleccion = firestore.collection("families").document(familyId.value).collection("caregivers")
+        val batch = firestore.batch()
+        caregivers.forEach { caregiver ->
+            batch.set(coleccion.document(caregiver.id.value), CaregiverFirestoreMapper.aDocumento(caregiver))
+        }
+        batch.commit().await()
+        dao.guardarTodos(caregivers.map { CaregiverEntity.desdeDominio(familyId.value, it) })
+    }
 }

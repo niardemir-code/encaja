@@ -16,12 +16,6 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import javax.inject.Inject
 
-/**
- * FamilyId fijo temporal: todavía no hay pantalla de login ni selección
- * de familia, así que de momento todo el mundo ve la misma. Cuando eso
- * exista, este valor vendrá de la sesión del usuario, no de una
- * constante.
- */
 private val FAMILY_ID_PROVISIONAL = FamilyId("demo-oliver-izquierdo")
 
 @HiltViewModel
@@ -40,6 +34,30 @@ class SemaforoViewModel @Inject constructor(
     }
 
     fun recargar() = cargar()
+
+    /**
+     * TEMPORAL — botón de desarrollo. Escribe los datos de ejemplo de
+     * DatosEjemploFamilia en Firestore de verdad, para no tener que
+     * crearlos a mano en la consola web. Se borrará cuando exista una
+     * forma real de dar de alta cuidadores y necesidades desde la app.
+     */
+    fun sembrarDatosDeEjemplo() {
+        viewModelScope.launch {
+            val d = DatosEjemploFamilia
+
+            caregiverRepository.guardarCuidadores(FAMILY_ID_PROVISIONAL, d.caregivers)
+            assignmentRepository.guardarPatrones(FAMILY_ID_PROVISIONAL, d.patrones)
+            d.anulaciones.forEach { (fecha, caregiverId) ->
+                assignmentRepository.anularParaFecha(FAMILY_ID_PROVISIONAL, fecha, caregiverId)
+            }
+            d.disponibilidad.forEach { bloque ->
+                availabilityRepository.guardarBloque(FAMILY_ID_PROVISIONAL, bloque)
+            }
+            coverageNeedRepository.guardarNeeds(FAMILY_ID_PROVISIONAL, d.needsDeLaSemana)
+
+            cargar()
+        }
+    }
 
     private fun cargar() {
         viewModelScope.launch {

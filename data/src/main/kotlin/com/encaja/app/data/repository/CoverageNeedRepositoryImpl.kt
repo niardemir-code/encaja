@@ -36,4 +36,14 @@ class CoverageNeedRepositoryImpl @Inject constructor(
             dao.obtener(familyId.value, desde.toString(), hasta.toString()).map { it.aDominio() }
         }
     }
+
+    override suspend fun guardarNeeds(familyId: FamilyId, needs: List<CoverageNeed>) {
+        val coleccion = firestore.collection("families").document(familyId.value).collection("coverageNeeds")
+        val batch = firestore.batch()
+        needs.forEach { need ->
+            batch.set(coleccion.document(need.id.value), CoverageNeedFirestoreMapper.aDocumento(need))
+        }
+        batch.commit().await()
+        dao.guardarTodos(needs.map { CoverageNeedEntity.desdeDominio(familyId.value, it) })
+    }
 }

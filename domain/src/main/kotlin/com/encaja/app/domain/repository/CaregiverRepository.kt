@@ -5,4 +5,5 @@ import com.encaja.app.domain.model.FamilyId
 
 interface CaregiverRepository {
     suspend fun obtenerCuidadores(familyId: FamilyId): List<Caregiver>
+    suspend fun guardarCuidadores(familyId: FamilyId, caregivers: List<Caregiver>)
 }
