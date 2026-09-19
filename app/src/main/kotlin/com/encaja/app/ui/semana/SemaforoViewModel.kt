@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.encaja.app.domain.model.Caregiver
 import com.encaja.app.domain.model.CaregiverId
 import com.encaja.app.domain.model.FamilyId
-import com.encaja.app.domain.model.FamilyMembership
 import com.encaja.app.domain.repository.AssignmentRepository
 import com.encaja.app.domain.repository.AuthRepository
 import com.encaja.app.domain.repository.AvailabilityRepository
@@ -39,7 +38,7 @@ class SemaforoViewModel @Inject constructor(
     private val _cuidadores = MutableStateFlow<List<Caregiver>>(emptyList())
     val cuidadores: StateFlow<List<Caregiver>> = _cuidadores.asStateFlow()
 
-    /** Familia del usuario ya resuelta, para que "sembrar datos" e "invitar" sepan dónde escribir. */
+    /** Familia del usuario ya resuelta, para que "invitar" sepa dónde escribir. */
     private var familyIdActual: FamilyId? = null
 
     init {
@@ -47,22 +46,6 @@ class SemaforoViewModel @Inject constructor(
     }
 
     fun recargar() = cargar()
-
-    /**
-     * TEMPORAL — mientras el resto de la app no permita crear una familia
-     * desde cero, este botón vincula al usuario actual con la familia de
-     * ejemplo, para poder seguir probando sin depender de una invitación.
-     */
-    fun vincularmeAFamiliaDeEjemplo() {
-        viewModelScope.launch {
-            val uid = authRepository.sesionActual()?.uid ?: return@launch
-            familyMembershipRepository.vincularAFamilia(
-                uid,
-                FamilyMembership(FamilyId("demo-oliver-izquierdo"), DatosEjemploFamilia.victor.id)
-            )
-            cargar()
-        }
-    }
 
     /** Introduce un código de invitación y, si es válido, vincula al usuario a esa familia. */
     fun canjearCodigo(codigo: String, alFallar: (String) -> Unit) {
@@ -86,26 +69,6 @@ class SemaforoViewModel @Inject constructor(
                 onSuccess = { codigo -> alConseguirlo(codigo) },
                 onFailure = { error -> alFallar(error.message ?: "No se pudo generar el código") }
             )
-        }
-    }
-
-    /** TEMPORAL — botón de desarrollo, escribe en la familia real del usuario, no en una fija. */
-    fun sembrarDatosDeEjemplo() {
-        val familyId = familyIdActual ?: return
-        viewModelScope.launch {
-            val d = DatosEjemploFamilia
-
-            caregiverRepository.guardarCuidadores(familyId, d.caregivers)
-            assignmentRepository.guardarPatrones(familyId, d.patrones)
-            d.anulaciones.forEach { (fecha, caregiverId) ->
-                assignmentRepository.anularParaFecha(familyId, fecha, caregiverId)
-            }
-            d.disponibilidad.forEach { bloque ->
-                availabilityRepository.guardarBloque(familyId, bloque)
-            }
-            coverageNeedRepository.guardarNeeds(familyId, d.needsDeLaSemana)
-
-            cargar()
         }
     }
 

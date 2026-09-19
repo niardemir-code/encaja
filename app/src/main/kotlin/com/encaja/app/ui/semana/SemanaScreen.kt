@@ -65,15 +65,6 @@ fun SemanaScreen(viewModel: SemaforoViewModel = hiltViewModel()) {
                 ) {
                     Text("Unirme con este código")
                 }
-
-                Spacer(Modifier.height(24.dp))
-                HorizontalDivider()
-                Spacer(Modifier.height(24.dp))
-                Text("O, mientras se prueba la app:", style = MaterialTheme.typography.labelSmall)
-                Spacer(Modifier.height(8.dp))
-                OutlinedButton(onClick = { viewModel.vincularmeAFamiliaDeEjemplo() }) {
-                    Text("Vincularme a la familia de ejemplo (temporal)")
-                }
             }
         }
 
@@ -89,14 +80,6 @@ fun SemanaScreen(viewModel: SemaforoViewModel = hiltViewModel()) {
                         " (${uiState.dias.first().fecha.format(formatter)} al ${uiState.dias.last().fecha.format(formatter)})"
                     } else ""
                     Text("Esta semana$rango", style = MaterialTheme.typography.headlineSmall)
-                }
-
-                // TEMPORAL — botón de desarrollo, se quitará cuando exista una
-                // forma real de dar de alta datos desde la app.
-                item {
-                    OutlinedButton(onClick = { viewModel.sembrarDatosDeEjemplo() }) {
-                        Text("Cargar datos de ejemplo (temporal)")
-                    }
                 }
 
                 item { FilaDeDias(uiState.dias) }
