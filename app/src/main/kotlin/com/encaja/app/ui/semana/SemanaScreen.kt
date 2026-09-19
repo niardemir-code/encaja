@@ -189,6 +189,16 @@ private fun colorParaEstado(estado: EstadoDia): Color = when (estado) {
     EstadoDia.SIN_DATOS -> MaterialTheme.colorScheme.surfaceVariant
 }
 
+/** "Lunes 21" en vez de la fecha ISO en bruto (2026-09-21). */
+private fun formatearFechaHueco(fecha: java.time.LocalDate): String {
+    val nombreDia = fecha.dayOfWeek.getDisplayName(TextStyle.FULL, Locale("es")).replaceFirstChar { it.uppercase() }
+    return "$nombreDia ${fecha.dayOfMonth}"
+}
+
+/** "18:30" en vez del LocalTime en bruto (18:30:00 o 18:30). */
+private fun formatearHoraHueco(hora: java.time.LocalTime): String =
+    hora.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
+
 @Composable
 private fun TarjetaHueco(hueco: com.encaja.app.domain.model.Hueco) {
     Column(
@@ -199,13 +209,13 @@ private fun TarjetaHueco(hueco: com.encaja.app.domain.model.Hueco) {
             .padding(12.dp)
     ) {
         Text(
-            text = "${hueco.need.fecha} · falta cubrir",
+            text = "${formatearFechaHueco(hueco.need.fecha)} · falta cubrir",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onErrorContainer
         )
         Spacer(Modifier.height(6.dp))
         Text(
-            text = "${hueco.need.horaInicio} — ${hueco.need.descripcion}",
+            text = "${formatearHoraHueco(hueco.need.horaInicio)} — ${hueco.need.descripcion}",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onErrorContainer
         )
