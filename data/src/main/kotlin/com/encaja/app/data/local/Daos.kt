@@ -54,6 +54,18 @@ interface AssignmentDao {
 }
 
 @Dao
+interface ChildDao {
+    @Query("SELECT * FROM children WHERE familyId = :familyId")
+    suspend fun obtener(familyId: String): List<ChildEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun guardarTodos(ninos: List<ChildEntity>)
+
+    @Query("DELETE FROM children WHERE familyId = :familyId AND id = :id")
+    suspend fun eliminar(familyId: String, id: String)
+}
+
+@Dao
 interface MenuDao {
     @Query("SELECT * FROM menus WHERE familyId = :familyId AND fecha BETWEEN :desde AND :hasta")
     suspend fun obtener(familyId: String, desde: String, hasta: String): List<ComidaDelDiaEntity>

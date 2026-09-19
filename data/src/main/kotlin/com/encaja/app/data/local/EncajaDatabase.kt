@@ -10,9 +10,10 @@ import androidx.room.RoomDatabase
         AvailabilityBlockEntity::class,
         PatronCuidadoEntity::class,
         AnulacionEntity::class,
-        ComidaDelDiaEntity::class
+        ComidaDelDiaEntity::class,
+        ChildEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class EncajaDatabase : RoomDatabase() {
@@ -21,4 +22,5 @@ abstract class EncajaDatabase : RoomDatabase() {
     abstract fun availabilityDao(): AvailabilityDao
     abstract fun assignmentDao(): AssignmentDao
     abstract fun menuDao(): MenuDao
+    abstract fun childDao(): ChildDao
 }

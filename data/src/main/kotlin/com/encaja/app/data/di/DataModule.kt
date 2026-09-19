@@ -52,6 +52,9 @@ object DatabaseModule {
 
     @Provides
     fun proveerMenuDao(db: EncajaDatabase): MenuDao = db.menuDao()
+
+    @Provides
+    fun proveerChildDao(db: EncajaDatabase): ChildDao = db.childDao()
 }
 
 @Module
@@ -81,4 +84,7 @@ abstract class RepositoryModule {
 
     @Binds
     abstract fun enlazarMenuRepository(impl: MenuRepositoryImpl): MenuRepository
+
+    @Binds
+    abstract fun enlazarChildRepository(impl: ChildRepositoryImpl): ChildRepository
 }

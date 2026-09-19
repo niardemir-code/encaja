@@ -94,6 +94,21 @@ data class AnulacionEntity(
     val caregiverId: String
 )
 
+@Entity(tableName = "children", primaryKeys = ["familyId", "id"])
+data class ChildEntity(
+    val familyId: String,
+    val id: String,
+    val nombre: String
+) {
+    fun aDominio() = Child(ChildId(id), nombre)
+
+    companion object {
+        fun desdeDominio(familyId: String, child: Child) = ChildEntity(
+            familyId, child.id.value, child.nombre
+        )
+    }
+}
+
 @Entity(tableName = "menus", primaryKeys = ["familyId", "fecha"])
 data class ComidaDelDiaEntity(
     val familyId: String,

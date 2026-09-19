@@ -23,6 +23,7 @@ object DatosEjemploFamilia {
 
     val julia = ChildId("julia")
     val etna = ChildId("etna")
+    val ninos = listOf(Child(julia, "Júlia"), Child(etna, "Etna"))
 
     val lunes: LocalDate = LocalDate.of(2026, 9, 14)
 
