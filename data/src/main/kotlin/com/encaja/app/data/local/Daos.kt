@@ -66,6 +66,21 @@ interface ChildDao {
 }
 
 @Dao
+interface CompraDao {
+    @Query("SELECT * FROM articulos_compra WHERE familyId = :familyId")
+    suspend fun obtener(familyId: String): List<ArticuloCompraEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun guardarTodos(articulos: List<ArticuloCompraEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun guardar(articulo: ArticuloCompraEntity)
+
+    @Query("DELETE FROM articulos_compra WHERE familyId = :familyId AND id = :id")
+    suspend fun eliminar(familyId: String, id: String)
+}
+
+@Dao
 interface MenuDao {
     @Query("SELECT * FROM menus WHERE familyId = :familyId AND fecha BETWEEN :desde AND :hasta")
     suspend fun obtener(familyId: String, desde: String, hasta: String): List<ComidaDelDiaEntity>

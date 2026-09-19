@@ -109,6 +109,23 @@ data class ChildEntity(
     }
 }
 
+@Entity(tableName = "articulos_compra", primaryKeys = ["familyId", "id"])
+data class ArticuloCompraEntity(
+    val familyId: String,
+    val id: String,
+    val nombre: String,
+    val tienda: String,
+    val comprado: Boolean
+) {
+    fun aDominio() = ArticuloCompra(ArticuloCompraId(id), nombre, tienda, comprado)
+
+    companion object {
+        fun desdeDominio(familyId: String, articulo: ArticuloCompra) = ArticuloCompraEntity(
+            familyId, articulo.id.value, articulo.nombre, articulo.tienda, articulo.comprado
+        )
+    }
+}
+
 @Entity(tableName = "menus", primaryKeys = ["familyId", "fecha"])
 data class ComidaDelDiaEntity(
     val familyId: String,
