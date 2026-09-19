@@ -2,13 +2,13 @@ package com.encaja.app.ui
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Group
-import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShoppingCart
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -37,7 +37,7 @@ import com.encaja.app.ui.semana.SemanaScreen
 
 private sealed class Destino(val ruta: String, val etiqueta: String, val icono: ImageVector) {
     data object Semana : Destino("semana", "Semana", Icons.Default.DateRange)
-    data object Guia : Destino("guia", "Guía", Icons.Default.List)
+    data object Guia : Destino("guia", "Guía", Icons.AutoMirrored.Filled.List)
     data object Familia : Destino("familia", "Familia", Icons.Default.Group)
     data object Menu : Destino("menu", "Menú", Icons.Default.Restaurant)
     data object Compra : Destino("compra", "Compra", Icons.Default.ShoppingCart)
@@ -61,7 +61,7 @@ fun EncajaApp(onCerrarSesion: () -> Unit) {
                 navigationIcon = {
                     if (rutaActual == RUTA_AJUSTES) {
                         IconButton(onClick = { navController.popBackStack() }) {
-                            Icon(Icons.Default.ArrowBack, contentDescription = "Cerrar ajustes")
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Cerrar ajustes")
                         }
                     }
                 },
