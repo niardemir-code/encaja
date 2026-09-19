@@ -93,3 +93,19 @@ data class AnulacionEntity(
     val fecha: String,
     val caregiverId: String
 )
+
+@Entity(tableName = "menus", primaryKeys = ["familyId", "fecha"])
+data class ComidaDelDiaEntity(
+    val familyId: String,
+    val fecha: String,
+    val comida: String?,
+    val cena: String?
+) {
+    fun aDominio() = ComidaDelDia(java.time.LocalDate.parse(fecha), comida, cena)
+
+    companion object {
+        fun desdeDominio(familyId: String, comidaDelDia: ComidaDelDia) = ComidaDelDiaEntity(
+            familyId, comidaDelDia.fecha.toString(), comidaDelDia.comida, comidaDelDia.cena
+        )
+    }
+}

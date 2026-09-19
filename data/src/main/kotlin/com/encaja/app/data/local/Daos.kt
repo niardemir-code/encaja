@@ -52,3 +52,12 @@ interface AssignmentDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun guardarAnulacion(anulacion: AnulacionEntity)
 }
+
+@Dao
+interface MenuDao {
+    @Query("SELECT * FROM menus WHERE familyId = :familyId AND fecha BETWEEN :desde AND :hasta")
+    suspend fun obtener(familyId: String, desde: String, hasta: String): List<ComidaDelDiaEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun guardarTodos(dias: List<ComidaDelDiaEntity>)
+}

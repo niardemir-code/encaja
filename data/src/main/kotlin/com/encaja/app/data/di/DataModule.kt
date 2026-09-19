@@ -32,7 +32,11 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun proveerBaseDeDatos(@ApplicationContext context: Context): EncajaDatabase =
-        Room.databaseBuilder(context, EncajaDatabase::class.java, "encaja.db").build()
+        Room.databaseBuilder(context, EncajaDatabase::class.java, "encaja.db")
+            // La base de datos es solo caché local (la fuente de verdad es Firestore),
+            // así que ante un cambio de esquema es más simple recrearla que migrar.
+            .fallbackToDestructiveMigration()
+            .build()
 
     @Provides
     fun proveerCaregiverDao(db: EncajaDatabase): CaregiverDao = db.caregiverDao()
@@ -45,6 +49,9 @@ object DatabaseModule {
 
     @Provides
     fun proveerAssignmentDao(db: EncajaDatabase): AssignmentDao = db.assignmentDao()
+
+    @Provides
+    fun proveerMenuDao(db: EncajaDatabase): MenuDao = db.menuDao()
 }
 
 @Module
@@ -71,4 +78,7 @@ abstract class RepositoryModule {
 
     @Binds
     abstract fun enlazarInviteRepository(impl: InviteRepositoryImpl): InviteRepository
+
+    @Binds
+    abstract fun enlazarMenuRepository(impl: MenuRepositoryImpl): MenuRepository
 }

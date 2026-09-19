@@ -9,9 +9,10 @@ import androidx.room.RoomDatabase
         CoverageNeedEntity::class,
         AvailabilityBlockEntity::class,
         PatronCuidadoEntity::class,
-        AnulacionEntity::class
+        AnulacionEntity::class,
+        ComidaDelDiaEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class EncajaDatabase : RoomDatabase() {
@@ -19,4 +20,5 @@ abstract class EncajaDatabase : RoomDatabase() {
     abstract fun coverageNeedDao(): CoverageNeedDao
     abstract fun availabilityDao(): AvailabilityDao
     abstract fun assignmentDao(): AssignmentDao
+    abstract fun menuDao(): MenuDao
 }
