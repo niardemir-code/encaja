@@ -8,6 +8,7 @@ import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -50,10 +51,20 @@ private const val RUTA_AJUSTES = "ajustes"
 fun EncajaApp(onCerrarSesion: () -> Unit) {
     val navController = rememberNavController()
 
+    val backStackEntry by navController.currentBackStackEntryAsState()
+    val rutaActual = backStackEntry?.destination?.hierarchy?.firstOrNull()?.route
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Encaja") },
+                navigationIcon = {
+                    if (rutaActual == RUTA_AJUSTES) {
+                        IconButton(onClick = { navController.popBackStack() }) {
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Cerrar ajustes")
+                        }
+                    }
+                },
                 actions = {
                     IconButton(onClick = { navController.navigate(RUTA_AJUSTES) }) {
                         Icon(Icons.Default.Settings, contentDescription = "Ajustes")
@@ -63,17 +74,20 @@ fun EncajaApp(onCerrarSesion: () -> Unit) {
         },
         bottomBar = {
             NavigationBar {
-                val backStackEntry by navController.currentBackStackEntryAsState()
-                val rutaActual = backStackEntry?.destination?.hierarchy?.firstOrNull()?.route
-
                 destinosBarraInferior.forEach { destino ->
                     NavigationBarItem(
                         selected = rutaActual == destino.ruta,
                         onClick = {
+                            // No se usa saveState/restoreState a propósito: esa combinación
+                            // provocaba que, al volver de Ajustes (una pantalla fuera de las
+                            // pestañas), pulsar la pestaña en la que ya se había estado antes
+                            // se quedara colgado sin navegar. Con solo popUpTo +
+                            // launchSingleTop cada pestaña navega siempre correctamente; el
+                            // coste es que se pierde el scroll al cambiar de pestaña, algo
+                            // asumible en esta app.
                             navController.navigate(destino.ruta) {
-                                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                popUpTo(navController.graph.findStartDestination().id)
                                 launchSingleTop = true
-                                restoreState = true
                             }
                         },
                         icon = { Icon(destino.icono, contentDescription = destino.etiqueta) },
