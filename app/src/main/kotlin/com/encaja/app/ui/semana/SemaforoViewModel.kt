@@ -2,9 +2,11 @@ package com.encaja.app.ui.semana
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.encaja.app.domain.model.AnuncioId
 import com.encaja.app.domain.model.Caregiver
 import com.encaja.app.domain.model.CaregiverId
 import com.encaja.app.domain.model.FamilyId
+import com.encaja.app.domain.repository.AnuncioRepository
 import com.encaja.app.domain.repository.AssignmentRepository
 import com.encaja.app.domain.repository.AuthRepository
 import com.encaja.app.domain.repository.AvailabilityRepository
@@ -29,7 +31,8 @@ class SemaforoViewModel @Inject constructor(
     private val caregiverRepository: CaregiverRepository,
     private val coverageNeedRepository: CoverageNeedRepository,
     private val availabilityRepository: AvailabilityRepository,
-    private val assignmentRepository: AssignmentRepository
+    private val assignmentRepository: AssignmentRepository,
+    private val anuncioRepository: AnuncioRepository
 ) : ViewModel() {
 
     private val _pantalla = MutableStateFlow<SemaforoPantallaEstado>(SemaforoPantallaEstado.Cargando)
@@ -40,6 +43,9 @@ class SemaforoViewModel @Inject constructor(
 
     /** Familia del usuario ya resuelta, para que "invitar" sepa dónde escribir. */
     private var familyIdActual: FamilyId? = null
+
+    /** Nombre del cuidador actual, para firmar los anuncios que publique. */
+    private var nombreCuidadorActual: String = "Alguien de la familia"
 
     init {
         cargar()
@@ -95,14 +101,38 @@ class SemaforoViewModel @Inject constructor(
 
             val caregivers = caregiverRepository.obtenerCuidadores(membresia.familyId)
             _cuidadores.value = caregivers
+            nombreCuidadorActual = caregivers.firstOrNull { it.id == membresia.caregiverId }?.nombre
+                ?: "Alguien de la familia"
 
             val patrones = assignmentRepository.obtenerPatrones(membresia.familyId)
             val anulaciones = assignmentRepository.obtenerAnulaciones(membresia.familyId, lunes, domingo)
             val disponibilidad = availabilityRepository.obtenerDisponibilidad(membresia.familyId, lunes, domingo)
             val needs = coverageNeedRepository.obtenerNeeds(membresia.familyId, lunes, domingo)
+            val anuncios = anuncioRepository.obtenerAnuncios(membresia.familyId)
 
             val mapper = SemaforoUiStateMapper(caregivers, patrones, anulaciones, disponibilidad)
-            _pantalla.value = SemaforoPantallaEstado.ConDatos(mapper.construir(lunes, needs))
+            _pantalla.value = SemaforoPantallaEstado.ConDatos(mapper.construir(lunes, needs).copy(anuncios = anuncios))
+        }
+    }
+
+    /** Publica un anuncio nuevo en el tablón, firmado con el nombre del cuidador actual. */
+    fun publicarAnuncio(texto: String) {
+        val familyId = familyIdActual ?: return
+        val textoLimpio = texto.trim()
+        if (textoLimpio.isBlank()) return
+
+        viewModelScope.launch {
+            anuncioRepository.publicarAnuncio(familyId, nombreCuidadorActual, textoLimpio)
+            cargar()
+        }
+    }
+
+    /** Cualquier miembro de la familia puede borrar un anuncio del tablón. */
+    fun eliminarAnuncio(anuncioId: AnuncioId) {
+        val familyId = familyIdActual ?: return
+        viewModelScope.launch {
+            anuncioRepository.eliminarAnuncio(familyId, anuncioId)
+            cargar()
         }
     }
 }

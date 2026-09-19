@@ -81,6 +81,21 @@ interface CompraDao {
 }
 
 @Dao
+interface AnuncioDao {
+    @Query("SELECT * FROM anuncios WHERE familyId = :familyId ORDER BY publicadoEn DESC")
+    suspend fun obtener(familyId: String): List<AnuncioEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun guardar(anuncio: AnuncioEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun guardarTodos(anuncios: List<AnuncioEntity>)
+
+    @Query("DELETE FROM anuncios WHERE familyId = :familyId AND id = :id")
+    suspend fun eliminar(familyId: String, id: String)
+}
+
+@Dao
 interface MenuDao {
     @Query("SELECT * FROM menus WHERE familyId = :familyId AND fecha BETWEEN :desde AND :hasta")
     suspend fun obtener(familyId: String, desde: String, hasta: String): List<ComidaDelDiaEntity>

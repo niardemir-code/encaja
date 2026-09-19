@@ -126,6 +126,23 @@ data class ArticuloCompraEntity(
     }
 }
 
+@Entity(tableName = "anuncios", primaryKeys = ["familyId", "id"])
+data class AnuncioEntity(
+    val familyId: String,
+    val id: String,
+    val autorNombre: String,
+    val texto: String,
+    val publicadoEn: String
+) {
+    fun aDominio() = Anuncio(AnuncioId(id), autorNombre, texto, java.time.LocalDateTime.parse(publicadoEn))
+
+    companion object {
+        fun desdeDominio(familyId: String, anuncio: Anuncio) = AnuncioEntity(
+            familyId, anuncio.id.value, anuncio.autorNombre, anuncio.texto, anuncio.publicadoEn.toString()
+        )
+    }
+}
+
 @Entity(tableName = "menus", primaryKeys = ["familyId", "fecha"])
 data class ComidaDelDiaEntity(
     val familyId: String,

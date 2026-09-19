@@ -12,6 +12,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,6 +23,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.encaja.app.domain.model.Anuncio
+import com.encaja.app.domain.model.AnuncioId
 import java.time.format.TextStyle
 import java.util.Locale
 
@@ -83,6 +87,14 @@ fun SemanaScreen(viewModel: SemaforoViewModel = hiltViewModel()) {
                 }
 
                 item { FilaDeDias(uiState.dias) }
+
+                item {
+                    TablonDeAnuncios(
+                        anuncios = uiState.anuncios,
+                        onPublicar = { texto -> viewModel.publicarAnuncio(texto) },
+                        onEliminar = { anuncioId -> viewModel.eliminarAnuncio(anuncioId) }
+                    )
+                }
 
                 items(uiState.huecosDeLaSemana) { hueco ->
                     TarjetaHueco(hueco = hueco)
@@ -178,6 +190,86 @@ private fun FilaDeDias(dias: List<DiaSemaforo>) {
                     Text(dia.fecha.dayOfMonth.toString(), style = MaterialTheme.typography.labelMedium)
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun TablonDeAnuncios(
+    anuncios: List<Anuncio>,
+    onPublicar: (String) -> Unit,
+    onEliminar: (AnuncioId) -> Unit
+) {
+    var textoNuevo by remember { mutableStateOf("") }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.secondaryContainer)
+            .padding(12.dp)
+    ) {
+        Text("Tablón de anuncios", style = MaterialTheme.typography.titleMedium)
+        Spacer(Modifier.height(8.dp))
+
+        if (anuncios.isEmpty()) {
+            Text(
+                "Todavía no hay ningún anuncio.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSecondaryContainer
+            )
+            Spacer(Modifier.height(8.dp))
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                anuncios.forEach { anuncio ->
+                    FilaAnuncio(anuncio = anuncio, onEliminar = { onEliminar(anuncio.id) })
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+        }
+
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(
+                value = textoNuevo,
+                onValueChange = { textoNuevo = it },
+                label = { Text("Nuevo anuncio") },
+                modifier = Modifier.weight(1f)
+            )
+            Spacer(Modifier.width(8.dp))
+            Button(
+                enabled = textoNuevo.isNotBlank(),
+                onClick = {
+                    onPublicar(textoNuevo)
+                    textoNuevo = ""
+                }
+            ) {
+                Text("Publicar")
+            }
+        }
+    }
+}
+
+@Composable
+private fun FilaAnuncio(anuncio: Anuncio, onEliminar: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .padding(10.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                "${anuncio.autorNombre} · ${formatearFechaAnuncio(anuncio.publicadoEn)}",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(anuncio.texto, style = MaterialTheme.typography.bodyMedium)
+        }
+        IconButton(onClick = onEliminar) {
+            Icon(Icons.Default.Delete, contentDescription = "Eliminar anuncio")
         }
     }
 }

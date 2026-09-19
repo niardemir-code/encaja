@@ -58,6 +58,9 @@ object DatabaseModule {
 
     @Provides
     fun proveerCompraDao(db: EncajaDatabase): CompraDao = db.compraDao()
+
+    @Provides
+    fun proveerAnuncioDao(db: EncajaDatabase): AnuncioDao = db.anuncioDao()
 }
 
 @Module
@@ -93,4 +96,7 @@ abstract class RepositoryModule {
 
     @Binds
     abstract fun enlazarCompraRepository(impl: CompraRepositoryImpl): CompraRepository
+
+    @Binds
+    abstract fun enlazarAnuncioRepository(impl: AnuncioRepositoryImpl): AnuncioRepository
 }

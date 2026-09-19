@@ -12,9 +12,10 @@ import androidx.room.RoomDatabase
         AnulacionEntity::class,
         ComidaDelDiaEntity::class,
         ChildEntity::class,
-        ArticuloCompraEntity::class
+        ArticuloCompraEntity::class,
+        AnuncioEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class EncajaDatabase : RoomDatabase() {
@@ -25,4 +26,5 @@ abstract class EncajaDatabase : RoomDatabase() {
     abstract fun menuDao(): MenuDao
     abstract fun childDao(): ChildDao
     abstract fun compraDao(): CompraDao
+    abstract fun anuncioDao(): AnuncioDao
 }
