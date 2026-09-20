@@ -16,11 +16,11 @@ import java.time.LocalTime
  */
 class CalcularHuecosDelDiaTest {
 
-    private val victor = Caregiver(CaregiverId("victor"), "Víctor Oliver", CaregiverRole.ADMIN)
-    private val silvia = Caregiver(CaregiverId("silvia"), "Sílvia Izquierdo", CaregiverRole.ADMIN)
-    private val josefa = Caregiver(CaregiverId("josefa"), "Josefa Fernández", CaregiverRole.CUIDADOR)
+    private val victor = Caregiver(CaregiverId("victor"), "Víctor", "Oliver", "Vila", CaregiverRole.ADMIN)
+    private val silvia = Caregiver(CaregiverId("silvia"), "Sílvia", "Izquierdo", "Camps", CaregiverRole.ADMIN)
+    private val josefa = Caregiver(CaregiverId("josefa"), "Josefa", "Fernández", "Ruiz", CaregiverRole.CUIDADOR)
     private val dolors = Caregiver(
-        CaregiverId("dolors"), "Dolors Vila", CaregiverRole.CUIDADOR, puedeDesplazarse = false
+        CaregiverId("dolors"), "Dolors", "Vila", "Camps", CaregiverRole.CUIDADOR, puedeDesplazarse = false
     )
     private val todos = listOf(victor, silvia, josefa, dolors)
     private val etna = ChildId("etna")

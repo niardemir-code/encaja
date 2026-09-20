@@ -4,6 +4,7 @@ import com.encaja.app.data.firestore.CaregiverFirestoreMapper
 import com.encaja.app.data.local.CaregiverDao
 import com.encaja.app.data.local.CaregiverEntity
 import com.encaja.app.domain.model.Caregiver
+import com.encaja.app.domain.model.CaregiverId
 import com.encaja.app.domain.model.FamilyId
 import com.encaja.app.domain.repository.CaregiverRepository
 import com.google.firebase.firestore.FirebaseFirestore
@@ -42,5 +43,13 @@ class CaregiverRepositoryImpl @Inject constructor(
         }
         batch.commit().await()
         dao.guardarTodos(caregivers.map { CaregiverEntity.desdeDominio(familyId.value, it) })
+    }
+
+    override suspend fun eliminarCuidador(familyId: FamilyId, caregiverId: CaregiverId) {
+        firestore.collection("families").document(familyId.value)
+            .collection("caregivers").document(caregiverId.value)
+            .delete()
+            .await()
+        dao.eliminar(familyId.value, caregiverId.value)
     }
 }

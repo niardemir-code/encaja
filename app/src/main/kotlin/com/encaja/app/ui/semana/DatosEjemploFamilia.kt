@@ -14,12 +14,15 @@ import java.time.LocalTime
  */
 object DatosEjemploFamilia {
 
-    val victor = Caregiver(CaregiverId("victor"), "Víctor Oliver", CaregiverRole.ADMIN)
-    val silvia = Caregiver(CaregiverId("silvia"), "Sílvia Izquierdo", CaregiverRole.ADMIN)
-    val vicente = Caregiver(CaregiverId("vicente"), "Vicente Oliver", CaregiverRole.CUIDADOR)
-    val dolors = Caregiver(CaregiverId("dolors"), "Dolors Vila", CaregiverRole.CUIDADOR)
-    val gregorio = Caregiver(CaregiverId("gregorio"), "Gregorio Izquierdo", CaregiverRole.CUIDADOR)
-    val josefa = Caregiver(CaregiverId("josefa"), "Josefa Fernández", CaregiverRole.CUIDADOR)
+    // Víctor y Vicente comparten nombre y primer apellido (Oliver) a propósito,
+    // para poder ver en la demo cómo se desambiguan las iniciales por el
+    // segundo apellido: Vicente Oliver Fortea -> "VO", Víctor Oliver Vila -> "VV".
+    val victor = Caregiver(CaregiverId("victor"), "Víctor", "Oliver", "Vila", CaregiverRole.ADMIN)
+    val silvia = Caregiver(CaregiverId("silvia"), "Sílvia", "Izquierdo", "Camps", CaregiverRole.ADMIN)
+    val vicente = Caregiver(CaregiverId("vicente"), "Vicente", "Oliver", "Fortea", CaregiverRole.CUIDADOR)
+    val dolors = Caregiver(CaregiverId("dolors"), "Dolors", "Vila", "Camps", CaregiverRole.CUIDADOR)
+    val gregorio = Caregiver(CaregiverId("gregorio"), "Gregorio", "Izquierdo", "Ramos", CaregiverRole.CUIDADOR)
+    val josefa = Caregiver(CaregiverId("josefa"), "Josefa", "Fernández", "Ruiz", CaregiverRole.CUIDADOR)
 
     val julia = ChildId("julia")
     val etna = ChildId("etna")
@@ -28,6 +31,12 @@ object DatosEjemploFamilia {
     val lunes: LocalDate = LocalDate.of(2026, 9, 14)
 
     val caregivers = listOf(victor, silvia, vicente, dolors, gregorio, josefa)
+
+    /** Unidades familiares de ejemplo: los abuelos maternos (GF) y los paternos (VD),
+     * para poder asignarlos a un día de golpe en vez de a cada uno por separado. */
+    val abuelosMaternos = FamilyUnit(FamilyUnitId("abuelos-maternos"), "GF", "Gregorio y Josefa", listOf(gregorio.id, josefa.id))
+    val abuelosPaternos = FamilyUnit(FamilyUnitId("abuelos-paternos"), "VD", "Vicente y Dolors", listOf(vicente.id, dolors.id))
+    val unidades = listOf(abuelosMaternos, abuelosPaternos)
 
     /** Patrón recurrente: lunes lo cubren los padres, martes y jueves la rama materna, viernes la paterna. */
     val patrones = listOf(

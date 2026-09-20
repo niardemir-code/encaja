@@ -61,6 +61,9 @@ object DatabaseModule {
 
     @Provides
     fun proveerAnuncioDao(db: EncajaDatabase): AnuncioDao = db.anuncioDao()
+
+    @Provides
+    fun proveerFamilyUnitDao(db: EncajaDatabase): FamilyUnitDao = db.familyUnitDao()
 }
 
 @Module
@@ -99,4 +102,7 @@ abstract class RepositoryModule {
 
     @Binds
     abstract fun enlazarAnuncioRepository(impl: AnuncioRepositoryImpl): AnuncioRepository
+
+    @Binds
+    abstract fun enlazarFamilyUnitRepository(impl: FamilyUnitRepositoryImpl): FamilyUnitRepository
 }

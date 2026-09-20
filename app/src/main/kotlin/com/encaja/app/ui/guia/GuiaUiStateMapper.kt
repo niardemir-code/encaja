@@ -26,7 +26,7 @@ class GuiaUiStateMapper(
                 .sortedBy { it.horaInicio }
                 .map { need ->
                     val asignadoId = resolverAsignacion(need.fecha, patrones, anulaciones)
-                    val nombreAsignado = caregivers.firstOrNull { it.id == asignadoId }?.nombre
+                    val nombreAsignado = caregivers.firstOrNull { it.id == asignadoId }?.nombreCompleto
                     BloqueGuia(need, nombreAsignado, cubierto = need.id !in idsConHueco)
                 }
             FilaGuia(nino, bloques)

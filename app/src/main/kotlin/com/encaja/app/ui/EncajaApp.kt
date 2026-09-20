@@ -1,6 +1,10 @@
 package com.encaja.app.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
@@ -19,9 +23,14 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -48,11 +57,12 @@ private const val RUTA_AJUSTES = "ajustes"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EncajaApp(onCerrarSesion: () -> Unit) {
+fun EncajaApp(onCerrarSesion: () -> Unit, viewModel: EncajaAppViewModel = hiltViewModel()) {
     val navController = rememberNavController()
 
     val backStackEntry by navController.currentBackStackEntryAsState()
     val rutaActual = backStackEntry?.destination?.hierarchy?.firstOrNull()?.route
+    val inicialesUsuario by viewModel.inicialesUsuario.collectAsState()
 
     Scaffold(
         topBar = {
@@ -66,6 +76,9 @@ fun EncajaApp(onCerrarSesion: () -> Unit) {
                     }
                 },
                 actions = {
+                    if (inicialesUsuario.isNotBlank()) {
+                        AvatarUsuario(inicialesUsuario)
+                    }
                     IconButton(onClick = { navController.navigate(RUTA_AJUSTES) }) {
                         Icon(Icons.Default.Settings, contentDescription = "Ajustes")
                     }
@@ -109,5 +122,24 @@ fun EncajaApp(onCerrarSesion: () -> Unit) {
             composable(Destino.Compra.ruta) { CompraScreen() }
             composable(RUTA_AJUSTES) { AjustesScreen(onCerrarSesion = onCerrarSesion) }
         }
+    }
+}
+
+/** Avatar circular con las iniciales del usuario, junto al icono de Ajustes. */
+@Composable
+private fun AvatarUsuario(iniciales: String) {
+    Box(
+        modifier = Modifier
+            .padding(end = 4.dp)
+            .size(32.dp)
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.primaryContainer),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            iniciales,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onPrimaryContainer
+        )
     }
 }

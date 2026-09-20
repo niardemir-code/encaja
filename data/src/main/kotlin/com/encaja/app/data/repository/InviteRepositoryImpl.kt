@@ -21,12 +21,17 @@ class InviteRepositoryImpl @Inject constructor(
         return try {
             // Si ese cuidador ya tiene a alguien vinculado, no generamos un código nuevo:
             // evita que dos personas distintas acaben siendo "la misma" Sílvia.
-            val yaVinculado = firestore.collection("users")
-                .whereEqualTo("familyId", familyId.value)
-                .whereEqualTo("caregiverId", caregiverId.value)
+            //
+            // Se comprueba con un documento único (families/{familyId}/caregiverLinks/{caregiverId})
+            // en vez de una consulta sobre toda la colección "users": las reglas de seguridad de
+            // Firestore normales son por documento (cada uno solo puede leer su propio users/{uid}),
+            // y esas reglas bloquean cualquier consulta que recorra la colección entera buscando por
+            // campos (de ahí el PERMISSION_DENIED). Un get() a un documento concreto sí es compatible.
+            val yaVinculado = firestore.collection("families").document(familyId.value)
+                .collection("caregiverLinks").document(caregiverId.value)
                 .get()
                 .await()
-            if (!yaVinculado.isEmpty) {
+            if (yaVinculado.exists()) {
                 return Result.failure(IllegalStateException("Ese cuidador ya tiene una cuenta vinculada"))
             }
 

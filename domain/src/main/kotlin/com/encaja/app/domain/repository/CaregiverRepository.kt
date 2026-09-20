@@ -1,9 +1,11 @@
 package com.encaja.app.domain.repository
 
 import com.encaja.app.domain.model.Caregiver
+import com.encaja.app.domain.model.CaregiverId
 import com.encaja.app.domain.model.FamilyId
 
 interface CaregiverRepository {
     suspend fun obtenerCuidadores(familyId: FamilyId): List<Caregiver>
     suspend fun guardarCuidadores(familyId: FamilyId, caregivers: List<Caregiver>)
+    suspend fun eliminarCuidador(familyId: FamilyId, caregiverId: CaregiverId)
 }

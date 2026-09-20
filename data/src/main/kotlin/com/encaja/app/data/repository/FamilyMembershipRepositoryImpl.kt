@@ -30,5 +30,13 @@ class FamilyMembershipRepositoryImpl @Inject constructor(
                 "caregiverId" to membership.caregiverId.value
             )
         ).await()
+
+        // Documento "espejo" que permite comprobar, con un simple get() por id (en vez de
+        // una consulta sobre toda la colección "users"), si un cuidador concreto ya tiene
+        // cuenta vinculada. Ver el comentario en InviteRepositoryImpl.generarInvitacion.
+        firestore.collection("families").document(membership.familyId.value)
+            .collection("caregiverLinks").document(membership.caregiverId.value)
+            .set(mapOf("uid" to uid))
+            .await()
     }
 }

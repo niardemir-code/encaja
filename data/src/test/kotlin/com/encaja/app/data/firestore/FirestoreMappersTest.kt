@@ -11,7 +11,7 @@ class FirestoreMappersTest {
 
     @Test
     fun `Caregiver hace el viaje completo sin perder datos`() {
-        val original = Caregiver(CaregiverId("dolors"), "Dolors Vila", CaregiverRole.CUIDADOR, puedeDesplazarse = false)
+        val original = Caregiver(CaregiverId("dolors"), "Dolors", "Vila", "Camps", CaregiverRole.CUIDADOR, puedeDesplazarse = false)
 
         val documento = CaregiverFirestoreMapper.aDocumento(original)
         val reconstruido = CaregiverFirestoreMapper.desdeDocumento(original.id.value, documento)
@@ -22,6 +22,7 @@ class FirestoreMappersTest {
     @Test
     fun `Caregiver sin puedeDesplazarse en el documento asume true por defecto`() {
         val documentoViejo = mapOf("nombre" to "Víctor", "rol" to "ADMIN")
+        // Sin apellido1/apellido2: simula un documento guardado antes de añadir estos campos.
         val reconstruido = CaregiverFirestoreMapper.desdeDocumento("victor", documentoViejo)
 
         assertEquals(true, reconstruido?.puedeDesplazarse)

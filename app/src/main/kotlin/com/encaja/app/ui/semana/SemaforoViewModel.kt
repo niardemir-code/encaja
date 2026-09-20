@@ -101,7 +101,7 @@ class SemaforoViewModel @Inject constructor(
 
             val caregivers = caregiverRepository.obtenerCuidadores(membresia.familyId)
             _cuidadores.value = caregivers
-            nombreCuidadorActual = caregivers.firstOrNull { it.id == membresia.caregiverId }?.nombre
+            nombreCuidadorActual = caregivers.firstOrNull { it.id == membresia.caregiverId }?.nombreCompleto
                 ?: "Alguien de la familia"
 
             val patrones = assignmentRepository.obtenerPatrones(membresia.familyId)

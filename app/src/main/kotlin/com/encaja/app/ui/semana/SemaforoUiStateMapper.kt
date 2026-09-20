@@ -37,7 +37,7 @@ class SemaforoUiStateMapper(
         val tramosPorCaregiver = CalcularRepartoSemanal(patrones, anulaciones)(lunes)
         val reparto = caregivers
             .filter { tramosPorCaregiver.containsKey(it.id) }
-            .map { TramoReparto(it.id, it.nombre, tramosPorCaregiver.getValue(it.id)) }
+            .map { TramoReparto(it.id, it.nombreCompleto, tramosPorCaregiver.getValue(it.id)) }
             .sortedByDescending { it.tramos }
 
         return SemaforoUiState(dias, huecos, reparto)

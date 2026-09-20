@@ -12,6 +12,9 @@ interface CaregiverDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun guardarTodos(caregivers: List<CaregiverEntity>)
+
+    @Query("DELETE FROM caregivers WHERE familyId = :familyId AND id = :id")
+    suspend fun eliminar(familyId: String, id: String)
 }
 
 @Dao
@@ -46,11 +49,29 @@ interface AssignmentDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun guardarPatrones(patrones: List<PatronCuidadoEntity>)
 
+    @Query("DELETE FROM patrones_cuidado WHERE familyId = :familyId AND diaSemana = :diaSemana")
+    suspend fun eliminarPatron(familyId: String, diaSemana: String)
+
     @Query("SELECT * FROM anulaciones WHERE familyId = :familyId AND fecha BETWEEN :desde AND :hasta")
     suspend fun obtenerAnulaciones(familyId: String, desde: String, hasta: String): List<AnulacionEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun guardarAnulacion(anulacion: AnulacionEntity)
+
+    @Query("DELETE FROM anulaciones WHERE familyId = :familyId AND fecha = :fecha")
+    suspend fun eliminarAnulacion(familyId: String, fecha: String)
+}
+
+@Dao
+interface FamilyUnitDao {
+    @Query("SELECT * FROM family_units WHERE familyId = :familyId")
+    suspend fun obtener(familyId: String): List<FamilyUnitEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun guardarTodos(unidades: List<FamilyUnitEntity>)
+
+    @Query("DELETE FROM family_units WHERE familyId = :familyId AND id = :id")
+    suspend fun eliminar(familyId: String, id: String)
 }
 
 @Dao

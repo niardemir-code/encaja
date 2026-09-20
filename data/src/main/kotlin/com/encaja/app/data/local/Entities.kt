@@ -9,16 +9,41 @@ data class CaregiverEntity(
     val familyId: String,
     val id: String,
     val nombre: String,
+    val apellido1: String,
+    val apellido2: String,
     val rol: String,
     val puedeDesplazarse: Boolean
 ) {
     fun aDominio() = Caregiver(
-        CaregiverId(id), nombre, CaregiverRole.valueOf(rol), puedeDesplazarse
+        CaregiverId(id), nombre, apellido1, apellido2, CaregiverRole.valueOf(rol), puedeDesplazarse
     )
 
     companion object {
         fun desdeDominio(familyId: String, caregiver: Caregiver) = CaregiverEntity(
-            familyId, caregiver.id.value, caregiver.nombre, caregiver.rol.name, caregiver.puedeDesplazarse
+            familyId, caregiver.id.value, caregiver.nombre, caregiver.apellido1, caregiver.apellido2,
+            caregiver.rol.name, caregiver.puedeDesplazarse
+        )
+    }
+}
+
+@Entity(tableName = "family_units", primaryKeys = ["familyId", "id"])
+data class FamilyUnitEntity(
+    val familyId: String,
+    val id: String,
+    val codigo: String,
+    val nombre: String,
+    /** Ids de los cuidadores miembros, unidos por coma (no hay comas en un CaregiverId generado). */
+    val miembros: String
+) {
+    fun aDominio() = FamilyUnit(
+        FamilyUnitId(id), codigo, nombre,
+        miembros.split(",").filter { it.isNotBlank() }.map { CaregiverId(it) }
+    )
+
+    companion object {
+        fun desdeDominio(familyId: String, unidad: FamilyUnit) = FamilyUnitEntity(
+            familyId, unidad.id.value, unidad.codigo, unidad.nombre,
+            unidad.miembros.joinToString(",") { it.value }
         )
     }
 }

@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,6 +21,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -113,7 +116,9 @@ private fun InvitarSeccion(viewModel: SemaforoViewModel) {
     var mostrarSelector by remember { mutableStateOf(false) }
     var codigoGenerado by remember { mutableStateOf<String?>(null) }
     var errorInvitacion by remember { mutableStateOf<String?>(null) }
+    var copiado by remember { mutableStateOf(false) }
     val cuidadores by viewModel.cuidadores.collectAsState()
+    val clipboard = LocalClipboardManager.current
 
     OutlinedButton(onClick = { mostrarSelector = true }) {
         Text("Invitar a alguien")
@@ -125,13 +130,34 @@ private fun InvitarSeccion(viewModel: SemaforoViewModel) {
                 mostrarSelector = false
                 codigoGenerado = null
                 errorInvitacion = null
+                copiado = false
             },
             title = { Text(if (codigoGenerado != null) "Código generado" else "¿Para quién es la invitación?") },
             text = {
                 Column {
                     when {
                         codigoGenerado != null -> {
-                            Text(codigoGenerado!!, style = MaterialTheme.typography.headlineMedium)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    codigoGenerado!!,
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                IconButton(onClick = {
+                                    clipboard.setText(AnnotatedString(codigoGenerado!!))
+                                    copiado = true
+                                }) {
+                                    Icon(Icons.Default.ContentCopy, contentDescription = "Copiar código")
+                                }
+                            }
+                            if (copiado) {
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    "Copiado al portapapeles",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
                             Spacer(Modifier.height(8.dp))
                             Text("Compártelo con esa persona. Deja de funcionar en cuanto se use una vez.")
                         }
@@ -147,7 +173,7 @@ private fun InvitarSeccion(viewModel: SemaforoViewModel) {
                                         alFallar = { mensaje -> errorInvitacion = mensaje }
                                     )
                                 }) {
-                                    Text(caregiver.nombre)
+                                    Text(caregiver.nombreCompleto)
                                 }
                             }
                         }
@@ -159,6 +185,7 @@ private fun InvitarSeccion(viewModel: SemaforoViewModel) {
                     mostrarSelector = false
                     codigoGenerado = null
                     errorInvitacion = null
+                    copiado = false
                 }) {
                     Text("Cerrar")
                 }
