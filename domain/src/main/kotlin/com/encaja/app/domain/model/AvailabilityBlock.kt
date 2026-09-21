@@ -7,14 +7,19 @@ import java.time.LocalTime
  * El "motivo" es una lista corta y fija a propósito: así el icono y el
  * color de cada tipo son siempre los mismos en toda la app. La "etiqueta"
  * es el texto libre que cada familia añade si quiere precisar
- * ("Revisión rodilla"), y nunca condiciona la lógica de cálculo de huecos.
+ * ("Revisión rodilla", "Viaje a Madrid"), y nunca condiciona la lógica
+ * de cálculo de huecos.
  */
-enum class MotivoNoDisponibilidad { TRABAJO, MEDICO, VACACIONES, OTRO }
+enum class MotivoNoDisponibilidad { TRABAJO, MEDICO, VIAJE, VACACIONES, OTRO }
 
 /**
  * Un tramo en el que un cuidador NO está disponible. Cubre tanto un turno
- * de trabajo recurrente como una cita médica puntual o un periodo largo
- * de baja: el modelo es el mismo, solo cambia cuánto dura.
+ * de trabajo como una cita médica puntual o un viaje de varios días (que
+ * se guarda como un bloque de día completo por cada fecha).
+ *
+ * Si [horaFin] no es posterior a [horaInicio] (p.ej. 22:00 -> 06:00), el
+ * bloque es un turno de noche: ocupa desde [horaInicio] hasta el final de
+ * [fecha] y sigue al día siguiente hasta [horaFin].
  */
 data class AvailabilityBlock(
     val caregiverId: CaregiverId,
@@ -24,6 +29,29 @@ data class AvailabilityBlock(
     val motivo: MotivoNoDisponibilidad,
     val etiqueta: String? = null
 ) {
+    val cruzaMedianoche: Boolean
+        get() = !horaFin.isAfter(horaInicio)
+
+    val todoElDia: Boolean
+        get() = horaInicio == INICIO_DIA && !horaFin.isBefore(FIN_DIA)
+
+    /** Solapa con el tramo [inicio, fin) del mismo día [fecha]. */
     fun solapaCon(inicio: LocalTime, fin: LocalTime): Boolean =
-        horaInicio < fin && inicio < horaFin
+        if (cruzaMedianoche) fin.isAfter(horaInicio)
+        else horaInicio < fin && inicio < horaFin
+
+    /**
+     * Si este bloque ocupa algo del tramo [inicio, fin) de [fechaTramo] — incluido
+     * el final de un turno de noche que empezó la víspera.
+     */
+    fun ocupa(fechaTramo: LocalDate, inicio: LocalTime, fin: LocalTime): Boolean = when (fechaTramo) {
+        fecha -> solapaCon(inicio, fin)
+        fecha.plusDays(1) -> cruzaMedianoche && inicio.isBefore(horaFin)
+        else -> false
+    }
+
+    companion object {
+        val INICIO_DIA: LocalTime = LocalTime.MIN
+        val FIN_DIA: LocalTime = LocalTime.of(23, 59)
+    }
 }

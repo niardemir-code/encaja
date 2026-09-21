@@ -4,15 +4,20 @@ package com.encaja.app.ui.familia
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.encaja.app.domain.model.AvailabilityBlock
 import com.encaja.app.domain.model.CaregiverId
 import com.encaja.app.domain.model.FamilyId
+import com.encaja.app.domain.model.MotivoNoDisponibilidad
 import com.encaja.app.domain.model.PatronCuidado
+import com.encaja.app.domain.model.TurnoId
+import com.encaja.app.domain.model.TurnoTrabajo
 import com.encaja.app.domain.repository.AssignmentRepository
 import com.encaja.app.domain.repository.AuthRepository
 import com.encaja.app.domain.repository.AvailabilityRepository
 import com.encaja.app.domain.repository.CaregiverRepository
 import com.encaja.app.domain.repository.FamilyMembershipRepository
 import com.encaja.app.domain.repository.FamilyUnitRepository
+import com.encaja.app.domain.repository.TurnoRepository
 import com.encaja.app.domain.usecase.lunesDeEstaSemana
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,6 +26,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.LocalTime
+import java.util.UUID
 import javax.inject.Inject
 
 @HiltViewModel
@@ -30,7 +37,8 @@ class FamiliaViewModel @Inject constructor(
     private val caregiverRepository: CaregiverRepository,
     private val familyUnitRepository: FamilyUnitRepository,
     private val availabilityRepository: AvailabilityRepository,
-    private val assignmentRepository: AssignmentRepository
+    private val assignmentRepository: AssignmentRepository,
+    private val turnoRepository: TurnoRepository
 ) : ViewModel() {
 
     private val _pantalla = MutableStateFlow<FamiliaPantallaEstado>(FamiliaPantallaEstado.Cargando)
@@ -56,9 +64,13 @@ class FamiliaViewModel @Inject constructor(
         cargar()
     }
 
-    private fun cargar() {
+    /**
+     * [mostrarCargando] = false recarga sin pasar por la pantalla de "Cargando", para que
+     * la lista no vuelva arriba al guardar desde un diálogo (mismo motivo que en Menú).
+     */
+    private fun cargar(mostrarCargando: Boolean = true) {
         viewModelScope.launch {
-            _pantalla.value = FamiliaPantallaEstado.Cargando
+            if (mostrarCargando) _pantalla.value = FamiliaPantallaEstado.Cargando
             val uid = authRepository.sesionActual()?.uid
             if (uid == null) { _pantalla.value = FamiliaPantallaEstado.SinFamilia; return@launch }
             val membresia = familyMembershipRepository.obtenerMembresia(uid)
@@ -72,9 +84,12 @@ class FamiliaViewModel @Inject constructor(
             val patrones = assignmentRepository.obtenerPatrones(membresia.familyId)
             val anulaciones = assignmentRepository.obtenerAnulaciones(membresia.familyId, lunes, domingo)
             val disponibilidad = availabilityRepository.obtenerDisponibilidad(membresia.familyId, lunes, domingo)
+            val turnos = turnoRepository.obtenerTurnos(membresia.familyId).sortedBy { it.horaInicio }
 
             val mapper = FamiliaUiStateMapper(caregivers, unidades, patrones, anulaciones, disponibilidad)
-            _pantalla.value = FamiliaPantallaEstado.ConDatos(mapper.construir(lunes, esSemanaActual = offsetSemanas == 0))
+            _pantalla.value = FamiliaPantallaEstado.ConDatos(
+                mapper.construir(lunes, esSemanaActual = offsetSemanas == 0).copy(turnos = turnos)
+            )
         }
     }
 
@@ -124,6 +139,74 @@ class FamiliaViewModel @Inject constructor(
         viewModelScope.launch {
             assignmentRepository.eliminarAnulacion(familyId, fecha)
             cargar()
+        }
+    }
+
+    /**
+     * Guarda un turno de trabajo en las [fechas] indicadas (y, si se pide, en las mismas
+     * fechas de la semana siguiente). Si alguno de esos días ya tenía un turno de trabajo,
+     * se sustituye — así cambiar de mañana a tarde no deja los dos turnos a la vez.
+     */
+    fun guardarTrabajo(
+        caregiverId: CaregiverId,
+        fechas: List<LocalDate>,
+        inicio: LocalTime,
+        fin: LocalTime,
+        duplicarSemanaSiguiente: Boolean,
+        nombreTurno: String? = null
+    ) {
+        val familyId = familyIdActual ?: return
+        val todas = fechasTrabajo(fechas, duplicarSemanaSiguiente)
+        if (todas.isEmpty()) return
+
+        viewModelScope.launch {
+            val existentes = availabilityRepository.obtenerDisponibilidad(familyId, todas.first(), todas.last())
+                .filter { it.caregiverId == caregiverId && it.motivo == MotivoNoDisponibilidad.TRABAJO && it.fecha in todas }
+            existentes.forEach { availabilityRepository.eliminarBloque(familyId, it.caregiverId, it.fecha, it.horaInicio) }
+            todas.forEach { fecha ->
+                availabilityRepository.guardarBloque(
+                    familyId, AvailabilityBlock(caregiverId, fecha, inicio, fin, MotivoNoDisponibilidad.TRABAJO, nombreTurno)
+                )
+            }
+            cargar(mostrarCargando = false)
+        }
+    }
+
+    /** Guarda bloques sueltos (una cita médica, los días de un viaje...). */
+    fun guardarBloques(bloques: List<AvailabilityBlock>) {
+        val familyId = familyIdActual ?: return
+        if (bloques.isEmpty()) return
+        viewModelScope.launch {
+            bloques.forEach { availabilityRepository.guardarBloque(familyId, it) }
+            cargar(mostrarCargando = false)
+        }
+    }
+
+    fun eliminarBloque(bloque: AvailabilityBlock) {
+        val familyId = familyIdActual ?: return
+        viewModelScope.launch {
+            availabilityRepository.eliminarBloque(familyId, bloque.caregiverId, bloque.fecha, bloque.horaInicio)
+            cargar(mostrarCargando = false)
+        }
+    }
+
+    /** Crea un turno de trabajo con nombre (p.ej. "Mañana 6-14") para toda la familia. */
+    fun crearTurno(nombre: String, inicio: LocalTime, fin: LocalTime) {
+        val familyId = familyIdActual ?: return
+        val nombreLimpio = nombre.trim()
+        if (nombreLimpio.isBlank()) return
+        viewModelScope.launch {
+            turnoRepository.guardarTurno(familyId, TurnoTrabajo(TurnoId(UUID.randomUUID().toString()), nombreLimpio, inicio, fin))
+            cargar(mostrarCargando = false)
+        }
+    }
+
+    /** Borra un turno de la lista. Los días ya marcados con ese turno no cambian. */
+    fun eliminarTurno(turnoId: TurnoId) {
+        val familyId = familyIdActual ?: return
+        viewModelScope.launch {
+            turnoRepository.eliminarTurno(familyId, turnoId)
+            cargar(mostrarCargando = false)
         }
     }
 }

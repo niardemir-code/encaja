@@ -29,10 +29,10 @@ class CalcularHuecosDelDia(
     }
 
     private fun estaDisponible(caregiverId: CaregiverId, need: CoverageNeed): Boolean {
-        val bloqueoEseDia = disponibilidad.filter {
-            it.caregiverId == caregiverId && it.fecha == need.fecha
-        }
-        return bloqueoEseDia.none { it.solapaCon(need.horaInicio, need.horaFin) }
+        // ocupa() también cuenta el final de un turno de noche que empezó la víspera.
+        return disponibilidad
+            .filter { it.caregiverId == caregiverId }
+            .none { it.ocupa(need.fecha, need.horaInicio, need.horaFin) }
     }
 
     /**

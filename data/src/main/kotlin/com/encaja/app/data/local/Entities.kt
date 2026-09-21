@@ -119,6 +119,25 @@ data class AnulacionEntity(
     val caregiverId: String
 )
 
+@Entity(tableName = "turnos_trabajo", primaryKeys = ["familyId", "id"])
+data class TurnoTrabajoEntity(
+    val familyId: String,
+    val id: String,
+    val nombre: String,
+    val horaInicio: String,
+    val horaFin: String
+) {
+    fun aDominio() = TurnoTrabajo(
+        TurnoId(id), nombre, java.time.LocalTime.parse(horaInicio), java.time.LocalTime.parse(horaFin)
+    )
+
+    companion object {
+        fun desdeDominio(familyId: String, turno: TurnoTrabajo) = TurnoTrabajoEntity(
+            familyId, turno.id.value, turno.nombre, turno.horaInicio.toString(), turno.horaFin.toString()
+        )
+    }
+}
+
 @Entity(tableName = "children", primaryKeys = ["familyId", "id"])
 data class ChildEntity(
     val familyId: String,

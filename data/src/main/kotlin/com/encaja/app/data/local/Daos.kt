@@ -63,6 +63,18 @@ interface AssignmentDao {
 }
 
 @Dao
+interface TurnoDao {
+    @Query("SELECT * FROM turnos_trabajo WHERE familyId = :familyId ORDER BY horaInicio")
+    suspend fun obtener(familyId: String): List<TurnoTrabajoEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun guardarTodos(turnos: List<TurnoTrabajoEntity>)
+
+    @Query("DELETE FROM turnos_trabajo WHERE familyId = :familyId AND id = :id")
+    suspend fun eliminar(familyId: String, id: String)
+}
+
+@Dao
 interface FamilyUnitDao {
     @Query("SELECT * FROM family_units WHERE familyId = :familyId")
     suspend fun obtener(familyId: String): List<FamilyUnitEntity>

@@ -4,6 +4,7 @@ import com.encaja.app.domain.model.AvailabilityBlock
 import com.encaja.app.domain.model.Caregiver
 import com.encaja.app.domain.model.CaregiverId
 import com.encaja.app.domain.model.FamilyUnit
+import com.encaja.app.domain.model.TurnoTrabajo
 import java.time.DayOfWeek
 import java.time.LocalDate
 
@@ -51,7 +52,9 @@ data class FamiliaUiState(
     val unidades: List<FamilyUnit>,
     /** El patrón recurrente: quién es el responsable habitual cada día de la semana (L-D).
      * Un día sin entrada en el mapa significa que no tiene responsable fijo asignado. */
-    val patronSemanal: Map<DayOfWeek, Responsable>
+    val patronSemanal: Map<DayOfWeek, Responsable>,
+    /** Turnos de trabajo con nombre que ha definido la familia, para elegirlos de un toque. */
+    val turnos: List<TurnoTrabajo> = emptyList()
 ) {
     /** Todas las opciones asignables a un día: primero las personas, luego las unidades. */
     val opcionesAsignables: List<Responsable>

@@ -36,6 +36,9 @@ object DatabaseModule {
             // La base de datos es solo caché local (la fuente de verdad es Firestore),
             // así que ante un cambio de esquema es más simple recrearla que migrar.
             .fallbackToDestructiveMigration()
+            // También hacia atrás: si en el móvil quedó instalada una versión de prueba con un
+            // número de esquema mayor, se recrea la caché en vez de cerrar la app.
+            .fallbackToDestructiveMigrationOnDowngrade()
             .build()
 
     @Provides
@@ -64,6 +67,9 @@ object DatabaseModule {
 
     @Provides
     fun proveerFamilyUnitDao(db: EncajaDatabase): FamilyUnitDao = db.familyUnitDao()
+
+    @Provides
+    fun proveerTurnoDao(db: EncajaDatabase): TurnoDao = db.turnoDao()
 }
 
 @Module
@@ -105,4 +111,7 @@ abstract class RepositoryModule {
 
     @Binds
     abstract fun enlazarFamilyUnitRepository(impl: FamilyUnitRepositoryImpl): FamilyUnitRepository
+
+    @Binds
+    abstract fun enlazarTurnoRepository(impl: TurnoRepositoryImpl): TurnoRepository
 }

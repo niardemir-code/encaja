@@ -7,6 +7,8 @@ package com.encaja.app.ui.familia
 // [día]" que decide si el cambio es solo para esa fecha o para siempre.
 // Se añade cabecera con navegación de semana (mismo patrón que en Menú)
 // y soporte para asignar unidades familiares además de personas sueltas.
+// La cuadrícula de disponibilidad es editable: cada casilla (persona + día)
+// abre DialogoDisponibilidad para añadir trabajo, médico, viajes, etc.
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -31,14 +33,15 @@ import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.encaja.app.domain.model.CaregiverId
+import com.encaja.app.domain.model.MotivoNoDisponibilidad
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
 
 private val VERDE = Color(0xFFC0DD97)
-private val ROJO = Color(0xFFF7C1C1)
 private val FONDO_UNIDAD = Color(0xFFDDD3F7)
 
 @Composable
@@ -65,6 +68,32 @@ fun FamiliaScreen(viewModel: FamiliaViewModel = hiltViewModel()) {
             val estado = estadoActual.estado
             val iniciales = remember(estado.cuidadores) {
                 calcularInicialesCuidadores(estado.cuidadores.map { it.caregiver })
+            }
+            var celdaEnEdicion by remember { mutableStateOf<Pair<CaregiverId, LocalDate>?>(null) }
+
+            // Se busca en el estado actual (no en una copia guardada al abrir), así al borrar
+            // un bloque el diálogo se actualiza solo tras la recarga.
+            celdaEnEdicion?.let { (caregiverId, fecha) ->
+                val cuidadorSemana = estado.cuidadores.firstOrNull { it.caregiver.id == caregiverId }
+                if (cuidadorSemana == null) {
+                    celdaEnEdicion = null
+                } else {
+                    DialogoDisponibilidad(
+                        caregiver = cuidadorSemana.caregiver,
+                        fecha = fecha,
+                        lunes = estado.lunes,
+                        bloquesDelDia = cuidadorSemana.dias.firstOrNull { it.fecha == fecha }?.bloqueos.orEmpty(),
+                        onEliminar = { viewModel.eliminarBloque(it) },
+                        turnos = estado.turnos,
+                        onGuardarTrabajo = { fechas, inicio, fin, duplicar, nombreTurno ->
+                            viewModel.guardarTrabajo(caregiverId, fechas, inicio, fin, duplicar, nombreTurno)
+                        },
+                        onCrearTurno = { nombre, inicio, fin -> viewModel.crearTurno(nombre, inicio, fin) },
+                        onEliminarTurno = { viewModel.eliminarTurno(it) },
+                        onGuardarBloques = { viewModel.guardarBloques(it) },
+                        onCerrar = { celdaEnEdicion = null }
+                    )
+                }
             }
 
             LazyColumn(
@@ -104,8 +133,24 @@ fun FamiliaScreen(viewModel: FamiliaViewModel = hiltViewModel()) {
                     }
                 }
 
+                item {
+                    Column {
+                        Text("Disponibilidad", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            "Toca la casilla de una persona en un día para añadir trabajo, médico, viajes…",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Leyenda()
+                    }
+                }
+
                 items(estado.cuidadores) { cuidadorSemana ->
-                    FilaDeCuidador(cuidadorSemana)
+                    FilaDeCuidador(
+                        cuidadorSemana = cuidadorSemana,
+                        onClickDia = { fecha -> celdaEnEdicion = cuidadorSemana.caregiver.id to fecha }
+                    )
                 }
             }
         }
@@ -390,27 +435,48 @@ private fun Modifier.fondoRayado(colorFondo: Color): Modifier = this.drawBehind 
 }
 
 @Composable
-private fun FilaDeCuidador(cuidadorSemana: CuidadorDisponibilidadSemana) {
+private fun FilaDeCuidador(cuidadorSemana: CuidadorDisponibilidadSemana, onClickDia: (LocalDate) -> Unit) {
     Column {
         Text(cuidadorSemana.caregiver.nombreCompleto, style = MaterialTheme.typography.labelMedium)
         Spacer(Modifier.height(4.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
             cuidadorSemana.dias.forEach { dia ->
+                val primero = dia.bloqueos.minByOrNull { it.horaInicio }
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .height(34.dp)
+                        .height(40.dp)
                         .clip(RoundedCornerShape(5.dp))
-                        .background(if (dia.libre) VERDE else ROJO),
+                        .background(if (primero == null) VERDE else colorMotivo(primero.motivo))
+                        .clickable { onClickDia(dia.fecha) },
                     contentAlignment = Alignment.Center
                 ) {
-                    if (!dia.libre) {
+                    textoCelda(dia.bloqueos)?.let { texto ->
                         Text(
-                            dia.bloqueos.first().motivo.name.take(3).lowercase(),
-                            style = MaterialTheme.typography.labelSmall
+                            texto,
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, lineHeight = 11.sp),
+                            textAlign = TextAlign.Center,
+                            maxLines = 2
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+/** Qué significa cada color de las casillas. FlowRow para que baje de línea en móviles estrechos. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun Leyenda() {
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        (listOf<Pair<String, Color>>("Libre" to VERDE) +
+            MotivoNoDisponibilidad.values().map { etiquetaMotivo(it) to colorMotivo(it) }
+        ).forEach { (texto, color) ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(10.dp).clip(RoundedCornerShape(2.dp)).background(color))
+                Spacer(Modifier.width(3.dp))
+                Text(texto, style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp))
             }
         }
     }

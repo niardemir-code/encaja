@@ -19,8 +19,8 @@ class ProponerCuidadores(
         return caregivers
             .filter { caregiver ->
                 val libre = disponibilidad
-                    .filter { it.caregiverId == caregiver.id && it.fecha == need.fecha }
-                    .none { it.solapaCon(need.horaInicio, need.horaFin) }
+                    .filter { it.caregiverId == caregiver.id }
+                    .none { it.ocupa(need.fecha, need.horaInicio, need.horaFin) }
 
                 val aptoParaDesplazarse = !need.requiereDesplazamiento || caregiver.puedeDesplazarse
 
