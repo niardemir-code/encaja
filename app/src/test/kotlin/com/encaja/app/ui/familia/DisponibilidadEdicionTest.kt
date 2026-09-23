@@ -2,6 +2,10 @@ package com.encaja.app.ui.familia
 
 import com.encaja.app.domain.model.AvailabilityBlock
 import com.encaja.app.domain.model.CaregiverId
+import com.encaja.app.domain.model.CategoriaDisponibilidad
+import com.encaja.app.domain.model.CategoriaId
+import com.encaja.app.domain.model.CategoriasBase
+import com.encaja.app.domain.model.ModoCategoria
 import com.encaja.app.domain.model.MotivoNoDisponibilidad
 import com.encaja.app.domain.model.TurnoId
 import com.encaja.app.domain.model.TurnoTrabajo
@@ -28,6 +32,71 @@ class DisponibilidadEdicionTest {
         val otro = AvailabilityBlock(victor, lunes, LocalTime.of(18, 0), LocalTime.of(19, 0), MotivoNoDisponibilidad.OTRO)
         assertEquals("Viaje +1", textoCelda(listOf(otro, viaje)))
         assertNull(textoCelda(emptyList()))
+    }
+
+    @Test
+    fun `un dia completo muestra el emoji de su categoria, uno por horas no`() {
+        val categorias = CategoriasBase.combinar(emptyList())
+        val vacaciones = AvailabilityBlock(victor, lunes, AvailabilityBlock.INICIO_DIA, AvailabilityBlock.FIN_DIA, MotivoNoDisponibilidad.VACACIONES)
+        val trabajo = AvailabilityBlock(victor, lunes, LocalTime.of(6, 0), LocalTime.of(14, 0), MotivoNoDisponibilidad.TRABAJO)
+        assertEquals("🏖️", emojiCelda(listOf(vacaciones), categorias))
+        assertEquals("✈️", emojiCelda(listOf(vacaciones.copy(motivo = MotivoNoDisponibilidad.VIAJE)), categorias))
+        assertNull(emojiCelda(listOf(trabajo), categorias))
+        assertNull(emojiCelda(emptyList(), categorias))
+    }
+
+    @Test
+    fun `el emoji sigue a la personalizacion y a las categorias propias`() {
+        val playa = CategoriasBase.predeterminadas.first { it.base == MotivoNoDisponibilidad.VACACIONES }.copy(emoji = "🌴")
+        val campamento = CategoriaDisponibilidad(CategoriaId("camp"), "Campamento", "🏕️", 0xFFB8E3DA, ModoCategoria.DIAS)
+        val categorias = CategoriasBase.combinar(listOf(playa, campamento))
+        val vacaciones = AvailabilityBlock(victor, lunes, AvailabilityBlock.INICIO_DIA, AvailabilityBlock.FIN_DIA, MotivoNoDisponibilidad.VACACIONES)
+        assertEquals("🌴", emojiCelda(listOf(vacaciones), categorias))
+        val bloqueCamp = bloqueDeCategoria(campamento, victor, lunes, AvailabilityBlock.INICIO_DIA, AvailabilityBlock.FIN_DIA, null)
+        assertEquals("🏕️", emojiCelda(listOf(bloqueCamp), categorias))
+    }
+
+    @Test
+    fun `por horas se ve el emoji si lo eligio la familia, y las horas si es el de serie`() {
+        val gym = CategoriaDisponibilidad(CategoriaId("gym"), "Gimnasio", "🏋️", 0xFFB8E3DA, ModoCategoria.HORAS)
+        val trabajoConEmoji = CategoriasBase.predeterminadas.first().copy(emoji = "🏭")
+        val turno = AvailabilityBlock(victor, lunes, LocalTime.of(6, 0), LocalTime.of(14, 0), MotivoNoDisponibilidad.TRABAJO)
+        val clase = bloqueDeCategoria(gym, victor, lunes, LocalTime.of(18, 0), LocalTime.of(19, 0), null)
+
+        assertNull(emojiCelda(listOf(turno), CategoriasBase.combinar(listOf(gym))))
+        assertEquals("🏋️", emojiCelda(listOf(clase), CategoriasBase.combinar(listOf(gym))))
+        assertEquals("🏭", emojiCelda(listOf(turno), CategoriasBase.combinar(listOf(trabajoConEmoji))))
+        // Volver a poner el emoji de serie devuelve las horas.
+        assertNull(emojiCelda(listOf(turno), CategoriasBase.combinar(listOf(trabajoConEmoji.copy(emoji = "💼")))))
+    }
+
+    @Test
+    fun `un bloque de categoria propia se guarda como OTRO con su id, uno de serie con su motivo`() {
+        val gym = CategoriaDisponibilidad(CategoriaId("gym"), "Gimnasio", "🏋️", 0xFFB8E3DA, ModoCategoria.HORAS)
+        val propio = bloqueDeCategoria(gym, victor, lunes, LocalTime.of(18, 0), LocalTime.of(19, 0), "Pilates")
+        assertEquals(MotivoNoDisponibilidad.OTRO, propio.motivo)
+        assertEquals(CategoriaId("gym"), propio.categoriaId)
+        val medico = CategoriasBase.predeterminadas.first { it.base == MotivoNoDisponibilidad.MEDICO }
+        val deSerie = bloqueDeCategoria(medico, victor, lunes, LocalTime.of(9, 0), LocalTime.of(10, 0), null)
+        assertEquals(MotivoNoDisponibilidad.MEDICO, deSerie.motivo)
+        assertNull(deSerie.categoriaId)
+    }
+
+    @Test
+    fun `el nombre de una categoria no puede estar vacio ni repetirse`() {
+        val categorias = CategoriasBase.combinar(emptyList())
+        assertFalse(nombreCategoriaValido("  ", categorias, null))
+        assertFalse(nombreCategoriaValido("trabajo", categorias, null))
+        assertTrue(nombreCategoriaValido("Gimnasio", categorias, null))
+        val trabajoId = CategoriasBase.idDe(MotivoNoDisponibilidad.TRABAJO)
+        assertTrue(nombreCategoriaValido("Trabajo", categorias, trabajoId))
+    }
+
+    @Test
+    fun `la galeria no repite emojis ni colores`() {
+        val emojis = SECCIONES_EMOJI.flatMap { it.second }
+        assertEquals(emojis.size, emojis.toSet().size)
+        assertEquals(COLORES_CATEGORIA.size, COLORES_CATEGORIA.toSet().size)
     }
 
     @Test

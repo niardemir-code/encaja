@@ -15,9 +15,10 @@ import androidx.room.RoomDatabase
         ArticuloCompraEntity::class,
         AnuncioEntity::class,
         FamilyUnitEntity::class,
-        TurnoTrabajoEntity::class
+        TurnoTrabajoEntity::class,
+        CategoriaEntity::class
     ],
-    version = 10,
+    version = 11,
     exportSchema = false
 )
 abstract class EncajaDatabase : RoomDatabase() {
@@ -31,4 +32,5 @@ abstract class EncajaDatabase : RoomDatabase() {
     abstract fun anuncioDao(): AnuncioDao
     abstract fun familyUnitDao(): FamilyUnitDao
     abstract fun turnoDao(): TurnoDao
+    abstract fun categoriaDao(): CategoriaDao
 }

@@ -1,6 +1,9 @@
 package com.encaja.app.ui.familia
 
 import com.encaja.app.domain.model.AvailabilityBlock
+import com.encaja.app.domain.model.CategoriaDisponibilidad
+import com.encaja.app.domain.model.CategoriasBase
+import com.encaja.app.domain.model.categoriaEn
 import com.encaja.app.domain.model.MotivoNoDisponibilidad
 import com.encaja.app.domain.model.TurnoTrabajo
 import java.time.DayOfWeek
@@ -60,6 +63,21 @@ fun textoCelda(bloques: List<AvailabilityBlock>): String? {
     } else {
         "${formatearHora(primero.horaInicio)}\n${formatearHora(primero.horaFin)}$extra"
     }
+}
+
+/**
+ * Emoji a mostrar en la casilla en lugar del texto, según el primer bloque del día:
+ *  - si ocupa el día entero (vacaciones, viaje...), siempre el de su categoría;
+ *  - si es por horas, solo si ese emoji lo eligió la familia (categoría propia, o de
+ *    serie con el emoji cambiado). Si no, null y la casilla muestra las horas con
+ *    [textoCelda] — así un turno de Trabajo sigue viéndose como "06:00 / 14:00".
+ * Las horas se ven siempre al tocar la casilla. El "+N" lo añade la pantalla.
+ */
+fun emojiCelda(bloques: List<AvailabilityBlock>, categorias: List<CategoriaDisponibilidad>): String? {
+    val primero = bloques.sortedBy { it.horaInicio }.firstOrNull() ?: return null
+    val categoria = primero.categoriaEn(categorias)
+    if (categoria.emoji.isBlank()) return null
+    return if (primero.todoElDia || CategoriasBase.tieneEmojiElegido(categoria)) categoria.emoji else null
 }
 
 /** Las fechas de la semana que empieza en [lunes] correspondientes a los [dias] marcados, en orden. */

@@ -70,6 +70,9 @@ object DatabaseModule {
 
     @Provides
     fun proveerTurnoDao(db: EncajaDatabase): TurnoDao = db.turnoDao()
+
+    @Provides
+    fun proveerCategoriaDao(db: EncajaDatabase): CategoriaDao = db.categoriaDao()
 }
 
 @Module
@@ -114,4 +117,7 @@ abstract class RepositoryModule {
 
     @Binds
     abstract fun enlazarTurnoRepository(impl: TurnoRepositoryImpl): TurnoRepository
+
+    @Binds
+    abstract fun enlazarCategoriaRepository(impl: CategoriaRepositoryImpl): CategoriaRepository
 }

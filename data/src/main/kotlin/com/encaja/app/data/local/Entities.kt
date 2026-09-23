@@ -81,18 +81,20 @@ data class AvailabilityBlockEntity(
     val horaInicio: String,
     val horaFin: String,
     val motivo: String,
-    val etiqueta: String?
+    val etiqueta: String?,
+    val categoriaId: String? = null
 ) {
     fun aDominio() = AvailabilityBlock(
         CaregiverId(caregiverId), java.time.LocalDate.parse(fecha),
         java.time.LocalTime.parse(horaInicio), java.time.LocalTime.parse(horaFin),
-        MotivoNoDisponibilidad.valueOf(motivo), etiqueta
+        MotivoNoDisponibilidad.valueOf(motivo), etiqueta, categoriaId?.let { CategoriaId(it) }
     )
 
     companion object {
         fun desdeDominio(familyId: String, bloque: AvailabilityBlock) = AvailabilityBlockEntity(
             familyId, bloque.caregiverId.value, bloque.fecha.toString(),
-            bloque.horaInicio.toString(), bloque.horaFin.toString(), bloque.motivo.name, bloque.etiqueta
+            bloque.horaInicio.toString(), bloque.horaFin.toString(), bloque.motivo.name, bloque.etiqueta,
+            bloque.categoriaId?.value
         )
     }
 }
@@ -118,6 +120,32 @@ data class AnulacionEntity(
     val fecha: String,
     val caregiverId: String
 )
+
+@Entity(tableName = "categorias_disponibilidad", primaryKeys = ["familyId", "id"])
+data class CategoriaEntity(
+    val familyId: String,
+    val id: String,
+    val nombre: String,
+    val emoji: String,
+    val color: Long,
+    val modo: String,
+    val bloquea: Boolean,
+    val base: String?
+) {
+    /** null si la fila de caché tiene un valor que ya no existe (p.ej. un modo renombrado). */
+    fun aDominio(): CategoriaDisponibilidad? {
+        val modoDominio = runCatching { ModoCategoria.valueOf(modo) }.getOrNull() ?: return null
+        val baseDominio = base?.let { runCatching { MotivoNoDisponibilidad.valueOf(it) }.getOrNull() }
+        return CategoriaDisponibilidad(CategoriaId(id), nombre, emoji, color, modoDominio, bloquea, baseDominio)
+    }
+
+    companion object {
+        fun desdeDominio(familyId: String, categoria: CategoriaDisponibilidad) = CategoriaEntity(
+            familyId, categoria.id.value, categoria.nombre, categoria.emoji, categoria.color,
+            categoria.modo.name, categoria.bloquea, categoria.base?.name
+        )
+    }
+}
 
 @Entity(tableName = "turnos_trabajo", primaryKeys = ["familyId", "id"])
 data class TurnoTrabajoEntity(

@@ -3,6 +3,8 @@ package com.encaja.app.ui.familia
 import com.encaja.app.domain.model.AvailabilityBlock
 import com.encaja.app.domain.model.Caregiver
 import com.encaja.app.domain.model.CaregiverId
+import com.encaja.app.domain.model.CategoriaDisponibilidad
+import com.encaja.app.domain.model.CategoriasBase
 import com.encaja.app.domain.model.FamilyUnit
 import com.encaja.app.domain.model.TurnoTrabajo
 import java.time.DayOfWeek
@@ -54,7 +56,9 @@ data class FamiliaUiState(
      * Un día sin entrada en el mapa significa que no tiene responsable fijo asignado. */
     val patronSemanal: Map<DayOfWeek, Responsable>,
     /** Turnos de trabajo con nombre que ha definido la familia, para elegirlos de un toque. */
-    val turnos: List<TurnoTrabajo> = emptyList()
+    val turnos: List<TurnoTrabajo> = emptyList(),
+    /** Todas las categorías: las 5 de serie (con su personalización) y las propias. */
+    val categorias: List<CategoriaDisponibilidad> = CategoriasBase.predeterminadas
 ) {
     /** Todas las opciones asignables a un día: primero las personas, luego las unidades. */
     val opcionesAsignables: List<Responsable>

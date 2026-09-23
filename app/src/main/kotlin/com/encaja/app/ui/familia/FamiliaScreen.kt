@@ -1,26 +1,31 @@
+@file:OptIn(ExperimentalLayoutApi::class)
+
 package com.encaja.app.ui.familia
 
 // NOTA: depende de Jetpack Compose y Hilt, no compilado en este entorno.
-// Rediseño: se quita la lista fija de "Patrón semanal" y todo se gestiona
-// desde un único diálogo al tocar el avatar de un día: una sola lista de
-// opciones (personas y unidades familiares) más una casilla "Todos los
-// [día]" que decide si el cambio es solo para esa fecha o para siempre.
-// Se añade cabecera con navegación de semana (mismo patrón que en Menú)
-// y soporte para asignar unidades familiares además de personas sueltas.
-// La cuadrícula de disponibilidad es editable: cada casilla (persona + día)
-// abre DialogoDisponibilidad para añadir trabajo, médico, viajes, etc.
+// Pantalla Familia con el diseño de tarjetas: cabecera fija (título, lema y
+// selector de semana) y, debajo, con scroll, tres tarjetas blancas:
+//  - "Con quién están las niñas": una pastilla por día; al tocarla se abre el
+//    diálogo para elegir responsable (solo esa fecha o todos los [día]).
+//  - "Disponibilidad": explicación y leyenda de colores.
+//  - Cuadrícula: por persona, avatar y nombre arriba y sus 7 casillas debajo; cada
+//    casilla abre DialogoDisponibilidad para añadir trabajo, médico, viajes...
+// Los colores del diseño están aquí como constantes para no tocar el tema
+// del resto de pantallas.
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -30,13 +35,16 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.encaja.app.domain.model.CaregiverId
-import com.encaja.app.domain.model.MotivoNoDisponibilidad
+import com.encaja.app.domain.model.CategoriaDisponibilidad
+import com.encaja.app.domain.model.categoriaEn
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
@@ -44,114 +52,156 @@ import java.util.Locale
 private val VERDE = Color(0xFFC0DD97)
 private val FONDO_UNIDAD = Color(0xFFDDD3F7)
 
+// Paleta del diseño de la pantalla Familia.
+private val FONDO_PANTALLA = Color(0xFFF7F6FC)
+private val TINTA = Color(0xFF1C1A4A)          // títulos y textos principales
+private val TINTA_SUAVE = Color(0xFF5B5972)    // subtítulos
+private val INDIGO = Color(0xFF2F2A8F)         // iconos, iniciales, "Esta semana"
+private val LAVANDA = Color(0xFFEAE7FB)        // pastillas, botones redondos, fondo de iconos
+private val LAVANDA_CLARA = Color(0xFFF3F1FD)  // cabecera de la tarjeta "Con quién"
+private val GRIS_VACIO = Color(0xFFEEEEF3)     // día sin responsable
+private val FONDO_FILA = Color(0xFFFAF9FE)     // filas de la cuadrícula
+
+/** Fondo y color de letra del avatar de cada persona, por orden de la lista. */
+private val COLORES_AVATAR = listOf(
+    Color(0xFFE4E2FA) to Color(0xFF3B3597),
+    Color(0xFFD6F1E3) to Color(0xFF1E6B45),
+    Color(0xFFE6DEFA) to Color(0xFF4A3B9A),
+    Color(0xFFFBDDE4) to Color(0xFF9A2A45),
+    Color(0xFFDCEAFA) to Color(0xFF1E5A8C),
+    Color(0xFFFCE4D6) to Color(0xFF9A3D1C)
+)
+
+// Medidas de la cuadrícula: la semana entera cabe siempre en el ancho de la pantalla.
+private val ALTO_CABECERA = 44.dp
+private val ALTO_CELDA = 50.dp
+private val ESPACIO_CELDAS = 4.dp
+private val PADDING_BLOQUE = 8.dp
+
+private val ES = Locale("es")
+
 @Composable
 fun FamiliaScreen(viewModel: FamiliaViewModel = hiltViewModel()) {
     val pantalla by viewModel.pantalla.collectAsState()
 
-    when (val estadoActual = pantalla) {
-        is FamiliaPantallaEstado.Cargando -> {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
+    Box(modifier = Modifier.fillMaxSize().background(FONDO_PANTALLA)) {
+        when (val estadoActual = pantalla) {
+            is FamiliaPantallaEstado.Cargando -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = INDIGO)
+                }
             }
-        }
 
-        is FamiliaPantallaEstado.SinFamilia -> {
-            Box(modifier = Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
-                Text(
-                    "Vincúlate a una familia desde la pestaña Semana para ver esta pantalla.",
-                    textAlign = TextAlign.Center
+            is FamiliaPantallaEstado.SinFamilia -> {
+                Box(modifier = Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
+                    Text(
+                        "Vincúlate a una familia desde la pestaña Semana para ver esta pantalla.",
+                        textAlign = TextAlign.Center,
+                        color = TINTA
+                    )
+                }
+            }
+
+            is FamiliaPantallaEstado.ConDatos -> ContenidoFamilia(estadoActual.estado, viewModel)
+        }
+    }
+}
+
+@Composable
+private fun ContenidoFamilia(estado: FamiliaUiState, viewModel: FamiliaViewModel) {
+    val iniciales = remember(estado.cuidadores) {
+        calcularInicialesCuidadores(estado.cuidadores.map { it.caregiver })
+    }
+    var celdaEnEdicion by remember { mutableStateOf<Pair<CaregiverId, LocalDate>?>(null) }
+
+    // Se busca en el estado actual (no en una copia guardada al abrir), así al borrar
+    // un bloque el diálogo se actualiza solo tras la recarga.
+    celdaEnEdicion?.let { (caregiverId, fecha) ->
+        val cuidadorSemana = estado.cuidadores.firstOrNull { it.caregiver.id == caregiverId }
+        if (cuidadorSemana == null) {
+            celdaEnEdicion = null
+        } else {
+            DialogoDisponibilidad(
+                caregiver = cuidadorSemana.caregiver,
+                fecha = fecha,
+                lunes = estado.lunes,
+                bloquesDelDia = cuidadorSemana.dias.firstOrNull { it.fecha == fecha }?.bloqueos.orEmpty(),
+                onEliminar = { viewModel.eliminarBloque(it) },
+                turnos = estado.turnos,
+                categorias = estado.categorias,
+                onGuardarTrabajo = { fechas, inicio, fin, duplicar, nombreTurno ->
+                    viewModel.guardarTrabajo(caregiverId, fechas, inicio, fin, duplicar, nombreTurno)
+                },
+                onCrearTurno = { nombre, inicio, fin -> viewModel.crearTurno(nombre, inicio, fin) },
+                onEliminarTurno = { viewModel.eliminarTurno(it) },
+                onGuardarBloques = { viewModel.guardarBloques(it) },
+                onGuardarCategoria = { viewModel.guardarCategoria(it) },
+                onEliminarCategoria = { viewModel.eliminarCategoria(it) },
+                onCerrar = { celdaEnEdicion = null }
+            )
+        }
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        // Cabecera fija: fuera del LazyColumn para que no se mueva con el scroll.
+        CabeceraFamilia(
+            lunes = estado.lunes,
+            esSemanaActual = estado.esSemanaActual,
+            onSemanaAnterior = { viewModel.cambiarSemana(-1) },
+            onSemanaSiguiente = { viewModel.cambiarSemana(1) },
+            onIrASemanaActual = { viewModel.irASemanaActual() },
+            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 12.dp)
+        )
+
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 2.dp, bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            item {
+                Tarjeta {
+                    CabeceraTarjeta(
+                        icono = Icons.Default.Groups,
+                        titulo = "Con quién están las niñas",
+                        subtitulo = "Toca un día para elegir quién es responsable",
+                        modifier = Modifier.background(LAVANDA_CLARA).padding(14.dp)
+                    )
+                    FilaDeAsignacion(
+                        dias = estado.diasAsignacion,
+                        opciones = estado.opcionesAsignables,
+                        iniciales = iniciales,
+                        patronSemanal = estado.patronSemanal,
+                        onAsignarHabitual = { dia, idTexto -> viewModel.asignarResponsableHabitual(dia, idTexto) },
+                        onQuitarHabitual = { dia -> viewModel.quitarResponsableHabitual(dia) },
+                        onAnularFecha = { fecha, idTexto -> viewModel.anularParaEstaFecha(fecha, idTexto) },
+                        onQuitarCambioPuntual = { fecha -> viewModel.quitarCambioPuntual(fecha) },
+                        modifier = Modifier.padding(12.dp)
+                    )
+                }
+            }
+
+            item {
+                Tarjeta {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        CabeceraTarjeta(
+                            icono = Icons.Default.CalendarMonth,
+                            titulo = "Disponibilidad",
+                            subtitulo = "Toca la casilla de una persona en un día para añadir trabajo, médico, viajes…"
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        Leyenda(estado.categorias)
+                    }
+                }
+            }
+
+            item {
+                TarjetaCuadricula(
+                    lunes = estado.lunes,
+                    cuidadores = estado.cuidadores,
+                    categorias = estado.categorias,
+                    iniciales = iniciales,
+                    onClickDia = { caregiverId, fecha -> celdaEnEdicion = caregiverId to fecha }
                 )
-            }
-        }
-
-        is FamiliaPantallaEstado.ConDatos -> {
-            val estado = estadoActual.estado
-            val iniciales = remember(estado.cuidadores) {
-                calcularInicialesCuidadores(estado.cuidadores.map { it.caregiver })
-            }
-            var celdaEnEdicion by remember { mutableStateOf<Pair<CaregiverId, LocalDate>?>(null) }
-
-            // Se busca en el estado actual (no en una copia guardada al abrir), así al borrar
-            // un bloque el diálogo se actualiza solo tras la recarga.
-            celdaEnEdicion?.let { (caregiverId, fecha) ->
-                val cuidadorSemana = estado.cuidadores.firstOrNull { it.caregiver.id == caregiverId }
-                if (cuidadorSemana == null) {
-                    celdaEnEdicion = null
-                } else {
-                    DialogoDisponibilidad(
-                        caregiver = cuidadorSemana.caregiver,
-                        fecha = fecha,
-                        lunes = estado.lunes,
-                        bloquesDelDia = cuidadorSemana.dias.firstOrNull { it.fecha == fecha }?.bloqueos.orEmpty(),
-                        onEliminar = { viewModel.eliminarBloque(it) },
-                        turnos = estado.turnos,
-                        onGuardarTrabajo = { fechas, inicio, fin, duplicar, nombreTurno ->
-                            viewModel.guardarTrabajo(caregiverId, fechas, inicio, fin, duplicar, nombreTurno)
-                        },
-                        onCrearTurno = { nombre, inicio, fin -> viewModel.crearTurno(nombre, inicio, fin) },
-                        onEliminarTurno = { viewModel.eliminarTurno(it) },
-                        onGuardarBloques = { viewModel.guardarBloques(it) },
-                        onCerrar = { celdaEnEdicion = null }
-                    )
-                }
-            }
-
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                item {
-                    CabeceraFamilia(
-                        lunes = estado.lunes,
-                        esSemanaActual = estado.esSemanaActual,
-                        onSemanaAnterior = { viewModel.cambiarSemana(-1) },
-                        onSemanaSiguiente = { viewModel.cambiarSemana(1) },
-                        onIrASemanaActual = { viewModel.irASemanaActual() }
-                    )
-                }
-
-                item {
-                    Column {
-                        Text("Con quién están las niñas", style = MaterialTheme.typography.labelSmall)
-                        Spacer(Modifier.height(6.dp))
-                        FilaDeAsignacion(
-                            dias = estado.diasAsignacion,
-                            opciones = estado.opcionesAsignables,
-                            iniciales = iniciales,
-                            patronSemanal = estado.patronSemanal,
-                            onAsignarHabitual = { dia, idTexto -> viewModel.asignarResponsableHabitual(dia, idTexto) },
-                            onQuitarHabitual = { dia -> viewModel.quitarResponsableHabitual(dia) },
-                            onAnularFecha = { fecha, idTexto -> viewModel.anularParaEstaFecha(fecha, idTexto) },
-                            onQuitarCambioPuntual = { fecha -> viewModel.quitarCambioPuntual(fecha) }
-                        )
-                        Spacer(Modifier.height(2.dp))
-                        Text(
-                            "Toca un día para elegir quién es responsable, solo esta semana o siempre.",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-
-                item {
-                    Column {
-                        Text("Disponibilidad", style = MaterialTheme.typography.titleMedium)
-                        Text(
-                            "Toca la casilla de una persona en un día para añadir trabajo, médico, viajes…",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(Modifier.height(6.dp))
-                        Leyenda()
-                    }
-                }
-
-                items(estado.cuidadores) { cuidadorSemana ->
-                    FilaDeCuidador(
-                        cuidadorSemana = cuidadorSemana,
-                        onClickDia = { fecha -> celdaEnEdicion = cuidadorSemana.caregiver.id to fecha }
-                    )
-                }
             }
         }
     }
@@ -163,82 +213,114 @@ private fun CabeceraFamilia(
     esSemanaActual: Boolean,
     onSemanaAnterior: () -> Unit,
     onSemanaSiguiente: () -> Unit,
-    onIrASemanaActual: () -> Unit
+    onIrASemanaActual: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    var menuAbierto by remember { mutableStateOf(false) }
-    val domingo = lunes.plusDays(6)
-    val rango = if (lunes.month == domingo.month) {
-        "${lunes.dayOfMonth} - ${domingo.dayOfMonth} de ${mesEs(domingo)}"
-    } else {
-        "${lunes.dayOfMonth} de ${mesEs(lunes)} - ${domingo.dayOfMonth} de ${mesEs(domingo)}"
-    }
+    Column(modifier = modifier) {
+        Text(
+            "Familia",
+            fontSize = 32.sp,
+            lineHeight = 36.sp,
+            fontWeight = FontWeight.ExtraBold,
+            color = TINTA
+        )
+        Text("Coordinados, todo encaja", style = MaterialTheme.typography.bodyLarge, color = TINTA_SUAVE)
+        Spacer(Modifier.height(12.dp))
 
-    Column {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Top
-        ) {
-            Text("Familia", style = MaterialTheme.typography.headlineSmall)
-
-            Box {
-                Row(
+        Tarjeta {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                BotonCircular(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Semana anterior", onSemanaAnterior)
+                Text(
+                    textoRangoSemana(lunes),
+                    modifier = Modifier.weight(1f).padding(horizontal = 6.dp),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = TINTA,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2
+                )
+                // Siempre visible con el mismo estilo; solo responde si no estás ya en esta semana.
+                Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(MaterialTheme.colorScheme.secondaryContainer)
-                        .clickable { menuAbierto = true }
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .clip(RoundedCornerShape(50))
+                        .background(LAVANDA)
+                        .clickable(enabled = !esSemanaActual, onClick = onIrASemanaActual)
+                        .padding(horizontal = 14.dp, vertical = 10.dp)
                 ) {
-                    Icon(
-                        Icons.Default.DateRange,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
-                    Spacer(Modifier.width(6.dp))
                     Text(
-                        if (esSemanaActual) "Esta semana" else "Otra semana",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
-                    Spacer(Modifier.width(2.dp))
-                    Icon(
-                        Icons.Default.KeyboardArrowRight,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.onSecondaryContainer
+                        "Esta semana",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = INDIGO
                     )
                 }
-
-                DropdownMenu(expanded = menuAbierto, onDismissRequest = { menuAbierto = false }) {
-                    DropdownMenuItem(
-                        text = { Text("Semana anterior") },
-                        onClick = { menuAbierto = false; onSemanaAnterior() }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Esta semana") },
-                        enabled = !esSemanaActual,
-                        onClick = { menuAbierto = false; onIrASemanaActual() }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Semana siguiente") },
-                        onClick = { menuAbierto = false; onSemanaSiguiente() }
-                    )
-                }
+                Spacer(Modifier.width(6.dp))
+                BotonCircular(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Semana siguiente", onSemanaSiguiente)
             }
         }
-        Spacer(Modifier.height(2.dp))
-        Text(
-            "Semana del $rango",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
     }
 }
 
-private fun mesEs(fecha: LocalDate): String =
-    fecha.month.getDisplayName(TextStyle.FULL, Locale("es"))
+/** "21 - 27 de septiembre", o "28 sept - 4 oct" si la semana cambia de mes. */
+private fun textoRangoSemana(lunes: LocalDate): String {
+    val domingo = lunes.plusDays(6)
+    return if (lunes.month == domingo.month) {
+        "${lunes.dayOfMonth} - ${domingo.dayOfMonth} de ${domingo.month.getDisplayName(TextStyle.FULL, ES)}"
+    } else {
+        "${lunes.dayOfMonth} ${mesCorto(lunes)} - ${domingo.dayOfMonth} ${mesCorto(domingo)}"
+    }
+}
+
+private fun mesCorto(fecha: LocalDate): String =
+    fecha.month.getDisplayName(TextStyle.SHORT, ES).removeSuffix(".")
+
+/** Primera letra del día abreviado en español: L M M J V S D. */
+private fun letraDia(fecha: LocalDate): String =
+    fecha.dayOfWeek.getDisplayName(TextStyle.SHORT, ES).take(1).uppercase()
+
+/** Tarjeta blanca con esquinas redondeadas y sombra suave, base de todos los bloques. */
+@Composable
+private fun Tarjeta(modifier: Modifier = Modifier, contenido: @Composable ColumnScope.() -> Unit) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        color = Color.White,
+        shadowElevation = 2.dp
+    ) {
+        Column(content = contenido)
+    }
+}
+
+/** Icono en un cuadrado lavanda + título y subtítulo, como encabezado de una tarjeta. */
+@Composable
+private fun CabeceraTarjeta(icono: ImageVector, titulo: String, subtitulo: String, modifier: Modifier = Modifier) {
+    Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(LAVANDA),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icono, contentDescription = null, tint = INDIGO, modifier = Modifier.size(24.dp))
+        }
+        Spacer(Modifier.width(12.dp))
+        Column {
+            Text(titulo, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = TINTA)
+            Text(subtitulo, style = MaterialTheme.typography.bodySmall, color = TINTA_SUAVE)
+        }
+    }
+}
+
+@Composable
+private fun BotonCircular(icono: ImageVector, descripcion: String, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier.size(40.dp).clip(CircleShape).background(LAVANDA).clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(icono, contentDescription = descripcion, tint = INDIGO)
+    }
+}
 
 @Composable
 private fun FilaDeAsignacion(
@@ -249,22 +331,23 @@ private fun FilaDeAsignacion(
     onAsignarHabitual: (java.time.DayOfWeek, String) -> Unit,
     onQuitarHabitual: (java.time.DayOfWeek) -> Unit,
     onAnularFecha: (LocalDate, String) -> Unit,
-    onQuitarCambioPuntual: (LocalDate) -> Unit
+    onQuitarCambioPuntual: (LocalDate) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     var diaEnEdicion by remember { mutableStateOf<DiaAsignado?>(null) }
 
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+    Row(modifier = modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         dias.forEach { dia ->
             Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.clickable { diaEnEdicion = dia }
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable { diaEnEdicion = dia },
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(
-                    dia.fecha.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale("es")).take(1).uppercase(),
-                    style = MaterialTheme.typography.labelSmall
-                )
-                Spacer(Modifier.height(4.dp))
-                AvatarResponsable(responsable = dia.responsable, iniciales = iniciales, tamano = 32.dp)
+                Text(letraDia(dia.fecha), style = MaterialTheme.typography.labelMedium, color = TINTA_SUAVE)
+                Spacer(Modifier.height(6.dp))
+                PildoraDia(responsable = dia.responsable, iniciales = iniciales)
             }
         }
     }
@@ -282,6 +365,36 @@ private fun FilaDeAsignacion(
             onQuitarCambioPuntual = { onQuitarCambioPuntual(diaActual.fecha); diaEnEdicion = null },
             onCerrar = { diaEnEdicion = null }
         )
+    }
+}
+
+/** Pastilla de un día: iniciales sobre lavanda (persona), código sobre rayado (unidad) o "–" en gris. */
+@Composable
+private fun PildoraDia(responsable: Responsable?, iniciales: Map<CaregiverId, String>) {
+    val base = Modifier.fillMaxWidth().height(44.dp).clip(RoundedCornerShape(12.dp))
+    val estiloTexto = MaterialTheme.typography.titleSmall
+    when (responsable) {
+        null -> Box(base.background(GRIS_VACIO), contentAlignment = Alignment.Center) {
+            Text("–", style = estiloTexto, color = TINTA_SUAVE)
+        }
+
+        is Responsable.Persona -> Box(base.background(LAVANDA), contentAlignment = Alignment.Center) {
+            Text(
+                iniciales[responsable.caregiver.id] ?: "",
+                style = estiloTexto,
+                fontWeight = FontWeight.ExtraBold,
+                color = INDIGO
+            )
+        }
+
+        is Responsable.Unidad -> Box(base.fondoRayado(FONDO_UNIDAD), contentAlignment = Alignment.Center) {
+            Text(
+                responsable.unidad.codigo.take(2).uppercase(),
+                style = estiloTexto,
+                fontWeight = FontWeight.ExtraBold,
+                color = INDIGO
+            )
+        }
     }
 }
 
@@ -434,50 +547,178 @@ private fun Modifier.fondoRayado(colorFondo: Color): Modifier = this.drawBehind 
     }
 }
 
+/**
+ * Tarjeta con la cuadrícula de disponibilidad. Arriba, la cabecera con los 7 días;
+ * debajo, un bloque por persona: su avatar y nombre en una línea y, justo debajo,
+ * sus 7 casillas ocupando todo el ancho, alineadas con la cabecera. Así la semana
+ * entera (lunes a domingo) se ve siempre sin desplazarse.
+ */
 @Composable
-private fun FilaDeCuidador(cuidadorSemana: CuidadorDisponibilidadSemana, onClickDia: (LocalDate) -> Unit) {
-    Column {
-        Text(cuidadorSemana.caregiver.nombreCompleto, style = MaterialTheme.typography.labelMedium)
-        Spacer(Modifier.height(4.dp))
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-            cuidadorSemana.dias.forEach { dia ->
-                val primero = dia.bloqueos.minByOrNull { it.horaInicio }
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(40.dp)
-                        .clip(RoundedCornerShape(5.dp))
-                        .background(if (primero == null) VERDE else colorMotivo(primero.motivo))
-                        .clickable { onClickDia(dia.fecha) },
-                    contentAlignment = Alignment.Center
-                ) {
-                    textoCelda(dia.bloqueos)?.let { texto ->
-                        Text(
-                            texto,
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, lineHeight = 11.sp),
-                            textAlign = TextAlign.Center,
-                            maxLines = 2
-                        )
-                    }
+private fun TarjetaCuadricula(
+    lunes: LocalDate,
+    cuidadores: List<CuidadorDisponibilidadSemana>,
+    categorias: List<CategoriaDisponibilidad>,
+    iniciales: Map<CaregiverId, String>,
+    onClickDia: (CaregiverId, LocalDate) -> Unit
+) {
+    val fechas = (0..6).map { lunes.plusDays(it.toLong()) }
+    val hoy = LocalDate.now()
+
+    Tarjeta {
+        Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Mismo padding lateral que el interior de cada bloque, para que los días cuadren.
+            Row(
+                modifier = Modifier.fillMaxWidth().height(ALTO_CABECERA).padding(horizontal = PADDING_BLOQUE),
+                horizontalArrangement = Arrangement.spacedBy(ESPACIO_CELDAS)
+            ) {
+                fechas.forEach { fecha ->
+                    CabeceraDia(fecha, esHoy = fecha == hoy, modifier = Modifier.weight(1f))
                 }
+            }
+
+            if (cuidadores.isEmpty()) {
+                Text(
+                    "Añade personas en Ajustes para ver aquí su disponibilidad.",
+                    modifier = Modifier.padding(8.dp),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TINTA_SUAVE
+                )
+            }
+
+            cuidadores.forEachIndexed { indice, cuidadorSemana ->
+                BloqueCuidador(
+                    cuidadorSemana = cuidadorSemana,
+                    categorias = categorias,
+                    iniciales = iniciales[cuidadorSemana.caregiver.id] ?: "",
+                    colores = COLORES_AVATAR[indice % COLORES_AVATAR.size],
+                    onClickDia = { fecha -> onClickDia(cuidadorSemana.caregiver.id, fecha) }
+                )
             }
         }
     }
 }
 
-/** Qué significa cada color de las casillas. FlowRow para que baje de línea en móviles estrechos. */
-@OptIn(ExperimentalLayoutApi::class)
+/** Letra y número del día; el de hoy va resaltado en lavanda. */
 @Composable
-private fun Leyenda() {
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        (listOf<Pair<String, Color>>("Libre" to VERDE) +
-            MotivoNoDisponibilidad.values().map { etiquetaMotivo(it) to colorMotivo(it) }
-        ).forEach { (texto, color) ->
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(10.dp).clip(RoundedCornerShape(2.dp)).background(color))
-                Spacer(Modifier.width(3.dp))
-                Text(texto, style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp))
+private fun CabeceraDia(fecha: LocalDate, esHoy: Boolean, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .fillMaxHeight()
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (esHoy) LAVANDA else Color.Transparent),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(letraDia(fecha), style = MaterialTheme.typography.labelMedium, color = if (esHoy) INDIGO else TINTA_SUAVE)
+        Text(
+            "${fecha.dayOfMonth}",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = if (esHoy) INDIGO else TINTA
+        )
+    }
+}
+
+/** Una persona: avatar y nombre completo arriba, sus 7 casillas debajo. */
+@Composable
+private fun BloqueCuidador(
+    cuidadorSemana: CuidadorDisponibilidadSemana,
+    categorias: List<CategoriaDisponibilidad>,
+    iniciales: String,
+    colores: Pair<Color, Color>,
+    onClickDia: (LocalDate) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(FONDO_FILA)
+            .padding(PADDING_BLOQUE)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier.size(32.dp).clip(CircleShape).background(colores.first),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(iniciales, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = colores.second)
+            }
+            Spacer(Modifier.width(10.dp))
+            Text(
+                cuidadorSemana.caregiver.nombreCompleto,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = TINTA,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(ESPACIO_CELDAS)) {
+            cuidadorSemana.dias.forEach { dia ->
+                CeldaDisponibilidad(dia, categorias, modifier = Modifier.weight(1f)) { onClickDia(dia.fecha) }
             }
         }
+    }
+}
+
+@Composable
+private fun CeldaDisponibilidad(
+    dia: DiaDisponibilidadCuidador,
+    categorias: List<CategoriaDisponibilidad>,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    val primero = dia.bloqueos.minByOrNull { it.horaInicio }
+    Box(
+        modifier = modifier
+            .height(ALTO_CELDA)
+            .clip(RoundedCornerShape(10.dp))
+            .background(if (primero == null) VERDE else Color(primero.categoriaEn(categorias).color))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        val emoji = emojiCelda(dia.bloqueos, categorias)
+        if (emoji != null) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(emoji, fontSize = 22.sp)
+                if (dia.bloqueos.size > 1) {
+                    Text("+${dia.bloqueos.size - 1}", fontSize = 10.sp, fontWeight = FontWeight.Medium, color = TINTA)
+                }
+            }
+        } else textoCelda(dia.bloqueos)?.let { texto ->
+            Text(
+                texto,
+                fontSize = 12.sp,
+                lineHeight = 15.sp,
+                fontWeight = FontWeight.Medium,
+                color = TINTA,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                softWrap = false
+            )
+        }
+    }
+}
+
+/** Qué significa cada color de las casillas. FlowRow para que baje de línea en móviles estrechos. */
+@Composable
+private fun Leyenda(categorias: List<CategoriaDisponibilidad>) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        ElementoLeyenda(color = VERDE, texto = "Libre")
+        categorias.forEach { categoria ->
+            ElementoLeyenda(color = Color(categoria.color), texto = "${categoria.emoji} ${categoria.nombre}")
+        }
+    }
+}
+
+@Composable
+private fun ElementoLeyenda(color: Color, texto: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(16.dp).clip(RoundedCornerShape(4.dp)).background(color))
+        Spacer(Modifier.width(6.dp))
+        Text(texto, style = MaterialTheme.typography.bodySmall, color = TINTA)
     }
 }

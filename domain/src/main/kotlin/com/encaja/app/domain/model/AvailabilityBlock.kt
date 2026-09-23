@@ -4,11 +4,11 @@ import java.time.LocalDate
 import java.time.LocalTime
 
 /**
- * El "motivo" es una lista corta y fija a propósito: así el icono y el
- * color de cada tipo son siempre los mismos en toda la app. La "etiqueta"
- * es el texto libre que cada familia añade si quiere precisar
- * ("Revisión rodilla", "Viaje a Madrid"), y nunca condiciona la lógica
- * de cálculo de huecos.
+ * El "motivo" es una lista corta y fija: marca el comportamiento de los 5 tipos de
+ * serie. Las categorías propias de la familia se guardan con motivo OTRO y su
+ * [AvailabilityBlock.categoriaId] (ver CategoriaDisponibilidad). La "etiqueta" es el
+ * texto libre que cada familia añade si quiere precisar ("Revisión rodilla",
+ * "Viaje a Madrid"), y nunca condiciona la lógica de cálculo de huecos.
  */
 enum class MotivoNoDisponibilidad { TRABAJO, MEDICO, VIAJE, VACACIONES, OTRO }
 
@@ -27,7 +27,14 @@ data class AvailabilityBlock(
     val horaInicio: LocalTime,
     val horaFin: LocalTime,
     val motivo: MotivoNoDisponibilidad,
-    val etiqueta: String? = null
+    val etiqueta: String? = null,
+    /** Categoría propia de la familia; null en los bloques de los 5 tipos de serie. */
+    val categoriaId: CategoriaId? = null,
+    /**
+     * false si su categoría es solo informativa (no ocupa a la persona). No se guarda:
+     * se calcula al leer, a partir de la categoría (ver conBloqueoDeCategorias).
+     */
+    val bloquea: Boolean = true
 ) {
     val cruzaMedianoche: Boolean
         get() = !horaFin.isAfter(horaInicio)
@@ -42,11 +49,13 @@ data class AvailabilityBlock(
 
     /**
      * Si este bloque ocupa algo del tramo [inicio, fin) de [fechaTramo] — incluido
-     * el final de un turno de noche que empezó la víspera.
+     * el final de un turno de noche que empezó la víspera. Un bloque de una categoría
+     * informativa ([bloquea] = false) no ocupa nunca.
      */
-    fun ocupa(fechaTramo: LocalDate, inicio: LocalTime, fin: LocalTime): Boolean = when (fechaTramo) {
-        fecha -> solapaCon(inicio, fin)
-        fecha.plusDays(1) -> cruzaMedianoche && inicio.isBefore(horaFin)
+    fun ocupa(fechaTramo: LocalDate, inicio: LocalTime, fin: LocalTime): Boolean = when {
+        !bloquea -> false
+        fechaTramo == fecha -> solapaCon(inicio, fin)
+        fechaTramo == fecha.plusDays(1) -> cruzaMedianoche && inicio.isBefore(horaFin)
         else -> false
     }
 

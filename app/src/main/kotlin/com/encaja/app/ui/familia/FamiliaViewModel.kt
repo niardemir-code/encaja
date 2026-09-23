@@ -6,6 +6,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.encaja.app.domain.model.AvailabilityBlock
 import com.encaja.app.domain.model.CaregiverId
+import com.encaja.app.domain.model.CategoriaDisponibilidad
+import com.encaja.app.domain.model.CategoriaId
+import com.encaja.app.domain.model.CategoriasBase
 import com.encaja.app.domain.model.FamilyId
 import com.encaja.app.domain.model.MotivoNoDisponibilidad
 import com.encaja.app.domain.model.PatronCuidado
@@ -15,6 +18,7 @@ import com.encaja.app.domain.repository.AssignmentRepository
 import com.encaja.app.domain.repository.AuthRepository
 import com.encaja.app.domain.repository.AvailabilityRepository
 import com.encaja.app.domain.repository.CaregiverRepository
+import com.encaja.app.domain.repository.CategoriaRepository
 import com.encaja.app.domain.repository.FamilyMembershipRepository
 import com.encaja.app.domain.repository.FamilyUnitRepository
 import com.encaja.app.domain.repository.TurnoRepository
@@ -38,7 +42,8 @@ class FamiliaViewModel @Inject constructor(
     private val familyUnitRepository: FamilyUnitRepository,
     private val availabilityRepository: AvailabilityRepository,
     private val assignmentRepository: AssignmentRepository,
-    private val turnoRepository: TurnoRepository
+    private val turnoRepository: TurnoRepository,
+    private val categoriaRepository: CategoriaRepository
 ) : ViewModel() {
 
     private val _pantalla = MutableStateFlow<FamiliaPantallaEstado>(FamiliaPantallaEstado.Cargando)
@@ -52,16 +57,20 @@ class FamiliaViewModel @Inject constructor(
     init { cargar() }
     fun recargar() = cargar()
 
-    /** Avanza o retrocede semanas desde el chip de cabecera (-1 anterior, +1 siguiente). */
+    /**
+     * Avanza o retrocede semanas desde la cabecera (-1 anterior, +1 siguiente).
+     * Sin pantalla de "Cargando" de por medio: la semana anterior se queda visible
+     * hasta que llega la nueva, en vez de dejar la pantalla en blanco un momento.
+     */
     fun cambiarSemana(delta: Int) {
         offsetSemanas += delta
-        cargar()
+        cargar(mostrarCargando = false)
     }
 
     /** Vuelve directamente a la semana actual, sin acumular desplazamientos previos. */
     fun irASemanaActual() {
         offsetSemanas = 0
-        cargar()
+        cargar(mostrarCargando = false)
     }
 
     /**
@@ -85,10 +94,11 @@ class FamiliaViewModel @Inject constructor(
             val anulaciones = assignmentRepository.obtenerAnulaciones(membresia.familyId, lunes, domingo)
             val disponibilidad = availabilityRepository.obtenerDisponibilidad(membresia.familyId, lunes, domingo)
             val turnos = turnoRepository.obtenerTurnos(membresia.familyId).sortedBy { it.horaInicio }
+            val categorias = CategoriasBase.combinar(categoriaRepository.obtenerCategorias(membresia.familyId))
 
             val mapper = FamiliaUiStateMapper(caregivers, unidades, patrones, anulaciones, disponibilidad)
             _pantalla.value = FamiliaPantallaEstado.ConDatos(
-                mapper.construir(lunes, esSemanaActual = offsetSemanas == 0).copy(turnos = turnos)
+                mapper.construir(lunes, esSemanaActual = offsetSemanas == 0).copy(turnos = turnos, categorias = categorias)
             )
         }
     }
@@ -197,6 +207,33 @@ class FamiliaViewModel @Inject constructor(
         if (nombreLimpio.isBlank()) return
         viewModelScope.launch {
             turnoRepository.guardarTurno(familyId, TurnoTrabajo(TurnoId(UUID.randomUUID().toString()), nombreLimpio, inicio, fin))
+            cargar(mostrarCargando = false)
+        }
+    }
+
+    /**
+     * Crea o actualiza una categoría. Si es nueva (id vacío) se le da un id propio.
+     * Las de serie se guardan con su mismo id fijo: solo cuentan su emoji y su color.
+     */
+    fun guardarCategoria(categoria: CategoriaDisponibilidad) {
+        val familyId = familyIdActual ?: return
+        val nombreLimpio = categoria.nombre.trim()
+        if (nombreLimpio.isBlank()) return
+        val conId = if (categoria.id.value.isBlank()) categoria.copy(id = CategoriaId(UUID.randomUUID().toString())) else categoria
+        viewModelScope.launch {
+            categoriaRepository.guardarCategoria(familyId, conId.copy(nombre = nombreLimpio))
+            cargar(mostrarCargando = false)
+        }
+    }
+
+    /**
+     * Borra una categoría propia. Los días que ya estaban apuntados con ella no se borran:
+     * pasan a verse como "Otro" (y a ocupar a la persona), que es con lo que se guardaron.
+     */
+    fun eliminarCategoria(categoriaId: CategoriaId) {
+        val familyId = familyIdActual ?: return
+        viewModelScope.launch {
+            categoriaRepository.eliminarCategoria(familyId, categoriaId)
             cargar(mostrarCargando = false)
         }
     }

@@ -5,9 +5,9 @@ package com.encaja.app.ui.familia
 // NOTA: depende de Jetpack Compose (Material 3), no compilado en este entorno.
 // Diálogo que se abre al tocar la casilla de un cuidador en un día concreto de la
 // pantalla Familia. Arriba lista lo que ya hay ese día (con papelera); debajo se
-// elige el tipo a añadir (Trabajo, Médico, Viaje, Vacaciones, Otro) y aparece el
-// formulario de ese tipo. Las horas se eligen con el reloj de Material 3 y las
-// fechas con su calendario, nada se escribe a mano.
+// elige la categoría a añadir (las 5 de serie y las propias de la familia, que se
+// crean y editan aquí mismo con DialogoCategoria) y aparece su formulario. Las
+// horas se eligen con el reloj de Material 3 y las fechas con su calendario.
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -30,9 +31,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.encaja.app.domain.model.AvailabilityBlock
 import com.encaja.app.domain.model.Caregiver
+import com.encaja.app.domain.model.CategoriaDisponibilidad
+import com.encaja.app.domain.model.CategoriaId
+import com.encaja.app.domain.model.ModoCategoria
+import com.encaja.app.domain.model.categoriaEn
 import com.encaja.app.domain.model.MotivoNoDisponibilidad
 import com.encaja.app.domain.model.TurnoId
 import com.encaja.app.domain.model.TurnoTrabajo
+import kotlinx.coroutines.delay
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
@@ -41,13 +47,15 @@ import java.util.Locale
 
 private val ES = Locale("es")
 
-/** Color de fondo de la casilla según el tipo; se reutiliza en la leyenda. */
-fun colorMotivo(motivo: MotivoNoDisponibilidad): Color = when (motivo) {
-    MotivoNoDisponibilidad.TRABAJO -> Color(0xFFF7C1C1)
-    MotivoNoDisponibilidad.MEDICO -> Color(0xFFB5D4F4)
-    MotivoNoDisponibilidad.VIAJE -> Color(0xFFFAC775)
-    MotivoNoDisponibilidad.VACACIONES -> Color(0xFFDDD3F7)
-    MotivoNoDisponibilidad.OTRO -> Color(0xFFE0E0E0)
+private val DIAS_LABORABLES = setOf(
+    DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY
+)
+
+/** Texto de ayuda del campo libre de cada categoría. */
+private fun etiquetaCampo(categoria: CategoriaDisponibilidad): String = when (categoria.base) {
+    MotivoNoDisponibilidad.OTRO -> "¿Qué es?"
+    MotivoNoDisponibilidad.VIAJE -> "Destino (opcional)"
+    else -> "Detalle (opcional)"
 }
 
 private fun nombreDia(fecha: LocalDate): String =
@@ -63,14 +71,41 @@ fun DialogoDisponibilidad(
     lunes: LocalDate,
     bloquesDelDia: List<AvailabilityBlock>,
     turnos: List<TurnoTrabajo>,
+    categorias: List<CategoriaDisponibilidad>,
     onEliminar: (AvailabilityBlock) -> Unit,
     onGuardarTrabajo: (fechas: List<LocalDate>, inicio: LocalTime, fin: LocalTime, duplicarSemanaSiguiente: Boolean, nombreTurno: String?) -> Unit,
     onCrearTurno: (nombre: String, inicio: LocalTime, fin: LocalTime) -> Unit,
     onEliminarTurno: (TurnoId) -> Unit,
     onGuardarBloques: (List<AvailabilityBlock>) -> Unit,
+    onGuardarCategoria: (CategoriaDisponibilidad) -> Unit,
+    onEliminarCategoria: (CategoriaId) -> Unit,
     onCerrar: () -> Unit
 ) {
-    var tipo by remember { mutableStateOf<MotivoNoDisponibilidad?>(null) }
+    // Se guarda el id (no la categoría) para ver siempre su versión más reciente tras editarla.
+    var seleccionId by remember { mutableStateOf<CategoriaId?>(null) }
+    val seleccionada = categorias.firstOrNull { it.id == seleccionId }
+    val esTrabajo = seleccionada?.base == MotivoNoDisponibilidad.TRABAJO
+
+    var editandoCategorias by remember { mutableStateOf(false) }
+    var categoriaEnEdicion by remember { mutableStateOf<CategoriaDisponibilidad?>(null) }
+    var creandoCategoria by remember { mutableStateOf(false) }
+
+    // Estado del formulario de Trabajo, elevado aquí (en vez de dentro de FormularioTrabajo)
+    // para poder mostrar "Guardar" fuera de la zona con scroll, al mismo nivel que "Cerrar".
+    var trabajoInicio by remember { mutableStateOf(turnos.firstOrNull()?.horaInicio ?: LocalTime.of(8, 0)) }
+    var trabajoFin by remember { mutableStateOf(turnos.firstOrNull()?.horaFin ?: LocalTime.of(15, 0)) }
+    var trabajoDias by remember { mutableStateOf(setOf(fecha.dayOfWeek)) }
+    var avisoSemanaCopiada by remember { mutableStateOf(false) }
+
+    val trabajoFechas = fechasDeLaSemana(lunes, trabajoDias)
+    val trabajoTurnoElegido = turnoConHoras(turnos, trabajoInicio, trabajoFin)
+
+    LaunchedEffect(avisoSemanaCopiada) {
+        if (avisoSemanaCopiada) {
+            delay(2000)
+            avisoSemanaCopiada = false
+        }
+    }
 
     AlertDialog(
         onDismissRequest = onCerrar,
@@ -84,15 +119,18 @@ fun DialogoDisponibilidad(
                 if (bloquesDelDia.isNotEmpty()) {
                     Text("Este día", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                     bloquesDelDia.sortedBy { it.horaInicio }.forEach { bloque ->
+                        val categoria = bloque.categoriaEn(categorias)
                         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                Modifier.size(12.dp).clip(CircleShape).background(colorMotivo(bloque.motivo))
-                            )
+                            Box(Modifier.size(12.dp).clip(CircleShape).background(Color(categoria.color)))
                             Spacer(Modifier.width(8.dp))
                             Column(modifier = Modifier.weight(1f)) {
-                                Text("${etiquetaMotivo(bloque.motivo)} · ${textoHorario(bloque)}")
-                                bloque.etiqueta?.takeIf { it.isNotBlank() }?.let {
-                                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("${categoria.emoji} ${categoria.nombre} · ${textoHorario(bloque)}")
+                                val detalle = listOfNotNull(
+                                    bloque.etiqueta?.takeIf { it.isNotBlank() },
+                                    "no ocupa".takeIf { !categoria.bloquea }
+                                ).joinToString(" · ")
+                                if (detalle.isNotEmpty()) {
+                                    Text(detalle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
                             IconButton(onClick = { onEliminar(bloque) }) {
@@ -105,73 +143,168 @@ fun DialogoDisponibilidad(
                     Spacer(Modifier.height(8.dp))
                 }
 
-                Text("Añadir", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(4.dp))
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    MotivoNoDisponibilidad.values().forEach { opcion ->
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "Añadir",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.weight(1f)
+                    )
+                    TextButton(onClick = { editandoCategorias = !editandoCategorias }) {
+                        Text(if (editandoCategorias) "Hecho" else "Editar")
+                    }
+                }
+                if (editandoCategorias) {
+                    Text(
+                        "Toca una categoría para cambiar su icono, color o nombre.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(4.dp))
+                }
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    categorias.forEach { categoria ->
                         FilterChip(
-                            selected = tipo == opcion,
-                            onClick = { tipo = if (tipo == opcion) null else opcion },
-                            label = { Text(etiquetaMotivo(opcion)) }
+                            selected = !editandoCategorias && categoria.id == seleccionId,
+                            onClick = {
+                                if (editandoCategorias) categoriaEnEdicion = categoria
+                                else seleccionId = if (seleccionId == categoria.id) null else categoria.id
+                            },
+                            label = { Text("${categoria.emoji} ${categoria.nombre}") },
+                            trailingIcon = if (editandoCategorias) {
+                                { Icon(Icons.Default.Edit, contentDescription = "Editar", modifier = Modifier.size(16.dp)) }
+                            } else null,
+                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = Color(categoria.color))
                         )
                     }
+                    AssistChip(
+                        onClick = { creandoCategoria = true },
+                        label = { Text("Nueva categoría") },
+                        leadingIcon = { Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                    )
                 }
                 Spacer(Modifier.height(8.dp))
 
-                val seleccionado = tipo
-                if (seleccionado != null) when (seleccionado) {
-                    MotivoNoDisponibilidad.TRABAJO -> FormularioTrabajo(
-                        fecha = fecha,
-                        lunes = lunes,
-                        turnos = turnos,
-                        onCrearTurno = onCrearTurno,
-                        onEliminarTurno = onEliminarTurno,
-                        onGuardar = { fechas, inicio, fin, duplicar, nombreTurno ->
-                            onGuardarTrabajo(fechas, inicio, fin, duplicar, nombreTurno)
-                            onCerrar()
-                        }
-                    )
+                if (seleccionada != null && !editandoCategorias) {
+                    // key: al cambiar de categoría, el formulario empieza de cero.
+                    key(seleccionada.id) {
+                        when {
+                            esTrabajo -> FormularioTrabajo(
+                                fecha = fecha,
+                                turnos = turnos,
+                                inicio = trabajoInicio,
+                                onInicioCambiado = { trabajoInicio = it },
+                                fin = trabajoFin,
+                                onFinCambiado = { trabajoFin = it },
+                                dias = trabajoDias,
+                                onDiasCambiado = { trabajoDias = it },
+                                onCrearTurno = onCrearTurno,
+                                onEliminarTurno = onEliminarTurno,
+                                onDuplicar = {
+                                    onGuardarTrabajo(trabajoFechas, trabajoInicio, trabajoFin, true, trabajoTurnoElegido?.nombre)
+                                    avisoSemanaCopiada = true
+                                },
+                                puedeDuplicar = trabajoFechas.isNotEmpty(),
+                                avisoSemanaCopiada = avisoSemanaCopiada
+                            )
 
-                    MotivoNoDisponibilidad.MEDICO, MotivoNoDisponibilidad.OTRO -> FormularioHoras(
-                        motivo = seleccionado,
-                        onGuardar = { inicio, fin, etiqueta ->
-                            onGuardarBloques(listOf(AvailabilityBlock(caregiver.id, fecha, inicio, fin, seleccionado, etiqueta)))
-                            onCerrar()
-                        }
-                    )
+                            seleccionada.modo == ModoCategoria.HORAS -> FormularioHoras(
+                                etiquetaCampo = etiquetaCampo(seleccionada),
+                                onGuardar = { inicio, fin, etiqueta ->
+                                    onGuardarBloques(listOf(bloqueDeCategoria(seleccionada, caregiver.id, fecha, inicio, fin, etiqueta)))
+                                    onCerrar()
+                                }
+                            )
 
-                    MotivoNoDisponibilidad.VIAJE, MotivoNoDisponibilidad.VACACIONES -> FormularioRango(
-                        fecha = fecha,
-                        motivo = seleccionado,
-                        onGuardar = { fechas, etiqueta ->
-                            onGuardarBloques(fechas.map { dia ->
-                                AvailabilityBlock(
-                                    caregiver.id, dia, AvailabilityBlock.INICIO_DIA, AvailabilityBlock.FIN_DIA, seleccionado, etiqueta
-                                )
-                            })
-                            onCerrar()
+                            else -> FormularioRango(
+                                fecha = fecha,
+                                etiquetaCampo = etiquetaCampo(seleccionada),
+                                onGuardar = { fechas, etiqueta ->
+                                    onGuardarBloques(fechas.map { dia ->
+                                        bloqueDeCategoria(
+                                            seleccionada, caregiver.id, dia, AvailabilityBlock.INICIO_DIA, AvailabilityBlock.FIN_DIA, etiqueta
+                                        )
+                                    })
+                                    onCerrar()
+                                }
+                            )
                         }
-                    )
-
+                    }
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onCerrar) { Text("Cerrar") } }
+        confirmButton = {
+            if (esTrabajo && !editandoCategorias) {
+                TextButton(
+                    onClick = {
+                        onGuardarTrabajo(trabajoFechas, trabajoInicio, trabajoFin, false, trabajoTurnoElegido?.nombre)
+                        onCerrar()
+                    },
+                    enabled = trabajoFechas.isNotEmpty()
+                ) { Text("Guardar") }
+            } else {
+                TextButton(onClick = onCerrar) { Text("Cerrar") }
+            }
+        },
+        dismissButton = if (esTrabajo && !editandoCategorias) {
+            { TextButton(onClick = onCerrar) { Text("Cerrar") } }
+        } else null
     )
+
+    if (creandoCategoria) {
+        DialogoCategoria(
+            inicial = null,
+            categorias = categorias,
+            onGuardar = { nueva ->
+                onGuardarCategoria(nueva)
+                creandoCategoria = false
+                editandoCategorias = false
+                seleccionId = nueva.id // queda elegida en cuanto se recarga la lista
+            },
+            onEliminar = null,
+            onCerrar = { creandoCategoria = false }
+        )
+    }
+
+    categoriaEnEdicion?.let { categoria ->
+        DialogoCategoria(
+            inicial = categoria,
+            categorias = categorias,
+            onGuardar = { editada ->
+                onGuardarCategoria(editada)
+                categoriaEnEdicion = null
+            },
+            onEliminar = if (categoria.esBase) null else {
+                {
+                    onEliminarCategoria(categoria.id)
+                    if (seleccionId == categoria.id) seleccionId = null
+                    categoriaEnEdicion = null
+                }
+            },
+            onCerrar = { categoriaEnEdicion = null }
+        )
+    }
 }
 
 @Composable
 private fun FormularioTrabajo(
     fecha: LocalDate,
-    lunes: LocalDate,
     turnos: List<TurnoTrabajo>,
+    inicio: LocalTime,
+    onInicioCambiado: (LocalTime) -> Unit,
+    fin: LocalTime,
+    onFinCambiado: (LocalTime) -> Unit,
+    dias: Set<DayOfWeek>,
+    onDiasCambiado: (Set<DayOfWeek>) -> Unit,
     onCrearTurno: (nombre: String, inicio: LocalTime, fin: LocalTime) -> Unit,
     onEliminarTurno: (TurnoId) -> Unit,
-    onGuardar: (fechas: List<LocalDate>, inicio: LocalTime, fin: LocalTime, duplicar: Boolean, nombreTurno: String?) -> Unit
+    onDuplicar: () -> Unit,
+    puedeDuplicar: Boolean,
+    avisoSemanaCopiada: Boolean
 ) {
-    var inicio by remember { mutableStateOf(turnos.firstOrNull()?.horaInicio ?: LocalTime.of(8, 0)) }
-    var fin by remember { mutableStateOf(turnos.firstOrNull()?.horaFin ?: LocalTime.of(15, 0)) }
-    var dias by remember { mutableStateOf(setOf(fecha.dayOfWeek)) }
     var editandoTurnos by remember { mutableStateOf(false) }
     var nuevoTurnoAbierto by remember { mutableStateOf(false) }
     val turnoElegido = turnoConHoras(turnos, inicio, fin)
@@ -199,7 +332,7 @@ private fun FormularioTrabajo(
                 selected = !enEdicion && turno == turnoElegido,
                 onClick = {
                     if (enEdicion) onEliminarTurno(turno.id)
-                    else { inicio = turno.horaInicio; fin = turno.horaFin }
+                    else { onInicioCambiado(turno.horaInicio); onFinCambiado(turno.horaFin) }
                 },
                 label = { Text("${turno.nombre} · ${formatearHora(turno.horaInicio)}-${formatearHora(turno.horaFin)}") },
                 trailingIcon = if (enEdicion) {
@@ -219,8 +352,8 @@ private fun FormularioTrabajo(
     Spacer(Modifier.height(8.dp))
     Text("Horas de este día", style = MaterialTheme.typography.labelMedium)
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        BotonHora("Desde", inicio, Modifier.weight(1f)) { inicio = it }
-        BotonHora("Hasta", fin, Modifier.weight(1f)) { fin = it }
+        BotonHora("Desde", inicio, Modifier.weight(1f)) { onInicioCambiado(it) }
+        BotonHora("Hasta", fin, Modifier.weight(1f)) { onFinCambiado(it) }
     }
     if (!fin.isAfter(inicio)) {
         Text(
@@ -239,7 +372,7 @@ private fun FormularioTrabajo(
             finInicial = fin,
             onCrear = { nombre, i, f ->
                 onCrearTurno(nombre, i, f)
-                inicio = i; fin = f
+                onInicioCambiado(i); onFinCambiado(f)
                 nuevoTurnoAbierto = false
             },
             onCerrar = { nuevoTurnoAbierto = false }
@@ -250,14 +383,14 @@ private fun FormularioTrabajo(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { dias = if (dias.size == 7) setOf(fecha.dayOfWeek) else DayOfWeek.values().toSet() },
+            .clickable { onDiasCambiado(if (dias == DIAS_LABORABLES) setOf(fecha.dayOfWeek) else DIAS_LABORABLES) },
         verticalAlignment = Alignment.CenterVertically
     ) {
         Checkbox(
-            checked = dias.size == 7,
-            onCheckedChange = { marcado -> dias = if (marcado) DayOfWeek.values().toSet() else setOf(fecha.dayOfWeek) }
+            checked = dias == DIAS_LABORABLES,
+            onCheckedChange = { marcado -> onDiasCambiado(if (marcado) DIAS_LABORABLES else setOf(fecha.dayOfWeek)) }
         )
-        Text("Toda la semana (lunes a domingo)")
+        Text("De lunes a viernes")
     }
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         DayOfWeek.values().forEach { dia ->
@@ -268,7 +401,7 @@ private fun FormularioTrabajo(
                     .clip(CircleShape)
                     .background(if (marcado) MaterialTheme.colorScheme.primary else Color.Transparent)
                     .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
-                    .clickable { dias = if (marcado) dias - dia else dias + dia },
+                    .clickable { onDiasCambiado(if (marcado) dias - dia else dias + dia) },
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -280,23 +413,25 @@ private fun FormularioTrabajo(
         }
     }
 
-    Spacer(Modifier.height(16.dp))
-    val fechas = fechasDeLaSemana(lunes, dias)
-    Button(
-        onClick = { onGuardar(fechas, inicio, fin, false, turnoElegido?.nombre) },
-        enabled = fechas.isNotEmpty(),
-        modifier = Modifier.fillMaxWidth()
-    ) { Text("Guardar") }
-    OutlinedButton(
-        onClick = { onGuardar(fechas, inicio, fin, true, turnoElegido?.nombre) },
-        enabled = fechas.isNotEmpty(),
-        modifier = Modifier.fillMaxWidth()
-    ) { Text("Guardar y duplicar a la semana siguiente") }
+    Spacer(Modifier.height(12.dp))
+    // En columna (no en fila): con los dos textos en horizontal, en un diálogo estrecho
+    // el aviso se salía por el borde derecho y quedaba cortado.
+    Column(modifier = Modifier.fillMaxWidth()) {
+        TextButton(onClick = onDuplicar, enabled = puedeDuplicar) { Text("Duplicar a la semana siguiente") }
+        if (avisoSemanaCopiada) {
+            Text(
+                "Semana copiada ✓",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(start = 12.dp)
+            )
+        }
+    }
 }
 
 @Composable
 private fun FormularioHoras(
-    motivo: MotivoNoDisponibilidad,
+    etiquetaCampo: String,
     onGuardar: (inicio: LocalTime, fin: LocalTime, etiqueta: String?) -> Unit
 ) {
     var todoElDia by remember { mutableStateOf(false) }
@@ -329,7 +464,7 @@ private fun FormularioHoras(
     OutlinedTextField(
         value = etiqueta,
         onValueChange = { etiqueta = it },
-        label = { Text(if (motivo == MotivoNoDisponibilidad.OTRO) "¿Qué es?" else "Detalle (opcional)") },
+        label = { Text(etiquetaCampo) },
         singleLine = true,
         modifier = Modifier.fillMaxWidth()
     )
@@ -347,7 +482,7 @@ private fun FormularioHoras(
 @Composable
 private fun FormularioRango(
     fecha: LocalDate,
-    motivo: MotivoNoDisponibilidad,
+    etiquetaCampo: String,
     onGuardar: (fechas: List<LocalDate>, etiqueta: String?) -> Unit
 ) {
     var desde by remember { mutableStateOf(fecha) }
@@ -369,7 +504,7 @@ private fun FormularioRango(
     OutlinedTextField(
         value = etiqueta,
         onValueChange = { etiqueta = it },
-        label = { Text(if (motivo == MotivoNoDisponibilidad.VIAJE) "Destino (opcional)" else "Detalle (opcional)") },
+        label = { Text(etiquetaCampo) },
         singleLine = true,
         modifier = Modifier.fillMaxWidth()
     )

@@ -75,6 +75,18 @@ interface TurnoDao {
 }
 
 @Dao
+interface CategoriaDao {
+    @Query("SELECT * FROM categorias_disponibilidad WHERE familyId = :familyId")
+    suspend fun obtener(familyId: String): List<CategoriaEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun guardarTodas(categorias: List<CategoriaEntity>)
+
+    @Query("DELETE FROM categorias_disponibilidad WHERE familyId = :familyId AND id = :id")
+    suspend fun eliminar(familyId: String, id: String)
+}
+
+@Dao
 interface FamilyUnitDao {
     @Query("SELECT * FROM family_units WHERE familyId = :familyId")
     suspend fun obtener(familyId: String): List<FamilyUnitEntity>

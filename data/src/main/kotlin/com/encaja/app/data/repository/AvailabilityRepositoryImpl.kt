@@ -6,7 +6,9 @@ import com.encaja.app.data.local.AvailabilityDao
 import com.encaja.app.domain.model.AvailabilityBlock
 import com.encaja.app.domain.model.CaregiverId
 import com.encaja.app.domain.model.FamilyId
+import com.encaja.app.domain.model.conBloqueoDeCategorias
 import com.encaja.app.domain.repository.AvailabilityRepository
+import com.encaja.app.domain.repository.CategoriaRepository
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 import java.time.LocalDate
@@ -15,7 +17,8 @@ import javax.inject.Inject
 
 class AvailabilityRepositoryImpl @Inject constructor(
     private val dao: AvailabilityDao,
-    private val firestore: FirebaseFirestore
+    private val firestore: FirebaseFirestore,
+    private val categoriaRepository: CategoriaRepository
 ) : AvailabilityRepository {
 
     private fun idDocumento(caregiverId: CaregiverId, fecha: LocalDate, horaInicio: LocalTime) =
@@ -24,7 +27,18 @@ class AvailabilityRepositoryImpl @Inject constructor(
     private fun coleccion(familyId: FamilyId) =
         firestore.collection("families").document(familyId.value).collection("availabilityBlocks")
 
+    /**
+     * Lo que ven todas las pantallas (y el cálculo de huecos): los bloques con "bloquea"
+     * ya ajustado según su categoría. Solo se consultan las categorías si hay algún
+     * bloque de una categoría propia.
+     */
     override suspend fun obtenerDisponibilidad(familyId: FamilyId, desde: LocalDate, hasta: LocalDate): List<AvailabilityBlock> {
+        val bloques = leerBloques(familyId, desde, hasta)
+        if (bloques.none { it.categoriaId != null }) return bloques
+        return bloques.conBloqueoDeCategorias(categoriaRepository.obtenerCategorias(familyId))
+    }
+
+    private suspend fun leerBloques(familyId: FamilyId, desde: LocalDate, hasta: LocalDate): List<AvailabilityBlock> {
         return try {
             val snapshot = coleccion(familyId)
                 .whereGreaterThanOrEqualTo("fecha", desde.toString())
