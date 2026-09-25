@@ -22,8 +22,20 @@ interface CoverageNeedDao {
     @Query("SELECT * FROM coverage_needs WHERE familyId = :familyId AND fecha BETWEEN :desde AND :hasta")
     suspend fun obtener(familyId: String, desde: String, hasta: String): List<CoverageNeedEntity>
 
+    @Query("SELECT * FROM coverage_needs WHERE familyId = :familyId")
+    suspend fun obtenerTodos(familyId: String): List<CoverageNeedEntity>
+
+    @Query("SELECT * FROM coverage_needs WHERE familyId = :familyId AND grupoRepeticionId = :grupoRepeticionId")
+    suspend fun obtenerPorGrupo(familyId: String, grupoRepeticionId: String): List<CoverageNeedEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun guardarTodos(needs: List<CoverageNeedEntity>)
+
+    @Query("DELETE FROM coverage_needs WHERE familyId = :familyId AND id = :id")
+    suspend fun eliminar(familyId: String, id: String)
+
+    @Query("DELETE FROM coverage_needs WHERE familyId = :familyId AND id IN (:ids)")
+    suspend fun eliminarVarios(familyId: String, ids: List<String>)
 }
 
 @Dao
@@ -42,24 +54,12 @@ interface AvailabilityDao {
 }
 
 @Dao
-interface AssignmentDao {
-    @Query("SELECT * FROM patrones_cuidado WHERE familyId = :familyId")
-    suspend fun obtenerPatrones(familyId: String): List<PatronCuidadoEntity>
+interface FilaVisibleDao {
+    @Query("SELECT * FROM filas_visibles WHERE familyId = :familyId AND lunes = :lunes")
+    suspend fun obtener(familyId: String, lunes: String): FilaVisibleEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun guardarPatrones(patrones: List<PatronCuidadoEntity>)
-
-    @Query("DELETE FROM patrones_cuidado WHERE familyId = :familyId AND diaSemana = :diaSemana")
-    suspend fun eliminarPatron(familyId: String, diaSemana: String)
-
-    @Query("SELECT * FROM anulaciones WHERE familyId = :familyId AND fecha BETWEEN :desde AND :hasta")
-    suspend fun obtenerAnulaciones(familyId: String, desde: String, hasta: String): List<AnulacionEntity>
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun guardarAnulacion(anulacion: AnulacionEntity)
-
-    @Query("DELETE FROM anulaciones WHERE familyId = :familyId AND fecha = :fecha")
-    suspend fun eliminarAnulacion(familyId: String, fecha: String)
+    suspend fun guardar(fila: FilaVisibleEntity)
 }
 
 @Dao

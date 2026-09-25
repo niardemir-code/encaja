@@ -40,7 +40,11 @@ import com.encaja.app.domain.model.FamilyUnit
 import com.encaja.app.domain.model.FamilyUnitId
 
 @Composable
-fun AjustesScreen(onCerrarSesion: () -> Unit, viewModel: AjustesViewModel = hiltViewModel()) {
+fun AjustesScreen(
+    onCerrarSesion: () -> Unit,
+    onAbrirTodasActividades: () -> Unit,
+    viewModel: AjustesViewModel = hiltViewModel()
+) {
     val pantalla by viewModel.pantalla.collectAsState()
 
     Column(
@@ -100,6 +104,11 @@ fun AjustesScreen(onCerrarSesion: () -> Unit, viewModel: AjustesViewModel = hilt
         }
 
         Spacer(Modifier.height(32.dp))
+        OutlinedButton(onClick = onAbrirTodasActividades, modifier = Modifier.fillMaxWidth()) {
+            Text("Todas las actividades")
+        }
+
+        Spacer(Modifier.height(16.dp))
         OutlinedButton(onClick = onCerrarSesion, modifier = Modifier.fillMaxWidth()) {
             Text("Cerrar sesión")
         }

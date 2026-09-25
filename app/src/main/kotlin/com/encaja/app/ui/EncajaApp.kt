@@ -37,6 +37,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.encaja.app.ui.actividades.TodasActividadesScreen
 import com.encaja.app.ui.ajustes.AjustesScreen
 import com.encaja.app.ui.compra.CompraScreen
 import com.encaja.app.ui.familia.FamiliaScreen
@@ -54,6 +55,11 @@ private sealed class Destino(val ruta: String, val etiqueta: String, val icono: 
 
 private val destinosBarraInferior = listOf(Destino.Semana, Destino.Guia, Destino.Familia, Destino.Menu, Destino.Compra)
 private const val RUTA_AJUSTES = "ajustes"
+private const val RUTA_TODAS_ACTIVIDADES = "todas_actividades"
+
+/** Rutas fuera de las pestañas de la barra inferior: llevan flecha de "atrás" en vez de
+ * quedarse sin icono de navegación a la izquierda. */
+private val RUTAS_CON_ATRAS = setOf(RUTA_AJUSTES, RUTA_TODAS_ACTIVIDADES)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -69,9 +75,9 @@ fun EncajaApp(onCerrarSesion: () -> Unit, viewModel: EncajaAppViewModel = hiltVi
             TopAppBar(
                 title = { Text("Encaja") },
                 navigationIcon = {
-                    if (rutaActual == RUTA_AJUSTES) {
+                    if (rutaActual != null && rutaActual in RUTAS_CON_ATRAS) {
                         IconButton(onClick = { navController.popBackStack() }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Cerrar ajustes")
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
                         }
                     }
                 },
@@ -120,7 +126,13 @@ fun EncajaApp(onCerrarSesion: () -> Unit, viewModel: EncajaAppViewModel = hiltVi
             composable(Destino.Familia.ruta) { FamiliaScreen() }
             composable(Destino.Menu.ruta) { MenuScreen() }
             composable(Destino.Compra.ruta) { CompraScreen() }
-            composable(RUTA_AJUSTES) { AjustesScreen(onCerrarSesion = onCerrarSesion) }
+            composable(RUTA_AJUSTES) {
+                AjustesScreen(
+                    onCerrarSesion = onCerrarSesion,
+                    onAbrirTodasActividades = { navController.navigate(RUTA_TODAS_ACTIVIDADES) }
+                )
+            }
+            composable(RUTA_TODAS_ACTIVIDADES) { TodasActividadesScreen() }
         }
     }
 }
