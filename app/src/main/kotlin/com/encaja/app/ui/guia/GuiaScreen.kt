@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 package com.encaja.app.ui.guia
 
 // NOTA: depende de Jetpack Compose y Hilt, no compilado en este entorno.
@@ -14,10 +16,12 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.MyLocation
@@ -38,9 +42,13 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.encaja.app.domain.model.CaregiverId
 import com.encaja.app.domain.model.CoverageNeed
 import com.encaja.app.ui.familia.Responsable
+import com.encaja.app.ui.familia.fechaAMillisUtc
 import com.encaja.app.ui.familia.formatearHora
+import com.encaja.app.ui.familia.millisUtcAFecha
+import com.encaja.app.ui.theme.LocalEncajaExtraColors
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -64,8 +72,10 @@ private val MARGEN_AHORA: Dp = 72.dp
 // dentro del bloque (que mide 56.dp de alto).
 private val ANCHO_ICONO_RESPONSABLE: Dp = 32.dp
 
-private val VERDE = Color(0xFFC0DD97)
-private val ROJO = Color(0xFFF7C1C1)
+private val VERDE: Color
+    @Composable get() = LocalEncajaExtraColors.current.verde
+private val ROJO: Color
+    @Composable get() = MaterialTheme.colorScheme.errorContainer
 
 @Composable
 fun GuiaScreen(viewModel: GuiaViewModel = hiltViewModel()) {
@@ -127,11 +137,17 @@ fun GuiaScreen(viewModel: GuiaViewModel = hiltViewModel()) {
                         scrollState.scrollTo(if (esHoy) destinoAhoraPx() else 0)
                     }
 
-                    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
+                            .padding(16.dp)
+                    ) {
                         CabeceraDeDia(
                             fecha = fecha,
                             onDiaAnterior = { viewModel.diaAnterior() },
                             onDiaSiguiente = { viewModel.diaSiguiente() },
+                            onElegirFecha = { viewModel.irADia(it) },
                             onAhora = {
                                 if (esHoy) {
                                     coroutineScope.launch { scrollState.animateScrollTo(destinoAhoraPx()) }
@@ -162,6 +178,21 @@ fun GuiaScreen(viewModel: GuiaViewModel = hiltViewModel()) {
                                     )
                                 }
                             }
+
+                            Spacer(Modifier.height(20.dp))
+                            HorizontalDivider()
+                            Spacer(Modifier.height(12.dp))
+                            Text(
+                                "Actividades del día",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                                estadoActual.estado.filas.forEach { fila ->
+                                    ListaActividadesDelNino(fila = fila, onEditar = { actividadEnEdicion = it })
+                                }
+                            }
                         }
                     }
 
@@ -181,17 +212,40 @@ fun GuiaScreen(viewModel: GuiaViewModel = hiltViewModel()) {
                     }
 
                     actividadEnEdicion?.let { need ->
+                        // Patrón real de la serie (días de la semana y última fecha), para
+                        // preseleccionar el selector de días al abrir "Repetir" en vez de
+                        // partir de uno vacío. Se pide de nuevo cada vez que cambia la
+                        // actividad en edición.
+                        var diasSerieActual by remember(need.id) { mutableStateOf<Set<DayOfWeek>?>(null) }
+                        var hastaSerieActual by remember(need.id) { mutableStateOf<LocalDate?>(null) }
+                        var patronSerieCargando by remember(need.id) { mutableStateOf(need.grupoRepeticionId != null) }
+                        LaunchedEffect(need.id) {
+                            val grupoId = need.grupoRepeticionId
+                            if (grupoId != null) {
+                                val (dias, hasta) = viewModel.patronDeSerie(grupoId, need.fecha)
+                                diasSerieActual = dias
+                                hastaSerieActual = hasta
+                                patronSerieCargando = false
+                            }
+                        }
                         DialogoActividad(
                             fecha = need.fecha,
                             ninos = estadoActual.estado.filas.map { it.child },
                             actividad = need,
                             responsables = estadoActual.estado.responsables,
+                            diasSerieActual = diasSerieActual,
+                            hastaSerieActual = hastaSerieActual,
+                            patronSerieCargando = patronSerieCargando,
                             onGuardar = { needs, aplicarATodaLaSerie ->
                                 viewModel.guardarActividades(needs, aplicarATodaLaSerie)
                                 actividadEnEdicion = null
                             },
                             onEliminar = { aplicarATodaLaSerie ->
                                 viewModel.eliminarActividad(need.id, need.grupoRepeticionId, need.fecha, aplicarATodaLaSerie)
+                                actividadEnEdicion = null
+                            },
+                            onActualizarSerie = { plantilla, nuevasFechas ->
+                                viewModel.actualizarSerie(plantilla, nuevasFechas)
                                 actividadEnEdicion = null
                             },
                             onCerrar = { actividadEnEdicion = null }
@@ -204,10 +258,17 @@ fun GuiaScreen(viewModel: GuiaViewModel = hiltViewModel()) {
 }
 
 @Composable
-private fun CabeceraDeDia(fecha: LocalDate, onDiaAnterior: () -> Unit, onDiaSiguiente: () -> Unit, onAhora: () -> Unit) {
+private fun CabeceraDeDia(
+    fecha: LocalDate,
+    onDiaAnterior: () -> Unit,
+    onDiaSiguiente: () -> Unit,
+    onElegirFecha: (LocalDate) -> Unit,
+    onAhora: () -> Unit
+) {
     val formatter = DateTimeFormatter.ofPattern("d 'de' MMMM", Locale("es"))
     val etiquetaDia = fecha.dayOfWeek.getDisplayName(TextStyle.FULL, Locale("es"))
         .replaceFirstChar { it.uppercase() }
+    var calendarioAbierto by remember { mutableStateOf(false) }
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -217,17 +278,39 @@ private fun CabeceraDeDia(fecha: LocalDate, onDiaAnterior: () -> Unit, onDiaSigu
         IconButton(onClick = onDiaAnterior) {
             Icon(Icons.Default.ChevronLeft, contentDescription = "Día anterior")
         }
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.clickable { calendarioAbierto = true }
+        ) {
             Text(etiquetaDia, style = MaterialTheme.typography.titleMedium)
             Text(fecha.format(formatter), style = MaterialTheme.typography.labelMedium)
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = { calendarioAbierto = true }) {
+                Icon(Icons.Default.CalendarMonth, contentDescription = "Ir a una fecha")
+            }
             IconButton(onClick = onAhora) {
                 Icon(Icons.Default.MyLocation, contentDescription = "Ahora")
             }
             IconButton(onClick = onDiaSiguiente) {
                 Icon(Icons.Default.ChevronRight, contentDescription = "Día siguiente")
             }
+        }
+    }
+
+    if (calendarioAbierto) {
+        val estado = rememberDatePickerState(initialSelectedDateMillis = fechaAMillisUtc(fecha))
+        DatePickerDialog(
+            onDismissRequest = { calendarioAbierto = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    estado.selectedDateMillis?.let { onElegirFecha(millisUtcAFecha(it)) }
+                    calendarioAbierto = false
+                }) { Text("Ir") }
+            },
+            dismissButton = { TextButton(onClick = { calendarioAbierto = false }) { Text("Cancelar") } }
+        ) {
+            DatePicker(state = estado)
         }
     }
 }
@@ -297,6 +380,64 @@ private fun FilaTimelineDelNino(
                         .fillMaxHeight()
                         .background(MaterialTheme.colorScheme.error)
                 )
+            }
+        }
+    }
+}
+
+/**
+ * El listado de las actividades de un niño ese día, debajo de las líneas de tiempo:
+ * mismo contenido que los bloques de arriba pero en formato de lista (hora, descripción
+ * y quién lleva/recoge), más fácil de leer de un vistazo o de repasar entero sin hacer
+ * scroll horizontal. Tocar una actividad la abre para editarla, igual que en la línea de
+ * tiempo.
+ */
+@Composable
+private fun ListaActividadesDelNino(fila: FilaGuia, onEditar: (CoverageNeed) -> Unit) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(fila.child.nombre, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(4.dp))
+        if (fila.bloques.isEmpty()) {
+            Text(
+                "Sin actividades",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        } else {
+            fila.bloques.sortedBy { it.need.horaInicio }.forEach { bloque ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { onEditar(bloque.need) }
+                        .padding(vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .clip(CircleShape)
+                            .background(if (bloque.cubierto) VERDE else ROJO)
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "${formatearHora(bloque.need.horaInicio)}–${formatearHora(bloque.need.horaFin)} · ${bloque.need.descripcion}",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        val detalle = listOfNotNull(
+                            bloque.quienLleva?.let { "Lleva: ${it.etiqueta}" },
+                            bloque.quienRecoge?.let { "Recoge: ${it.etiqueta}" }
+                        ).joinToString(" · ")
+                        if (detalle.isNotEmpty()) {
+                            Text(
+                                detalle,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
             }
         }
     }

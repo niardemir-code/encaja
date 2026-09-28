@@ -1,7 +1,9 @@
 package com.encaja.app.ui
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -29,8 +31,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.encaja.app.R
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -38,11 +43,15 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.encaja.app.ui.actividades.TodasActividadesScreen
+import com.encaja.app.ui.ajustes.AjustesCuidadoresScreen
+import com.encaja.app.ui.ajustes.AjustesNinosScreen
 import com.encaja.app.ui.ajustes.AjustesScreen
 import com.encaja.app.ui.compra.CompraScreen
 import com.encaja.app.ui.familia.FamiliaScreen
 import com.encaja.app.ui.guia.GuiaScreen
 import com.encaja.app.ui.menu.MenuScreen
+import com.encaja.app.ui.semana.BotonInvitar
+import com.encaja.app.ui.semana.SemaforoViewModel
 import com.encaja.app.ui.semana.SemanaScreen
 
 private sealed class Destino(val ruta: String, val etiqueta: String, val icono: ImageVector) {
@@ -55,11 +64,13 @@ private sealed class Destino(val ruta: String, val etiqueta: String, val icono: 
 
 private val destinosBarraInferior = listOf(Destino.Semana, Destino.Guia, Destino.Familia, Destino.Menu, Destino.Compra)
 private const val RUTA_AJUSTES = "ajustes"
+private const val RUTA_AJUSTES_NINOS = "ajustes/ninos"
+private const val RUTA_AJUSTES_CUIDADORES = "ajustes/cuidadores"
 private const val RUTA_TODAS_ACTIVIDADES = "todas_actividades"
 
 /** Rutas fuera de las pestañas de la barra inferior: llevan flecha de "atrás" en vez de
  * quedarse sin icono de navegación a la izquierda. */
-private val RUTAS_CON_ATRAS = setOf(RUTA_AJUSTES, RUTA_TODAS_ACTIVIDADES)
+private val RUTAS_CON_ATRAS = setOf(RUTA_AJUSTES, RUTA_AJUSTES_NINOS, RUTA_AJUSTES_CUIDADORES, RUTA_TODAS_ACTIVIDADES)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,7 +84,20 @@ fun EncajaApp(onCerrarSesion: () -> Unit, viewModel: EncajaAppViewModel = hiltVi
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Encaja") },
+                title = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Image(
+                            painter = painterResource(R.drawable.ic_logo),
+                            contentDescription = null,
+                            modifier = Modifier.size(28.dp)
+                        )
+                        Text(
+                            "Encaja",
+                            modifier = Modifier.padding(start = 8.dp),
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                },
                 navigationIcon = {
                     if (rutaActual != null && rutaActual in RUTAS_CON_ATRAS) {
                         IconButton(onClick = { navController.popBackStack() }) {
@@ -82,6 +106,16 @@ fun EncajaApp(onCerrarSesion: () -> Unit, viewModel: EncajaAppViewModel = hiltVi
                     }
                 },
                 actions = {
+                    // El botón de invitar vive aquí (y no en la lista de Semana) para que
+                    // esté siempre a mano; usa el mismo SemaforoViewModel de la pestaña
+                    // Semana, así que solo se puede mostrar cuando esa pestaña ya existe
+                    // en el back stack (backStackEntry no es null).
+                    if (rutaActual == Destino.Semana.ruta) {
+                        backStackEntry?.let { entry ->
+                            val semanaViewModel: SemaforoViewModel = hiltViewModel(entry)
+                            BotonInvitar(semanaViewModel)
+                        }
+                    }
                     if (inicialesUsuario.isNotBlank()) {
                         AvatarUsuario(inicialesUsuario)
                     }
@@ -97,16 +131,15 @@ fun EncajaApp(onCerrarSesion: () -> Unit, viewModel: EncajaAppViewModel = hiltVi
                     NavigationBarItem(
                         selected = rutaActual == destino.ruta,
                         onClick = {
-                            // No se usa saveState/restoreState a propósito: esa combinación
-                            // provocaba que, al volver de Ajustes (una pantalla fuera de las
-                            // pestañas), pulsar la pestaña en la que ya se había estado antes
-                            // se quedara colgado sin navegar. Con solo popUpTo +
-                            // launchSingleTop cada pestaña navega siempre correctamente; el
-                            // coste es que se pierde el scroll al cambiar de pestaña, algo
-                            // asumible en esta app.
+                            // saveState/restoreState es lo que hace que cada pestaña conserve su
+                            // propio estado (p.ej. el día o la semana en que se estaba) al volver a
+                            // ella, en vez de recrearse desde cero cada vez.
                             navController.navigate(destino.ruta) {
-                                popUpTo(navController.graph.findStartDestination().id)
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
                                 launchSingleTop = true
+                                restoreState = true
                             }
                         },
                         icon = { Icon(destino.icono, contentDescription = destino.etiqueta) },
@@ -129,9 +162,13 @@ fun EncajaApp(onCerrarSesion: () -> Unit, viewModel: EncajaAppViewModel = hiltVi
             composable(RUTA_AJUSTES) {
                 AjustesScreen(
                     onCerrarSesion = onCerrarSesion,
+                    onAbrirNinos = { navController.navigate(RUTA_AJUSTES_NINOS) },
+                    onAbrirCuidadores = { navController.navigate(RUTA_AJUSTES_CUIDADORES) },
                     onAbrirTodasActividades = { navController.navigate(RUTA_TODAS_ACTIVIDADES) }
                 )
             }
+            composable(RUTA_AJUSTES_NINOS) { AjustesNinosScreen() }
+            composable(RUTA_AJUSTES_CUIDADORES) { AjustesCuidadoresScreen() }
             composable(RUTA_TODAS_ACTIVIDADES) { TodasActividadesScreen() }
         }
     }

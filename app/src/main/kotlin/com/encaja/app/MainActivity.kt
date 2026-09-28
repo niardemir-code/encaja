@@ -11,6 +11,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.encaja.app.ui.EncajaApp
 import com.encaja.app.ui.auth.AuthViewModel
 import com.encaja.app.ui.auth.LoginScreen
+import com.encaja.app.ui.theme.EncajaTheme
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -18,8 +19,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MaterialTheme {
-                Surface {
+            // Cambia solo entre "Cálido" (claro) y "Nocturno" (oscuro) según el
+            // tema del sistema del teléfono; no hay selector manual en la app.
+            EncajaTheme {
+                Surface(color = MaterialTheme.colorScheme.background) {
                     val authViewModel: AuthViewModel = hiltViewModel()
                     val autenticado by authViewModel.autenticado.collectAsState()
 

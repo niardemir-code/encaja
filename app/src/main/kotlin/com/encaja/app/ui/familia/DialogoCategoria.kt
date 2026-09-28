@@ -33,8 +33,10 @@ import com.encaja.app.domain.model.CategoriaId
 import com.encaja.app.domain.model.ModoCategoria
 import java.util.UUID
 
-private val TINTA_EDITOR = Color(0xFF1C1A4A)
-private val LAVANDA_EDITOR = Color(0xFFEAE7FB)
+private val TINTA_EDITOR: Color
+    @Composable get() = MaterialTheme.colorScheme.onBackground
+private val LAVANDA_EDITOR: Color
+    @Composable get() = MaterialTheme.colorScheme.primaryContainer
 
 /**
  * [inicial] null = crear una nueva. [onEliminar] null = no se puede borrar (las de serie).

@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 package com.encaja.app.ui.menu
 
 // NOTA: depende de Jetpack Compose y Hilt, no compilado en este entorno.
@@ -16,7 +18,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowRight
@@ -33,6 +38,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.encaja.app.domain.model.ComidaDelDia
+import com.encaja.app.ui.familia.fechaAMillisUtc
+import com.encaja.app.ui.familia.millisUtcAFecha
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
@@ -47,7 +54,8 @@ private val paletaDias = listOf(
     Color(0xFFC0DD97)  // verde claro
 )
 
-private val GRIS_TARJETA = Color(0xFFF3F1F6)
+private val GRIS_TARJETA: Color
+    @Composable get() = MaterialTheme.colorScheme.surfaceVariant
 
 @Composable
 fun MenuScreen(viewModel: MenuViewModel = hiltViewModel()) {
@@ -76,7 +84,8 @@ fun MenuScreen(viewModel: MenuViewModel = hiltViewModel()) {
                 onGuardarDia = { fecha, comida, cena -> viewModel.guardarDia(fecha, comida, cena) },
                 onSemanaAnterior = { viewModel.cambiarSemana(-1) },
                 onSemanaSiguiente = { viewModel.cambiarSemana(1) },
-                onIrASemanaActual = { viewModel.irASemanaActual() }
+                onIrASemanaActual = { viewModel.irASemanaActual() },
+                onIrASemanaDe = { fecha -> viewModel.irASemanaDe(fecha) }
             )
         }
     }
@@ -89,7 +98,8 @@ private fun ContenidoMenuSemanal(
     onGuardarDia: (fecha: LocalDate, comida: String?, cena: String?) -> Unit,
     onSemanaAnterior: () -> Unit,
     onSemanaSiguiente: () -> Unit,
-    onIrASemanaActual: () -> Unit
+    onIrASemanaActual: () -> Unit,
+    onIrASemanaDe: (LocalDate) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(16.dp),
@@ -97,10 +107,12 @@ private fun ContenidoMenuSemanal(
     ) {
         item {
             CabeceraMenu(
+                primerDia = dias.firstOrNull()?.fecha,
                 esSemanaActual = esSemanaActual,
                 onSemanaAnterior = onSemanaAnterior,
                 onSemanaSiguiente = onSemanaSiguiente,
-                onIrASemanaActual = onIrASemanaActual
+                onIrASemanaActual = onIrASemanaActual,
+                onIrASemanaDe = onIrASemanaDe
             )
         }
 
@@ -118,12 +130,15 @@ private fun ContenidoMenuSemanal(
 
 @Composable
 private fun CabeceraMenu(
+    primerDia: LocalDate?,
     esSemanaActual: Boolean,
     onSemanaAnterior: () -> Unit,
     onSemanaSiguiente: () -> Unit,
-    onIrASemanaActual: () -> Unit
+    onIrASemanaActual: () -> Unit,
+    onIrASemanaDe: (LocalDate) -> Unit
 ) {
     var menuAbierto by remember { mutableStateOf(false) }
+    var calendarioAbierto by remember { mutableStateOf(false) }
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -144,7 +159,22 @@ private fun CabeceraMenu(
             )
         }
 
-        Box {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onSemanaAnterior) {
+                Icon(Icons.Default.ChevronLeft, contentDescription = "Semana anterior")
+            }
+            IconButton(onClick = { calendarioAbierto = true }) {
+                Icon(Icons.Default.CalendarMonth, contentDescription = "Ir a una semana")
+            }
+            IconButton(onClick = onSemanaSiguiente) {
+                Icon(Icons.Default.ChevronRight, contentDescription = "Semana siguiente")
+            }
+        }
+    }
+
+    Spacer(Modifier.height(8.dp))
+
+    Box {
             Row(
                 modifier = Modifier
                     .clip(RoundedCornerShape(20.dp))
@@ -189,6 +219,23 @@ private fun CabeceraMenu(
                     onClick = { menuAbierto = false; onSemanaSiguiente() }
                 )
             }
+        }
+
+    if (calendarioAbierto) {
+        val estado = rememberDatePickerState(
+            initialSelectedDateMillis = fechaAMillisUtc(primerDia ?: LocalDate.now())
+        )
+        DatePickerDialog(
+            onDismissRequest = { calendarioAbierto = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    estado.selectedDateMillis?.let { onIrASemanaDe(millisUtcAFecha(it)) }
+                    calendarioAbierto = false
+                }) { Text("Ir") }
+            },
+            dismissButton = { TextButton(onClick = { calendarioAbierto = false }) { Text("Cancelar") } }
+        ) {
+            DatePicker(state = estado)
         }
     }
 }

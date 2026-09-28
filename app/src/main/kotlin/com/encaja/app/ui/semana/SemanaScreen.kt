@@ -1,20 +1,28 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 package com.encaja.app.ui.semana
 
 // NOTA: igual que el ViewModel, este archivo depende de Jetpack Compose
 // y no ha podido compilarse en este entorno (sin acceso al repositorio
 // de Google). Reproduce fielmente la maqueta de "Esta semana": círculos
-// de día, tarjeta de hueco con acciones y barra de reparto — ahora
-// además con los tres estados: cargando, sin familia, con datos.
+// de día y tarjeta de hueco con acciones, con los tres estados: cargando,
+// sin familia, con datos. El botón de invitar vive en la barra superior
+// (EncajaApp.kt), no aquí.
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,12 +36,27 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.encaja.app.domain.model.Anuncio
 import com.encaja.app.domain.model.AnuncioId
+import com.encaja.app.domain.usecase.AvisoConflicto
+import com.encaja.app.domain.usecase.RolResponsable
+import com.encaja.app.ui.familia.etiquetaMotivo
+import com.encaja.app.ui.familia.fechaAMillisUtc
+import com.encaja.app.ui.familia.millisUtcAFecha
+import com.encaja.app.ui.theme.LocalEncajaExtraColors
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
 
 @Composable
 fun SemanaScreen(viewModel: SemaforoViewModel = hiltViewModel()) {
     val pantalla by viewModel.pantalla.collectAsState()
+
+    // Igual que en Guía: el ViewModel se conserva al cambiar de pestaña (saveState/
+    // restoreState), así que sin esto se seguiría viendo lo que había la última vez
+    // que se estuvo aquí — p.ej. una actividad recién creada en Guía no aparecería
+    // en Semana hasta cambiar de semana y volver. Al reentrar en la pestaña se
+    // vuelve a componer desde cero, así que esto se ejecuta cada vez.
+    LaunchedEffect(Unit) { viewModel.recargar() }
 
     when (val estadoActual = pantalla) {
         is SemaforoPantallaEstado.Cargando -> {
@@ -82,11 +105,13 @@ fun SemanaScreen(viewModel: SemaforoViewModel = hiltViewModel()) {
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 item {
-                    val formatter = java.time.format.DateTimeFormatter.ofPattern("dd-MM")
-                    val rango = if (uiState.dias.isNotEmpty()) {
-                        " (${uiState.dias.first().fecha.format(formatter)} al ${uiState.dias.last().fecha.format(formatter)})"
-                    } else ""
-                    Text("Esta semana$rango", style = MaterialTheme.typography.headlineSmall)
+                    CabeceraDeSemana(
+                        lunes = uiState.dias.firstOrNull()?.fecha,
+                        domingo = uiState.dias.lastOrNull()?.fecha,
+                        onSemanaAnterior = { viewModel.cambiarSemana(-1) },
+                        onSemanaSiguiente = { viewModel.cambiarSemana(1) },
+                        onElegirFecha = { viewModel.irASemanaDe(it) }
+                    )
                 }
 
                 item { FilaDeDias(uiState.dias) }
@@ -103,16 +128,86 @@ fun SemanaScreen(viewModel: SemaforoViewModel = hiltViewModel()) {
                     TarjetaHueco(hueco = hueco)
                 }
 
-                item { BarraDeReparto(uiState.reparto, uiState.totalTramos) }
-
-                item { InvitarSeccion(viewModel) }
+                items(uiState.avisos) { aviso ->
+                    TarjetaAvisoConflicto(aviso = aviso)
+                }
             }
         }
     }
 }
 
+/** Cabecera de la pantalla Semana: flechas para retroceder/avanzar una semana completa,
+ * el rango de fechas (lunes-domingo) en el centro, y un icono de calendario para saltar
+ * directamente a la semana que contiene una fecha cualquiera. Igual que la cabecera de
+ * la Guía, pero navegando semana a semana en vez de día a día. */
 @Composable
-private fun InvitarSeccion(viewModel: SemaforoViewModel) {
+private fun CabeceraDeSemana(
+    lunes: LocalDate?,
+    domingo: LocalDate?,
+    onSemanaAnterior: () -> Unit,
+    onSemanaSiguiente: () -> Unit,
+    onElegirFecha: (LocalDate) -> Unit
+) {
+    var calendarioAbierto by remember { mutableStateOf(false) }
+    val formatter = DateTimeFormatter.ofPattern("d 'de' MMMM", Locale("es"))
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconButton(onClick = onSemanaAnterior) {
+            Icon(Icons.Default.ChevronLeft, contentDescription = "Semana anterior")
+        }
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.weight(1f).clickable { calendarioAbierto = true }
+        ) {
+            Text("Esta semana", style = MaterialTheme.typography.titleMedium)
+            if (lunes != null && domingo != null) {
+                Text(
+                    "${lunes.format(formatter)} – ${domingo.format(formatter)}",
+                    style = MaterialTheme.typography.labelMedium,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+        IconButton(onClick = { calendarioAbierto = true }) {
+            Icon(Icons.Default.CalendarMonth, contentDescription = "Ir a una semana")
+        }
+        IconButton(onClick = onSemanaSiguiente) {
+            Icon(Icons.Default.ChevronRight, contentDescription = "Semana siguiente")
+        }
+    }
+
+    if (calendarioAbierto) {
+        val estado = rememberDatePickerState(
+            initialSelectedDateMillis = fechaAMillisUtc(lunes ?: LocalDate.now())
+        )
+        DatePickerDialog(
+            onDismissRequest = { calendarioAbierto = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    estado.selectedDateMillis?.let { onElegirFecha(millisUtcAFecha(it)) }
+                    calendarioAbierto = false
+                }) { Text("Ir") }
+            },
+            dismissButton = { TextButton(onClick = { calendarioAbierto = false }) { Text("Cancelar") } }
+        ) {
+            DatePicker(state = estado)
+        }
+    }
+}
+
+/**
+ * Botón de "invitar a alguien": ahora vive en la barra superior (a la izquierda del
+ * avatar), no en la lista de Semana, así que se puede usar desde cualquier pestaña.
+ * Se le pasa el mismo [SemaforoViewModel] de la pestaña Semana (obtenido en
+ * EncajaApp a partir de su propia entrada del back stack), de donde saca la lista
+ * de cuidadores y genera el código.
+ */
+@Composable
+fun BotonInvitar(viewModel: SemaforoViewModel) {
     var mostrarSelector by remember { mutableStateOf(false) }
     var codigoGenerado by remember { mutableStateOf<String?>(null) }
     var errorInvitacion by remember { mutableStateOf<String?>(null) }
@@ -120,8 +215,8 @@ private fun InvitarSeccion(viewModel: SemaforoViewModel) {
     val cuidadores by viewModel.cuidadores.collectAsState()
     val clipboard = LocalClipboardManager.current
 
-    OutlinedButton(onClick = { mostrarSelector = true }) {
-        Text("Invitar a alguien")
+    IconButton(onClick = { mostrarSelector = true }) {
+        Icon(Icons.Default.PersonAdd, contentDescription = "Invitar a alguien")
     }
 
     if (mostrarSelector) {
@@ -303,8 +398,9 @@ private fun FilaAnuncio(anuncio: Anuncio, onEliminar: () -> Unit) {
 
 @Composable
 private fun colorParaEstado(estado: EstadoDia): Color = when (estado) {
-    EstadoDia.VERDE -> Color(0xFFC0DD97)
-    EstadoDia.ROJO -> Color(0xFFF7C1C1)
+    EstadoDia.VERDE -> LocalEncajaExtraColors.current.verde
+    EstadoDia.AMBAR -> MaterialTheme.colorScheme.tertiaryContainer
+    EstadoDia.ROJO -> MaterialTheme.colorScheme.errorContainer
     EstadoDia.SIN_DATOS -> MaterialTheme.colorScheme.surfaceVariant
 }
 
@@ -341,53 +437,41 @@ private fun TarjetaHueco(hueco: com.encaja.app.domain.model.Hueco) {
     }
 }
 
-private val paletaCuidadores = listOf(
-    Color(0xFFB5D4F4), // azul
-    Color(0xFFF4C0D1), // rosa
-    Color(0xFF9FE1CB), // verde
-    Color(0xFFDDD3F7), // lila
-    Color(0xFFFAC775), // ámbar
-    Color(0xFFF0997B)  // coral
-)
+/** "Ojo, Sílvia tiene asignado llevar y recoger a Etna el sábado en "Fútbol de
+ * Etna", pero tiene asignada "Trabajo" a esa hora." Un único aviso aunque la
+ * misma persona esté asignada a llevar y a recoger (no cambia el semáforo). */
+private fun textoAviso(aviso: AvisoConflicto): String {
+    val accion = when {
+        RolResponsable.LLEVA in aviso.roles && RolResponsable.RECOGE in aviso.roles -> "llevar y recoger"
+        RolResponsable.LLEVA in aviso.roles -> "llevar"
+        else -> "recoger"
+    }
+    val dia = aviso.need.fecha.dayOfWeek.getDisplayName(TextStyle.FULL, Locale("es"))
+    val tarea = aviso.bloque.etiqueta ?: etiquetaMotivo(aviso.bloque.motivo)
+    return "Ojo, ${aviso.caregiver.nombreCompleto} tiene asignado $accion a ${aviso.child.nombre} " +
+        "el $dia en \"${aviso.need.descripcion}\", pero tiene asignada \"$tarea\" a esa hora."
+}
 
 @Composable
-private fun BarraDeReparto(reparto: List<TramoReparto>, total: Int) {
-    Column {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("Reparto de la semana", style = MaterialTheme.typography.labelSmall)
-            Text("$total tramos", style = MaterialTheme.typography.labelSmall)
-        }
-        Spacer(Modifier.height(6.dp))
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(10.dp)
-                .clip(RoundedCornerShape(5.dp))
-        ) {
-            reparto.forEachIndexed { index, tramo ->
-                Box(
-                    modifier = Modifier
-                        .weight(tramo.tramos.toFloat().coerceAtLeast(0.01f))
-                        .fillMaxHeight()
-                        .background(paletaCuidadores[index % paletaCuidadores.size])
-                )
-            }
-        }
-        Spacer(Modifier.height(6.dp))
-        reparto.forEachIndexed { index, tramo ->
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(8.dp)
-                        .clip(CircleShape)
-                        .background(paletaCuidadores[index % paletaCuidadores.size])
-                )
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    "${tramo.nombre}  ${tramo.tramos}",
-                    style = MaterialTheme.typography.labelSmall
-                )
-            }
-        }
+private fun TarjetaAvisoConflicto(aviso: AvisoConflicto) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.tertiaryContainer)
+            .padding(12.dp)
+    ) {
+        Text(
+            text = aviso.need.descripcion,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onTertiaryContainer
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = textoAviso(aviso),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onTertiaryContainer
+        )
     }
 }
+

@@ -25,16 +25,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -45,22 +41,27 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.encaja.app.domain.model.CaregiverId
 import com.encaja.app.domain.model.CategoriaDisponibilidad
 import com.encaja.app.domain.model.categoriaEn
+import com.encaja.app.ui.theme.LocalEncajaExtraColors
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
 
-private val VERDE = Color(0xFFC0DD97)
-private val FONDO_UNIDAD = Color(0xFFDDD3F7)
-
-// Paleta del diseño de la pantalla Familia.
-private val FONDO_PANTALLA = Color(0xFFF7F6FC)
-private val TINTA = Color(0xFF1C1A4A)          // títulos y textos principales
-private val TINTA_SUAVE = Color(0xFF5B5972)    // subtítulos
-private val INDIGO = Color(0xFF2F2A8F)         // iconos, iniciales, "Esta semana"
-private val LAVANDA = Color(0xFFEAE7FB)        // pastillas, botones redondos, fondo de iconos
-private val LAVANDA_CLARA = Color(0xFFF3F1FD)  // cabecera de la tarjeta "Con quién"
-private val GRIS_VACIO = Color(0xFFEEEEF3)     // día sin responsable
-private val FONDO_FILA = Color(0xFFFAF9FE)     // filas de la cuadrícula
+// Paleta del diseño de la pantalla Familia. Se leen del tema activo (Cálido/Nocturno)
+// para que la pantalla cambie sola con el modo claro/oscuro del teléfono.
+private val VERDE: Color
+    @Composable get() = LocalEncajaExtraColors.current.verde
+private val FONDO_PANTALLA: Color
+    @Composable get() = MaterialTheme.colorScheme.background
+private val TINTA: Color
+    @Composable get() = MaterialTheme.colorScheme.onBackground   // títulos y textos principales
+private val TINTA_SUAVE: Color
+    @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant // subtítulos
+private val INDIGO: Color
+    @Composable get() = MaterialTheme.colorScheme.primary        // iconos, iniciales, "Esta semana"
+private val LAVANDA: Color
+    @Composable get() = MaterialTheme.colorScheme.primaryContainer // pastillas, botones redondos, fondo de iconos
+private val FONDO_FILA: Color
+    @Composable get() = MaterialTheme.colorScheme.surfaceVariant // filas de la cuadrícula
 
 /** Fondo y color de letra del avatar de cada persona, por orden de la lista. */
 private val COLORES_AVATAR = listOf(
@@ -158,28 +159,6 @@ private fun ContenidoFamilia(estado: FamiliaUiState, viewModel: FamiliaViewModel
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 2.dp, bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            item {
-                Tarjeta {
-                    CabeceraTarjeta(
-                        icono = Icons.Default.Groups,
-                        titulo = "Con quién están las niñas",
-                        subtitulo = "Toca un día para elegir quién es responsable",
-                        modifier = Modifier.background(LAVANDA_CLARA).padding(14.dp)
-                    )
-                    FilaDeAsignacion(
-                        dias = estado.diasAsignacion,
-                        opciones = estado.opcionesAsignables,
-                        iniciales = iniciales,
-                        patronSemanal = estado.patronSemanal,
-                        onAsignarHabitual = { dia, idTexto -> viewModel.asignarResponsableHabitual(dia, idTexto) },
-                        onQuitarHabitual = { dia -> viewModel.quitarResponsableHabitual(dia) },
-                        onAnularFecha = { fecha, idTexto -> viewModel.anularParaEstaFecha(fecha, idTexto) },
-                        onQuitarCambioPuntual = { fecha -> viewModel.quitarCambioPuntual(fecha) },
-                        modifier = Modifier.padding(12.dp)
-                    )
-                }
-            }
-
             item {
                 Tarjeta {
                     Column(modifier = Modifier.padding(14.dp)) {
@@ -287,7 +266,7 @@ private fun Tarjeta(modifier: Modifier = Modifier, contenido: @Composable Column
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        color = Color.White,
+        color = MaterialTheme.colorScheme.surface,
         shadowElevation = 2.dp
     ) {
         Column(content = contenido)
@@ -319,231 +298,6 @@ private fun BotonCircular(icono: ImageVector, descripcion: String, onClick: () -
         contentAlignment = Alignment.Center
     ) {
         Icon(icono, contentDescription = descripcion, tint = INDIGO)
-    }
-}
-
-@Composable
-private fun FilaDeAsignacion(
-    dias: List<DiaAsignado>,
-    opciones: List<Responsable>,
-    iniciales: Map<CaregiverId, String>,
-    patronSemanal: Map<java.time.DayOfWeek, Responsable>,
-    onAsignarHabitual: (java.time.DayOfWeek, String) -> Unit,
-    onQuitarHabitual: (java.time.DayOfWeek) -> Unit,
-    onAnularFecha: (LocalDate, String) -> Unit,
-    onQuitarCambioPuntual: (LocalDate) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    var diaEnEdicion by remember { mutableStateOf<DiaAsignado?>(null) }
-
-    Row(modifier = modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        dias.forEach { dia ->
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(12.dp))
-                    .clickable { diaEnEdicion = dia },
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(letraDia(dia.fecha), style = MaterialTheme.typography.labelMedium, color = TINTA_SUAVE)
-                Spacer(Modifier.height(6.dp))
-                PildoraDia(responsable = dia.responsable, iniciales = iniciales)
-            }
-        }
-    }
-
-    val diaActual = diaEnEdicion
-    if (diaActual != null) {
-        DialogoAsignarDia(
-            dia = diaActual,
-            opciones = opciones,
-            iniciales = iniciales,
-            hayResponsableHabitual = patronSemanal[diaActual.fecha.dayOfWeek] != null,
-            onAsignarHabitual = { idTexto -> onAsignarHabitual(diaActual.fecha.dayOfWeek, idTexto); diaEnEdicion = null },
-            onQuitarHabitual = { onQuitarHabitual(diaActual.fecha.dayOfWeek); diaEnEdicion = null },
-            onAnularFecha = { idTexto -> onAnularFecha(diaActual.fecha, idTexto); diaEnEdicion = null },
-            onQuitarCambioPuntual = { onQuitarCambioPuntual(diaActual.fecha); diaEnEdicion = null },
-            onCerrar = { diaEnEdicion = null }
-        )
-    }
-}
-
-/** Pastilla de un día: iniciales sobre lavanda (persona), código sobre rayado (unidad) o "–" en gris. */
-@Composable
-private fun PildoraDia(responsable: Responsable?, iniciales: Map<CaregiverId, String>) {
-    val base = Modifier.fillMaxWidth().height(44.dp).clip(RoundedCornerShape(12.dp))
-    val estiloTexto = MaterialTheme.typography.titleSmall
-    when (responsable) {
-        null -> Box(base.background(GRIS_VACIO), contentAlignment = Alignment.Center) {
-            Text("–", style = estiloTexto, color = TINTA_SUAVE)
-        }
-
-        is Responsable.Persona -> Box(base.background(LAVANDA), contentAlignment = Alignment.Center) {
-            Text(
-                iniciales[responsable.caregiver.id] ?: "",
-                style = estiloTexto,
-                fontWeight = FontWeight.ExtraBold,
-                color = INDIGO
-            )
-        }
-
-        is Responsable.Unidad -> Box(base.fondoRayado(FONDO_UNIDAD), contentAlignment = Alignment.Center) {
-            Text(
-                responsable.unidad.codigo.take(2).uppercase(),
-                style = estiloTexto,
-                fontWeight = FontWeight.ExtraBold,
-                color = INDIGO
-            )
-        }
-    }
-}
-
-/**
- * Una única lista de opciones (personas y unidades familiares). La casilla "Todos los
- * [día]" decide qué pasa al tocar una opción: marcada, la deja como responsable habitual
- * de ese día de la semana (todas las semanas); sin marcar, solo cambia esta fecha
- * concreta. Así se evita tener dos listas duplicadas una debajo de la otra.
- */
-@Composable
-private fun DialogoAsignarDia(
-    dia: DiaAsignado,
-    opciones: List<Responsable>,
-    iniciales: Map<CaregiverId, String>,
-    hayResponsableHabitual: Boolean,
-    onAsignarHabitual: (String) -> Unit,
-    onQuitarHabitual: () -> Unit,
-    onAnularFecha: (String) -> Unit,
-    onQuitarCambioPuntual: () -> Unit,
-    onCerrar: () -> Unit
-) {
-    val etiquetaDia = dia.fecha.dayOfWeek.getDisplayName(TextStyle.FULL, Locale("es")).replaceFirstChar { it.uppercase() }
-    var todosLosDias by remember { mutableStateOf(false) }
-
-    AlertDialog(
-        onDismissRequest = onCerrar,
-        title = { Text("$etiquetaDia ${dia.fecha.dayOfMonth}") },
-        text = {
-            Column(
-                modifier = Modifier
-                    .heightIn(max = 420.dp)
-                    .verticalScroll(rememberScrollState())
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { todosLosDias = !todosLosDias }
-                        .padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Checkbox(checked = todosLosDias, onCheckedChange = { todosLosDias = it })
-                    Text("Todos los $etiquetaDia (responsable habitual)")
-                }
-                Text(
-                    if (todosLosDias) {
-                        "Se aplicará todas las semanas, hasta que lo cambies."
-                    } else {
-                        "Solo cambia este día. El patrón habitual no se toca."
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(Modifier.height(10.dp))
-
-                opciones.forEach { opcion ->
-                    FilaOpcion(opcion, iniciales) {
-                        if (todosLosDias) onAsignarHabitual(opcion.idTexto) else onAnularFecha(opcion.idTexto)
-                    }
-                }
-
-                if (dia.esCambioPuntual || hayResponsableHabitual) {
-                    Spacer(Modifier.height(6.dp))
-                    HorizontalDivider()
-                    Spacer(Modifier.height(6.dp))
-                }
-                if (dia.esCambioPuntual) {
-                    TextButton(onClick = onQuitarCambioPuntual) {
-                        Text("Quitar cambio puntual de este día", color = MaterialTheme.colorScheme.error)
-                    }
-                }
-                if (hayResponsableHabitual) {
-                    TextButton(onClick = onQuitarHabitual) {
-                        Text("Quitar responsable habitual de los $etiquetaDia", color = MaterialTheme.colorScheme.error)
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onCerrar) { Text("Cerrar") }
-        }
-    )
-}
-
-@Composable
-private fun FilaOpcion(opcion: Responsable, iniciales: Map<CaregiverId, String>, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        AvatarResponsable(responsable = opcion, iniciales = iniciales, tamano = 24.dp)
-        Spacer(Modifier.width(10.dp))
-        Text(opcion.etiqueta)
-    }
-}
-
-/** Avatar de un día o de una fila de opción: iniciales (desambiguadas con
- * calcularInicialesCuidadores, igual que en el resto de la app) sobre fondo liso
- * para una persona, código en negrita sobre fondo rayado en diagonal para una
- * unidad familiar. */
-@Composable
-private fun AvatarResponsable(
-    responsable: Responsable?,
-    iniciales: Map<CaregiverId, String>,
-    tamano: androidx.compose.ui.unit.Dp
-) {
-    when (responsable) {
-        null -> Box(
-            modifier = Modifier.size(tamano).clip(RoundedCornerShape(8.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-            contentAlignment = Alignment.Center
-        ) { Text("–", style = MaterialTheme.typography.labelSmall) }
-
-        is Responsable.Persona -> Box(
-            modifier = Modifier.size(tamano).clip(RoundedCornerShape(8.dp))
-                .background(MaterialTheme.colorScheme.primaryContainer),
-            contentAlignment = Alignment.Center
-        ) { Text(iniciales[responsable.caregiver.id] ?: "", style = MaterialTheme.typography.labelSmall) }
-
-        is Responsable.Unidad -> Box(
-            modifier = Modifier.size(tamano).clip(RoundedCornerShape(8.dp)).fondoRayado(FONDO_UNIDAD),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                responsable.unidad.codigo.take(2).uppercase(),
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.ExtraBold
-            )
-        }
-    }
-}
-
-/** Fondo rayado en diagonal, para distinguir a simple vista una unidad familiar de una persona. */
-private fun Modifier.fondoRayado(colorFondo: Color): Modifier = this.drawBehind {
-    drawRect(colorFondo)
-    val espaciado = 6.dp.toPx()
-    val grosor = 2.dp.toPx()
-    val diagonal = kotlin.math.sqrt(size.width * size.width + size.height * size.height)
-    val colorRaya = Color.White.copy(alpha = 0.55f)
-    rotate(degrees = 45f, pivot = center) {
-        var x = -diagonal
-        while (x < diagonal) {
-            drawLine(
-                color = colorRaya,
-                start = Offset(x, -diagonal),
-                end = Offset(x, diagonal),
-                strokeWidth = grosor
-            )
-            x += espaciado
-        }
     }
 }
 
