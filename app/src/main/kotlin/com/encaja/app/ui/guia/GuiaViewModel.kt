@@ -4,6 +4,8 @@ package com.encaja.app.ui.guia
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import com.encaja.app.domain.repository.AssignmentRepository
 import com.encaja.app.domain.repository.AuthRepository
 import com.encaja.app.domain.repository.AvailabilityRepository
@@ -11,6 +13,7 @@ import com.encaja.app.domain.repository.CaregiverRepository
 import com.encaja.app.domain.repository.ChildRepository
 import com.encaja.app.domain.repository.CoverageNeedRepository
 import com.encaja.app.domain.repository.FamilyMembershipRepository
+import com.encaja.app.domain.repository.FamilyUnitRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -27,7 +30,8 @@ class GuiaViewModel @Inject constructor(
     private val caregiverRepository: CaregiverRepository,
     private val coverageNeedRepository: CoverageNeedRepository,
     private val availabilityRepository: AvailabilityRepository,
-    private val assignmentRepository: AssignmentRepository
+    private val assignmentRepository: AssignmentRepository,
+    private val familyUnitRepository: FamilyUnitRepository
 ) : ViewModel() {
 
     private val _pantalla = MutableStateFlow<GuiaPantallaEstado>(GuiaPantallaEstado.Cargando)
@@ -71,15 +75,29 @@ class GuiaViewModel @Inject constructor(
             }
 
             val fecha = fechaActual
-            val ninos = childRepository.obtenerNinos(membresia.familyId)
-            val caregivers = caregiverRepository.obtenerCuidadores(membresia.familyId)
-            val patrones = assignmentRepository.obtenerPatrones(membresia.familyId)
-            val anulaciones = assignmentRepository.obtenerAnulaciones(membresia.familyId, fecha, fecha)
-            val disponibilidad = availabilityRepository.obtenerDisponibilidad(membresia.familyId, fecha, fecha)
-            val needsDelDia = coverageNeedRepository.obtenerNeeds(membresia.familyId, fecha, fecha)
 
-            val mapper = GuiaUiStateMapper(ninos, caregivers, patrones, anulaciones, disponibilidad)
-            _pantalla.value = GuiaPantallaEstado.ConDatos(mapper.construir(fecha, needsDelDia))
+            // Las seis lecturas son independientes entre sí, así que se lanzan todas a la
+            // vez en vez de esperarlas una detrás de otra: cambiar de día tarda lo que
+            // tarda la más lenta, no la suma de las seis.
+            coroutineScope {
+                val ninosDeferred = async { childRepository.obtenerNinos(membresia.familyId) }
+                val caregiversDeferred = async { caregiverRepository.obtenerCuidadores(membresia.familyId) }
+                val unidadesDeferred = async { familyUnitRepository.obtenerUnidades(membresia.familyId) }
+                val patronesDeferred = async { assignmentRepository.obtenerPatrones(membresia.familyId) }
+                val anulacionesDeferred = async { assignmentRepository.obtenerAnulaciones(membresia.familyId, fecha, fecha) }
+                val disponibilidadDeferred = async { availabilityRepository.obtenerDisponibilidad(membresia.familyId, fecha, fecha) }
+                val needsDeferred = async { coverageNeedRepository.obtenerNeeds(membresia.familyId, fecha, fecha) }
+
+                val mapper = GuiaUiStateMapper(
+                    ninosDeferred.await(),
+                    caregiversDeferred.await(),
+                    unidadesDeferred.await(),
+                    patronesDeferred.await(),
+                    anulacionesDeferred.await(),
+                    disponibilidadDeferred.await()
+                )
+                _pantalla.value = GuiaPantallaEstado.ConDatos(mapper.construir(fecha, needsDeferred.await()))
+            }
         }
     }
 }

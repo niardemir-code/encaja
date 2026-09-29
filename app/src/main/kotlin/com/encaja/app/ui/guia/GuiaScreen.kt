@@ -73,7 +73,7 @@ private val MARGEN_AHORA: Dp = 72.dp
 private val ANCHO_ICONO_RESPONSABLE: Dp = 32.dp
 
 private val VERDE: Color
-    @Composable get() = LocalEncajaExtraColors.current.verde
+    @Composable get() = LocalEncajaExtraColors.current.verdeContainer
 private val ROJO: Color
     @Composable get() = MaterialTheme.colorScheme.errorContainer
 

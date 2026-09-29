@@ -14,7 +14,10 @@ object CoverageNeedFirestoreMapper {
         "horaInicio" to need.horaInicio.toString(), // "16:30"
         "horaFin" to need.horaFin.toString(),
         "descripcion" to need.descripcion,
-        "requiereDesplazamiento" to need.requiereDesplazamiento
+        "requiereDesplazamiento" to need.requiereDesplazamiento,
+        "quienLlevaId" to need.quienLlevaId,
+        "quienRecogeId" to need.quienRecogeId,
+        "grupoRepeticionId" to need.grupoRepeticionId
     )
 
     fun desdeDocumento(id: String, datos: Map<String, Any?>): CoverageNeed? {
@@ -24,7 +27,13 @@ object CoverageNeedFirestoreMapper {
         val horaFin = (datos["horaFin"] as? String)?.let { runCatching { LocalTime.parse(it) }.getOrNull() } ?: return null
         val descripcion = datos["descripcion"] as? String ?: return null
         val requiereDesplazamiento = datos["requiereDesplazamiento"] as? Boolean ?: true
+        val quienLlevaId = datos["quienLlevaId"] as? String
+        val quienRecogeId = datos["quienRecogeId"] as? String
+        val grupoRepeticionId = datos["grupoRepeticionId"] as? String
 
-        return CoverageNeed(CoverageNeedId(id), childId, fecha, horaInicio, horaFin, descripcion, requiereDesplazamiento)
+        return CoverageNeed(
+            CoverageNeedId(id), childId, fecha, horaInicio, horaFin, descripcion, requiereDesplazamiento,
+            quienLlevaId, quienRecogeId, grupoRepeticionId
+        )
     }
 }

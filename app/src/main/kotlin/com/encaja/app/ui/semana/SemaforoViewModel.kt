@@ -11,11 +11,14 @@ import com.encaja.app.domain.repository.AssignmentRepository
 import com.encaja.app.domain.repository.AuthRepository
 import com.encaja.app.domain.repository.AvailabilityRepository
 import com.encaja.app.domain.repository.CaregiverRepository
+import com.encaja.app.domain.repository.ChildRepository
 import com.encaja.app.domain.repository.CoverageNeedRepository
 import com.encaja.app.domain.repository.FamilyMembershipRepository
 import com.encaja.app.domain.repository.InviteRepository
 import com.encaja.app.domain.usecase.lunesDeEstaSemana
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,6 +31,7 @@ class SemaforoViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val familyMembershipRepository: FamilyMembershipRepository,
     private val inviteRepository: InviteRepository,
+    private val childRepository: ChildRepository,
     private val caregiverRepository: CaregiverRepository,
     private val coverageNeedRepository: CoverageNeedRepository,
     private val availabilityRepository: AvailabilityRepository,
@@ -41,17 +45,38 @@ class SemaforoViewModel @Inject constructor(
     private val _cuidadores = MutableStateFlow<List<Caregiver>>(emptyList())
     val cuidadores: StateFlow<List<Caregiver>> = _cuidadores.asStateFlow()
 
-    /** Familia del usuario ya resuelta, para que "invitar" sepa dónde escribir. */
+    /** Familia del usuario ya resuelta, para que "invitar" sepa dónde escribir. Se
+     * comprueba una sola vez (en [cargar]): cambiar de semana no vuelve a comprobar
+     * sesión ni familia, porque no cambian mientras se navega. */
     private var familyIdActual: FamilyId? = null
 
     /** Nombre del cuidador actual, para firmar los anuncios que publique. */
     private var nombreCuidadorActual: String = "Alguien de la familia"
 
+    /** Lunes de la semana que se está mostrando. */
+    private var lunesActual: LocalDate = LocalDate.now().lunesDeEstaSemana()
+
     init {
         cargar()
     }
 
+    /** Recarga completa: vuelve a comprobar sesión y familia (por si han cambiado) y
+     * recarga la semana que se estuviera viendo. Se usa al entrar en la pestaña y tras
+     * publicar/borrar un anuncio o canjear un código. */
     fun recargar() = cargar()
+
+    /** Avanza o retrocede semanas desde la cabecera (-1 anterior, +1 siguiente). No hace
+     * falta volver a comprobar sesión ni familia: solo cambian los datos de la semana. */
+    fun cambiarSemana(delta: Int) {
+        lunesActual = lunesActual.plusWeeks(delta.toLong())
+        cargarSemana(mostrarCargando = false)
+    }
+
+    /** Salta directamente a la semana que contiene [fecha], elegida en el calendario. */
+    fun irASemanaDe(fecha: LocalDate) {
+        lunesActual = fecha.lunesDeEstaSemana()
+        cargarSemana(mostrarCargando = false)
+    }
 
     /** Introduce un código de invitación y, si es válido, vincula al usuario a esa familia. */
     fun canjearCodigo(codigo: String, alFallar: (String) -> Unit) {
@@ -78,6 +103,8 @@ class SemaforoViewModel @Inject constructor(
         }
     }
 
+    /** Primera carga (o recarga forzada): valida sesión y familia — lo único que de
+     * verdad puede tardar un poco — y solo entonces pide los datos de la semana. */
     private fun cargar() {
         viewModelScope.launch {
             _pantalla.value = SemaforoPantallaEstado.Cargando
@@ -96,34 +123,65 @@ class SemaforoViewModel @Inject constructor(
             }
             familyIdActual = membresia.familyId
 
-            val lunes = LocalDate.now().lunesDeEstaSemana()
+            cargarSemana(mostrarCargando = false, caregiverIdPropio = membresia.caregiverId)
+        }
+    }
+
+    /**
+     * Recarga solo los datos de [lunesActual]. Las peticiones de la semana son
+     * independientes entre sí (ninguna necesita el resultado de otra), así que se
+     * lanzan todas a la vez con [async] en vez de esperarlas una detrás de otra: avanzar
+     * de semana tarda lo que tarda la más lenta, no la suma de todas.
+     * [mostrarCargando] = false deja la semana anterior visible mientras llega la
+     * nueva, en vez de pasar por una pantalla en blanco a cada cambio.
+     */
+    private fun cargarSemana(mostrarCargando: Boolean, caregiverIdPropio: CaregiverId? = null) {
+        val familyId = familyIdActual ?: return
+        viewModelScope.launch {
+            if (mostrarCargando) _pantalla.value = SemaforoPantallaEstado.Cargando
+
+            val lunes = lunesActual
             val domingo = lunes.plusDays(6)
 
-            val caregivers = caregiverRepository.obtenerCuidadores(membresia.familyId)
-            _cuidadores.value = caregivers
-            nombreCuidadorActual = caregivers.firstOrNull { it.id == membresia.caregiverId }?.nombreCompleto
-                ?: "Alguien de la familia"
+            coroutineScope {
+                val caregiversDeferred = async { caregiverRepository.obtenerCuidadores(familyId) }
+                val ninosDeferred = async { childRepository.obtenerNinos(familyId) }
+                val patronesDeferred = async { assignmentRepository.obtenerPatrones(familyId) }
+                val anulacionesDeferred = async { assignmentRepository.obtenerAnulaciones(familyId, lunes, domingo) }
+                val disponibilidadDeferred = async { availabilityRepository.obtenerDisponibilidad(familyId, lunes, domingo) }
+                val needsDeferred = async { coverageNeedRepository.obtenerNeeds(familyId, lunes, domingo) }
+                val anunciosDeferred = async { anuncioRepository.obtenerAnuncios(familyId) }
 
-            val patrones = assignmentRepository.obtenerPatrones(membresia.familyId)
-            val anulaciones = assignmentRepository.obtenerAnulaciones(membresia.familyId, lunes, domingo)
-            val disponibilidad = availabilityRepository.obtenerDisponibilidad(membresia.familyId, lunes, domingo)
-            val needs = coverageNeedRepository.obtenerNeeds(membresia.familyId, lunes, domingo)
-            val anuncios = anuncioRepository.obtenerAnuncios(membresia.familyId)
+                val caregivers = caregiversDeferred.await()
+                _cuidadores.value = caregivers
+                if (caregiverIdPropio != null) {
+                    nombreCuidadorActual = caregivers.firstOrNull { it.id == caregiverIdPropio }?.nombreCompleto
+                        ?: nombreCuidadorActual
+                }
 
-            val mapper = SemaforoUiStateMapper(caregivers, patrones, anulaciones, disponibilidad)
-            _pantalla.value = SemaforoPantallaEstado.ConDatos(mapper.construir(lunes, needs).copy(anuncios = anuncios))
+                val mapper = SemaforoUiStateMapper(
+                    ninosDeferred.await(),
+                    caregivers,
+                    patronesDeferred.await(),
+                    anulacionesDeferred.await(),
+                    disponibilidadDeferred.await()
+                )
+                _pantalla.value = SemaforoPantallaEstado.ConDatos(
+                    mapper.construir(lunes, needsDeferred.await()).copy(anuncios = anunciosDeferred.await())
+                )
+            }
         }
     }
 
     /** Publica un anuncio nuevo en el tablón, firmado con el nombre del cuidador actual. */
     fun publicarAnuncio(texto: String) {
-        val familyId = familyIdActual ?: return
         val textoLimpio = texto.trim()
         if (textoLimpio.isBlank()) return
+        val familyId = familyIdActual ?: return
 
         viewModelScope.launch {
             anuncioRepository.publicarAnuncio(familyId, nombreCuidadorActual, textoLimpio)
-            cargar()
+            cargarSemana(mostrarCargando = false)
         }
     }
 
@@ -132,7 +190,7 @@ class SemaforoViewModel @Inject constructor(
         val familyId = familyIdActual ?: return
         viewModelScope.launch {
             anuncioRepository.eliminarAnuncio(familyId, anuncioId)
-            cargar()
+            cargarSemana(mostrarCargando = false)
         }
     }
 }

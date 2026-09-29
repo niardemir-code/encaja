@@ -15,6 +15,8 @@ class GuiaUiStateMapper(
     private val ninos: List<Child>,
     private val caregivers: List<Caregiver>,
     private val unidades: List<FamilyUnit>,
+    private val patrones: List<PatronCuidado>,
+    private val anulaciones: Anulaciones,
     private val disponibilidad: List<AvailabilityBlock>
 ) {
     private val responsables: List<Responsable> =
@@ -27,7 +29,7 @@ class GuiaUiStateMapper(
     }
 
     fun construir(fecha: LocalDate, needsDelDia: List<CoverageNeed>): GuiaUiState {
-        val calcularHuecos = CalcularHuecosDelDia(caregivers, unidades, disponibilidad)
+        val calcularHuecos = CalcularHuecosDelDia(caregivers, patrones, anulaciones, disponibilidad)
         val idsConHueco = calcularHuecos(needsDelDia).map { it.need.id }.toSet()
         val needsPorNino = needsDelDia.groupBy { it.childId }
 

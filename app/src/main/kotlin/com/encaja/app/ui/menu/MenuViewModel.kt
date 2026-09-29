@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 
 @HiltViewModel
@@ -37,20 +38,31 @@ class MenuViewModel @Inject constructor(
         cargar()
     }
 
+    /** Recarga completa: vuelve a comprobar sesión y familia (por si han cambiado). Se
+     * usa al entrar en la pestaña; cambiar de semana no lo necesita. */
     fun recargar() = cargar()
 
     /** Avanza o retrocede semanas desde el botón "Esta semana" (-1 anterior, +1 siguiente). */
     fun cambiarSemana(delta: Int) {
         offsetSemanas += delta
-        cargar()
+        cargarDatos()
     }
 
     /** Vuelve directamente a la semana actual, sin acumular desplazamientos previos. */
     fun irASemanaActual() {
         offsetSemanas = 0
-        cargar()
+        cargarDatos()
     }
 
+    /** Salta directamente a la semana que contiene [fecha], elegida en el calendario. */
+    fun irASemanaDe(fecha: LocalDate) {
+        val lunesHoy = LocalDate.now().lunesDeEstaSemana()
+        offsetSemanas = ChronoUnit.WEEKS.between(lunesHoy, fecha.lunesDeEstaSemana()).toInt()
+        cargarDatos()
+    }
+
+    /** Primera carga (o recarga forzada): valida sesión y familia y solo entonces
+     * pide los datos de la semana. */
     private fun cargar() {
         viewModelScope.launch {
             _pantalla.value = MenuPantallaEstado.Cargando
@@ -67,10 +79,18 @@ class MenuViewModel @Inject constructor(
                 return@launch
             }
             familyIdActual = membresia.familyId
+            cargarDatos()
+        }
+    }
 
+    /** Recarga solo el menú de la semana con el desplazamiento actual: cambiar de
+     * semana no necesita volver a comprobar sesión ni familia. */
+    private fun cargarDatos() {
+        val familyId = familyIdActual ?: return
+        viewModelScope.launch {
             val lunes = LocalDate.now().lunesDeEstaSemana().plusWeeks(offsetSemanas.toLong())
             val domingo = lunes.plusDays(6)
-            val guardados = menuRepository.obtenerSemana(membresia.familyId, lunes, domingo)
+            val guardados = menuRepository.obtenerSemana(familyId, lunes, domingo)
             val porFecha = guardados.associateBy { it.fecha }
 
             // Se rellenan los 7 días de la semana aunque no tengan menú guardado todavía,

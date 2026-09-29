@@ -31,6 +31,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -309,7 +310,12 @@ private fun FilaDeDias(dias: List<DiaSemaforo>) {
                         .background(colorParaEstado(dia.estado)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(dia.fecha.dayOfMonth.toString(), style = MaterialTheme.typography.labelMedium)
+                    Text(
+                        dia.fecha.dayOfMonth.toString(),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = colorTextoParaEstado(dia.estado),
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         }
@@ -398,10 +404,21 @@ private fun FilaAnuncio(anuncio: Anuncio, onEliminar: () -> Unit) {
 
 @Composable
 private fun colorParaEstado(estado: EstadoDia): Color = when (estado) {
-    EstadoDia.VERDE -> LocalEncajaExtraColors.current.verde
+    EstadoDia.VERDE -> LocalEncajaExtraColors.current.verdeContainer
     EstadoDia.AMBAR -> MaterialTheme.colorScheme.tertiaryContainer
     EstadoDia.ROJO -> MaterialTheme.colorScheme.errorContainer
     EstadoDia.SIN_DATOS -> MaterialTheme.colorScheme.surfaceVariant
+}
+
+/** Color del número dentro de cada círculo del semáforo: mismo criterio que las
+ * tarjetas de hueco y aviso de conflicto — fondo pálido del estado + texto en el
+ * tono fuerte de ese mismo color, en vez de un texto neutro encima. */
+@Composable
+private fun colorTextoParaEstado(estado: EstadoDia): Color = when (estado) {
+    EstadoDia.VERDE -> LocalEncajaExtraColors.current.onVerdeContainer
+    EstadoDia.AMBAR -> MaterialTheme.colorScheme.onTertiaryContainer
+    EstadoDia.ROJO -> MaterialTheme.colorScheme.onErrorContainer
+    EstadoDia.SIN_DATOS -> MaterialTheme.colorScheme.onSurfaceVariant
 }
 
 /** "Lunes 21" en vez de la fecha ISO en bruto (2026-09-21). */

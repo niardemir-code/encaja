@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalLayoutApi::class)
+@file:OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 
 package com.encaja.app.ui.familia
 
@@ -49,7 +49,7 @@ import java.util.Locale
 // Paleta del diseño de la pantalla Familia. Se leen del tema activo (Cálido/Nocturno)
 // para que la pantalla cambie sola con el modo claro/oscuro del teléfono.
 private val VERDE: Color
-    @Composable get() = LocalEncajaExtraColors.current.verde
+    @Composable get() = LocalEncajaExtraColors.current.verdeContainer
 private val FONDO_PANTALLA: Color
     @Composable get() = MaterialTheme.colorScheme.background
 private val TINTA: Color
@@ -151,6 +151,7 @@ private fun ContenidoFamilia(estado: FamiliaUiState, viewModel: FamiliaViewModel
             onSemanaAnterior = { viewModel.cambiarSemana(-1) },
             onSemanaSiguiente = { viewModel.cambiarSemana(1) },
             onIrASemanaActual = { viewModel.irASemanaActual() },
+            onElegirFecha = { viewModel.irASemanaDe(it) },
             modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 12.dp)
         )
 
@@ -193,8 +194,11 @@ private fun CabeceraFamilia(
     onSemanaAnterior: () -> Unit,
     onSemanaSiguiente: () -> Unit,
     onIrASemanaActual: () -> Unit,
+    onElegirFecha: (LocalDate) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var calendarioAbierto by remember { mutableStateOf(false) }
+
     Column(modifier = modifier) {
         Text(
             "Familia",
@@ -237,8 +241,26 @@ private fun CabeceraFamilia(
                     )
                 }
                 Spacer(Modifier.width(6.dp))
+                BotonCircular(Icons.Default.CalendarMonth, "Ir a una semana", { calendarioAbierto = true })
+                Spacer(Modifier.width(6.dp))
                 BotonCircular(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Semana siguiente", onSemanaSiguiente)
             }
+        }
+    }
+
+    if (calendarioAbierto) {
+        val estado = rememberDatePickerState(initialSelectedDateMillis = fechaAMillisUtc(lunes))
+        DatePickerDialog(
+            onDismissRequest = { calendarioAbierto = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    estado.selectedDateMillis?.let { onElegirFecha(millisUtcAFecha(it)) }
+                    calendarioAbierto = false
+                }) { Text("Ir") }
+            },
+            dismissButton = { TextButton(onClick = { calendarioAbierto = false }) { Text("Cancelar") } }
+        ) {
+            DatePicker(state = estado)
         }
     }
 }

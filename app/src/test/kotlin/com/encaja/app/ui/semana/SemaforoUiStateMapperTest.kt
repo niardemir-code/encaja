@@ -1,13 +1,12 @@
 package com.encaja.app.ui.semana
 
-import com.encaja.app.domain.model.CaregiverId
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
 class SemaforoUiStateMapperTest {
 
     private val d = DatosEjemploFamilia
-    private val mapper = SemaforoUiStateMapper(d.caregivers, d.patrones, d.anulaciones, d.disponibilidad)
+    private val mapper = SemaforoUiStateMapper(d.ninos, d.caregivers, d.patrones, d.anulaciones, d.disponibilidad)
     private val estado = mapper.construir(d.lunes, d.needsDeLaSemana)
 
     @Test
@@ -42,19 +41,5 @@ class SemaforoUiStateMapperTest {
     @Test
     fun `hay exactamente un hueco en toda la semana`() {
         assertEquals(1, estado.huecosDeLaSemana.size)
-    }
-
-    @Test
-    fun `el reparto solo incluye a quien tiene tramos asignados esta semana`() {
-        val ids = estado.reparto.map { it.caregiverId }
-        assertTrue(ids.contains(CaregiverId("josefa")))
-        assertTrue(ids.contains(CaregiverId("vicente")))
-        assertFalse(ids.contains(CaregiverId("dolors"))) // Dolors no tiene tramos esta semana en el ejemplo
-    }
-
-    @Test
-    fun `el total de tramos coincide con la suma del reparto`() {
-        val sumaManual = estado.reparto.sumOf { it.tramos }
-        assertEquals(sumaManual, estado.totalTramos)
     }
 }

@@ -9,13 +9,13 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
 data class EncajaExtraColors(
-    val verde: Color,
-    val verdeContainer: Color
+    val verdeContainer: Color,
+    val onVerdeContainer: Color
 )
 
 private val ColoresPorDefecto = EncajaExtraColors(
-    verde = CalidoVerde,
-    verdeContainer = CalidoVerdeContainer
+    verdeContainer = CalidoVerdeContainer,
+    onVerdeContainer = CalidoVerde
 )
 
 val LocalEncajaExtraColors = staticCompositionLocalOf { ColoresPorDefecto }

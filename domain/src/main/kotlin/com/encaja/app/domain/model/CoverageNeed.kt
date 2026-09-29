@@ -16,5 +16,14 @@ data class CoverageNeed(
     val horaInicio: LocalTime,
     val horaFin: LocalTime,
     val descripcion: String,
-    val requiereDesplazamiento: Boolean = true
+    val requiereDesplazamiento: Boolean = true,
+    /** Id (de cuidador o de unidad familiar) asignado manualmente desde la Guía para
+     * llevar al niño al empezar la actividad. Independiente del patrón semanal de
+     * Familia; null si no se ha asignado nadie. */
+    val quienLlevaId: String? = null,
+    /** Igual que [quienLlevaId] pero para recoger al terminar. */
+    val quienRecogeId: String? = null,
+    /** Id común a todas las ocurrencias creadas juntas con "Repetir cada semana",
+     * para poder editarlas o borrarlas como grupo; null en una actividad puntual. */
+    val grupoRepeticionId: String? = null
 )

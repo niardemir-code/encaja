@@ -1,8 +1,8 @@
 package com.encaja.app.ui.semana
 
 import com.encaja.app.domain.model.Anuncio
-import com.encaja.app.domain.model.CaregiverId
 import com.encaja.app.domain.model.Hueco
+import com.encaja.app.domain.usecase.AvisoConflicto
 import java.time.LocalDate
 
 /**
@@ -11,7 +11,7 @@ import java.time.LocalDate
  * Eso es deliberado — mantiene la pantalla "tonta" y toda la lógica
  * testeable fuera de Compose.
  */
-enum class EstadoDia { VERDE, ROJO, SIN_DATOS }
+enum class EstadoDia { VERDE, AMBAR, ROJO, SIN_DATOS }
 
 data class DiaSemaforo(
     val fecha: LocalDate,
@@ -19,18 +19,10 @@ data class DiaSemaforo(
     val huecos: List<Hueco>
 )
 
-data class TramoReparto(
-    val caregiverId: CaregiverId,
-    val nombre: String,
-    val tramos: Int
-)
-
 data class SemaforoUiState(
     val dias: List<DiaSemaforo>,
     val huecosDeLaSemana: List<Hueco>,
-    val reparto: List<TramoReparto>,
     /** El tablón de anuncios se añade aparte en el ViewModel (el mapper no lo conoce). */
-    val anuncios: List<Anuncio> = emptyList()
-) {
-    val totalTramos: Int get() = reparto.sumOf { it.tramos }
-}
+    val anuncios: List<Anuncio> = emptyList(),
+    val avisos: List<AvisoConflicto> = emptyList()
+)
