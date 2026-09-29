@@ -70,6 +70,12 @@ class SemaforoViewModel @Inject constructor(
         cargarSemana(mostrarCargando = false)
     }
 
+    /** Vuelve directamente a la semana actual, igual que en Familia y Menú. */
+    fun irASemanaActual() {
+        lunesActual = LocalDate.now().lunesDeEstaSemana()
+        cargarSemana(mostrarCargando = false)
+    }
+
     /** Salta directamente a la semana que contiene [fecha], elegida en el calendario. */
     fun irASemanaDe(fecha: LocalDate) {
         lunesActual = fecha.lunesDeEstaSemana()
@@ -157,7 +163,10 @@ class SemaforoViewModel @Inject constructor(
 
                 val mapper = SemaforoUiStateMapper(ninosDeferred.await(), caregivers, disponibilidadDeferred.await())
                 _pantalla.value = SemaforoPantallaEstado.ConDatos(
-                    mapper.construir(lunes, needsDeferred.await()).copy(anuncios = anunciosDeferred.await())
+                    mapper.construir(lunes, needsDeferred.await()).copy(
+                        anuncios = anunciosDeferred.await(),
+                        esSemanaActual = lunes == LocalDate.now().lunesDeEstaSemana()
+                    )
                 )
             }
         }

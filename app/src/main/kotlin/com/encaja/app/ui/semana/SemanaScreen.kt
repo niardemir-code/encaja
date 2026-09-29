@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -109,8 +110,10 @@ fun SemanaScreen(viewModel: SemaforoViewModel = hiltViewModel()) {
                     CabeceraDeSemana(
                         lunes = uiState.dias.firstOrNull()?.fecha,
                         domingo = uiState.dias.lastOrNull()?.fecha,
+                        esSemanaActual = uiState.esSemanaActual,
                         onSemanaAnterior = { viewModel.cambiarSemana(-1) },
                         onSemanaSiguiente = { viewModel.cambiarSemana(1) },
+                        onIrASemanaActual = { viewModel.irASemanaActual() },
                         onElegirFecha = { viewModel.irASemanaDe(it) }
                     )
                 }
@@ -138,15 +141,19 @@ fun SemanaScreen(viewModel: SemaforoViewModel = hiltViewModel()) {
 }
 
 /** Cabecera de la pantalla Semana: flechas para retroceder/avanzar una semana completa,
- * el rango de fechas (lunes-domingo) en el centro, y un icono de calendario para saltar
- * directamente a la semana que contiene una fecha cualquiera. Igual que la cabecera de
- * la Guía, pero navegando semana a semana en vez de día a día. */
+ * el rango de fechas (lunes-domingo) en el centro, y a la derecha el calendario (para
+ * saltar a la semana de una fecha cualquiera) y el icono de "ir a la semana actual" —
+ * mismo icono (punto de disparo) y criterio que en Guía, Familia y Menú. Los tres
+ * botones de la derecha van agrupados en su propia fila para que el rango de fechas,
+ * que puede ser largo, tenga todo el espacio central sin empujarlos fuera. */
 @Composable
 private fun CabeceraDeSemana(
     lunes: LocalDate?,
     domingo: LocalDate?,
+    esSemanaActual: Boolean,
     onSemanaAnterior: () -> Unit,
     onSemanaSiguiente: () -> Unit,
+    onIrASemanaActual: () -> Unit,
     onElegirFecha: (LocalDate) -> Unit
 ) {
     var calendarioAbierto by remember { mutableStateOf(false) }
@@ -173,11 +180,20 @@ private fun CabeceraDeSemana(
                 )
             }
         }
-        IconButton(onClick = { calendarioAbierto = true }) {
-            Icon(Icons.Default.CalendarMonth, contentDescription = "Ir a una semana")
-        }
-        IconButton(onClick = onSemanaSiguiente) {
-            Icon(Icons.Default.ChevronRight, contentDescription = "Semana siguiente")
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = { calendarioAbierto = true }) {
+                Icon(Icons.Default.CalendarMonth, contentDescription = "Ir a una semana")
+            }
+            IconButton(onClick = onIrASemanaActual, enabled = !esSemanaActual) {
+                Icon(
+                    Icons.Default.MyLocation,
+                    contentDescription = "Ir a la semana actual",
+                    tint = if (esSemanaActual) LocalContentColor.current.copy(alpha = 0.38f) else LocalContentColor.current
+                )
+            }
+            IconButton(onClick = onSemanaSiguiente) {
+                Icon(Icons.Default.ChevronRight, contentDescription = "Semana siguiente")
+            }
         }
     }
 

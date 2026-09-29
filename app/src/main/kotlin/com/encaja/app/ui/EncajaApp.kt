@@ -110,11 +110,10 @@ fun EncajaApp(onCerrarSesion: () -> Unit, viewModel: EncajaAppViewModel = hiltVi
                 },
                 actions = {
                     // El botón de invitar vive aquí (y no en la lista de Semana) para que
-                    // esté siempre a mano, en todas las pestañas — no solo en Semana. Usa
-                    // el SemaforoViewModel de la pestaña Semana (que, al ser la pestaña de
-                    // inicio, siempre tiene una entrada en el back stack, se esté viendo
-                    // esa pestaña o no) para sacar de ahí la lista de cuidadores y generar
-                    // el código.
+                    // esté siempre a mano en cualquier pestaña, no solo en Semana; usa el
+                    // mismo SemaforoViewModel de esa pestaña, así que solo puede mostrarse
+                    // una vez que esa pestaña ya existe en el back stack (Semana es la
+                    // pantalla inicial, así que en la práctica siempre está).
                     val semanaEntry = runCatching { navController.getBackStackEntry(Destino.Semana.ruta) }.getOrNull()
                     semanaEntry?.let { entry ->
                         val semanaViewModel: SemaforoViewModel = hiltViewModel(entry)

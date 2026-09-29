@@ -22,8 +22,8 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.NightsStay
-import androidx.compose.material.icons.filled.Today
 import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -33,6 +33,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.encaja.app.domain.model.ComidaDelDia
@@ -142,17 +143,24 @@ private fun CabeceraMenu(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.Top
     ) {
-        Column {
+        // weight(1f) + una sola línea con elipsis: así el título largo se acorta en vez
+        // de empujar los iconos de la derecha fuera de la pantalla (lo que hacía que
+        // pareciera que faltaba el botón de avanzar semana al añadir un cuarto icono).
+        Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
             Text(
                 "Menú semanal",
                 style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
             Spacer(Modifier.height(2.dp))
             Text(
                 "Planifica, organiza y disfruta",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
 
@@ -160,17 +168,18 @@ private fun CabeceraMenu(
             IconButton(onClick = onSemanaAnterior) {
                 Icon(Icons.Default.ChevronLeft, contentDescription = "Semana anterior")
             }
+            IconButton(onClick = { calendarioAbierto = true }) {
+                Icon(Icons.Default.CalendarMonth, contentDescription = "Ir a una semana")
+            }
             // Botones de ir adelante/atrás ya cubren cambiar de semana; este vuelve
-            // directo a la actual sin acumular los pasos dados con las flechas.
+            // directo a la actual sin acumular los pasos dados con las flechas. Mismo
+            // icono ("punto de disparo") que en Guía, Familia y Semana.
             IconButton(onClick = onIrASemanaActual, enabled = !esSemanaActual) {
                 Icon(
-                    Icons.Default.Today,
+                    Icons.Default.MyLocation,
                     contentDescription = "Ir a la semana actual",
                     tint = if (esSemanaActual) LocalContentColor.current.copy(alpha = 0.38f) else LocalContentColor.current
                 )
-            }
-            IconButton(onClick = { calendarioAbierto = true }) {
-                Icon(Icons.Default.CalendarMonth, contentDescription = "Ir a una semana")
             }
             IconButton(onClick = onSemanaSiguiente) {
                 Icon(Icons.Default.ChevronRight, contentDescription = "Semana siguiente")

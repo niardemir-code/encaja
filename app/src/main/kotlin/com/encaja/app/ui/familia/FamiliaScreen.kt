@@ -25,7 +25,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.Today
+import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -226,10 +226,11 @@ private fun CabeceraFamilia(
                     textAlign = TextAlign.Center,
                     maxLines = 2
                 )
-                // Icono en vez de un texto ("Esta semana") que se cortaba: mismo criterio que
-                // el botón "Ahora" de la Guía. Solo responde si no se está ya en esta semana.
+                // Icono en vez de un texto ("Esta semana") que se cortaba: mismo criterio (y
+                // mismo icono, el "punto de disparo") que el botón "Ahora" de la Guía. Solo
+                // responde si no se está ya en esta semana.
                 BotonCircular(
-                    Icons.Default.Today, "Ir a la semana actual", onIrASemanaActual,
+                    Icons.Default.MyLocation, "Ir a la semana actual", onIrASemanaActual,
                     habilitado = !esSemanaActual
                 )
                 Spacer(Modifier.width(6.dp))

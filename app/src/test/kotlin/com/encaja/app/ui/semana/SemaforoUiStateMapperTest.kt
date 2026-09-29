@@ -7,7 +7,11 @@ class SemaforoUiStateMapperTest {
 
     private val d = DatosEjemploFamilia
     private val mapper = SemaforoUiStateMapper(d.ninos, d.caregivers, d.disponibilidad)
-    private val estado = mapper.construir(d.lunes, d.needsDeLaSemana)
+
+    // "hoy" fijo al lunes de la semana de ejemplo (no LocalDate.now()): así el test no
+    // depende de la fecha real, que con datos de 2026-09-14 ya sería siempre pasada y
+    // el filtro de "huecos/avisos ya pasados" (ver SemaforoUiStateMapper) los quitaría.
+    private val estado = mapper.construir(d.lunes, d.needsDeLaSemana, hoy = d.lunes)
 
     @Test
     fun `lunes queda en verde porque Silvia esta asignada a llevar y recoger`() {

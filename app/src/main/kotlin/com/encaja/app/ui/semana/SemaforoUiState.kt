@@ -24,5 +24,7 @@ data class SemaforoUiState(
     val huecosDeLaSemana: List<Hueco>,
     /** El tablón de anuncios se añade aparte en el ViewModel (el mapper no lo conoce). */
     val anuncios: List<Anuncio> = emptyList(),
-    val avisos: List<AvisoConflicto> = emptyList()
+    val avisos: List<AvisoConflicto> = emptyList(),
+    /** Igual que en Familia/Menú: si es false, la cabecera ofrece volver a la semana de hoy. */
+    val esSemanaActual: Boolean = true
 )

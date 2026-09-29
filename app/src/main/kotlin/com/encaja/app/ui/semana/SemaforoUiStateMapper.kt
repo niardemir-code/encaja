@@ -16,7 +16,7 @@ class SemaforoUiStateMapper(
     private val caregivers: List<Caregiver>,
     private val disponibilidad: List<AvailabilityBlock>
 ) {
-    fun construir(lunes: LocalDate, needsDeLaSemana: List<CoverageNeed>): SemaforoUiState {
+    fun construir(lunes: LocalDate, needsDeLaSemana: List<CoverageNeed>, hoy: LocalDate = LocalDate.now()): SemaforoUiState {
         val huecos = CalcularHuecosDelDia()(needsDeLaSemana)
         val huecosPorFecha = huecos.groupBy { it.need.fecha }
         val needsPorFecha = needsDeLaSemana.groupBy { it.fecha }
@@ -38,6 +38,13 @@ class SemaforoUiStateMapper(
             DiaSemaforo(fecha, estado, huecosDelDia)
         }
 
-        return SemaforoUiState(dias, huecos, avisos = avisos)
+        // El círculo de cada día conserva su color aunque ya haya pasado (para poder
+        // repasar la semana), pero las tarjetas de debajo son avisos accionables: un
+        // hueco o incompatibilidad de un día ya pasado no hay nada que hacer con él,
+        // así que desaparece de estas listas en cuanto la fecha queda atrás.
+        val huecosVigentes = huecos.filter { it.need.fecha >= hoy }
+        val avisosVigentes = avisos.filter { it.need.fecha >= hoy }
+
+        return SemaforoUiState(dias, huecosVigentes, avisos = avisosVigentes)
     }
 }
