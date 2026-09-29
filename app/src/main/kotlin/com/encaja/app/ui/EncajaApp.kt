@@ -4,6 +4,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -21,6 +23,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -51,6 +55,7 @@ import com.encaja.app.ui.compra.CompraScreen
 import com.encaja.app.ui.familia.FamiliaScreen
 import com.encaja.app.ui.guia.GuiaScreen
 import com.encaja.app.ui.menu.MenuScreen
+import com.encaja.app.ui.semana.BotonBarraSuperior
 import com.encaja.app.ui.semana.BotonInvitar
 import com.encaja.app.ui.semana.SemaforoViewModel
 import com.encaja.app.ui.semana.SemanaScreen
@@ -85,17 +90,24 @@ fun EncajaApp(onCerrarSesion: () -> Unit, viewModel: EncajaAppViewModel = hiltVi
     Scaffold(
         topBar = {
             TopAppBar(
+                // Barra blanca (surface) con el logo y el nombre en índigo, como en la maqueta.
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.primary,
+                    navigationIconContentColor = MaterialTheme.colorScheme.primary,
+                    actionIconContentColor = MaterialTheme.colorScheme.primary
+                ),
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Image(
                             painter = painterResource(R.drawable.ic_logo),
                             contentDescription = null,
-                            modifier = Modifier.size(28.dp)
+                            modifier = Modifier.size(36.dp)
                         )
                         Text(
                             "encaja",
-                            modifier = Modifier.padding(start = 8.dp),
-                            style = MaterialTheme.typography.titleLarge,
+                            modifier = Modifier.padding(start = 10.dp),
+                            style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.ExtraBold,
                             letterSpacing = (-0.5).sp
                         )
@@ -122,16 +134,23 @@ fun EncajaApp(onCerrarSesion: () -> Unit, viewModel: EncajaAppViewModel = hiltVi
                     if (inicialesUsuario.isNotBlank()) {
                         AvatarUsuario(inicialesUsuario)
                     }
-                    IconButton(onClick = { navController.navigate(RUTA_AJUSTES) }) {
-                        Icon(Icons.Default.Settings, contentDescription = "Ajustes")
-                    }
+                    BotonBarraSuperior(Icons.Default.Settings, "Ajustes") { navController.navigate(RUTA_AJUSTES) }
+                    Spacer(Modifier.width(6.dp))
                 }
             )
         },
         bottomBar = {
-            NavigationBar {
+            NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
                 destinosBarraInferior.forEach { destino ->
                     NavigationBarItem(
+                        // Pestaña activa: pastilla lavanda con icono y texto en índigo.
+                        colors = NavigationBarItemDefaults.colors(
+                            indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                            selectedIconColor = MaterialTheme.colorScheme.primary,
+                            selectedTextColor = MaterialTheme.colorScheme.primary,
+                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        ),
                         selected = rutaActual == destino.ruta,
                         onClick = {
                             // saveState/restoreState es lo que hace que cada pestaña conserve su
@@ -146,7 +165,7 @@ fun EncajaApp(onCerrarSesion: () -> Unit, viewModel: EncajaAppViewModel = hiltVi
                             }
                         },
                         icon = { Icon(destino.icono, contentDescription = destino.etiqueta) },
-                        label = { Text(destino.etiqueta) }
+                        label = { Text(destino.etiqueta, fontWeight = FontWeight.Bold) }
                     )
                 }
             }
@@ -182,15 +201,16 @@ fun EncajaApp(onCerrarSesion: () -> Unit, viewModel: EncajaAppViewModel = hiltVi
 private fun AvatarUsuario(iniciales: String) {
     Box(
         modifier = Modifier
-            .padding(end = 4.dp)
-            .size(32.dp)
+            .padding(end = 6.dp)
+            .size(40.dp)
             .clip(CircleShape)
             .background(MaterialTheme.colorScheme.primaryContainer),
         contentAlignment = Alignment.Center
     ) {
         Text(
             iniciales,
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.ExtraBold,
             color = MaterialTheme.colorScheme.onPrimaryContainer
         )
     }

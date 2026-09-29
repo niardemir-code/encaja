@@ -9,6 +9,7 @@ package com.encaja.app.ui.semana
 // sin familia, con datos. El botón de invitar vive en la barra superior
 // (EncajaApp.kt), no aquí.
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -18,26 +19,35 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.filled.PriorityHigh
+import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.encaja.app.domain.model.Anuncio
 import com.encaja.app.domain.model.AnuncioId
+import com.encaja.app.domain.model.Hueco
 import com.encaja.app.domain.usecase.AvisoConflicto
 import com.encaja.app.domain.usecase.RolResponsable
 import com.encaja.app.ui.familia.etiquetaMotivo
@@ -45,9 +55,20 @@ import com.encaja.app.ui.familia.fechaAMillisUtc
 import com.encaja.app.ui.familia.millisUtcAFecha
 import com.encaja.app.ui.theme.LocalEncajaExtraColors
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
+
+private val ES = Locale("es")
+
+// Atajos a los colores del tema activo (Cálido/Nocturno) con los nombres del diseño.
+private val TINTA: Color @Composable get() = MaterialTheme.colorScheme.onBackground
+private val TINTA_SUAVE: Color @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
+private val INDIGO: Color @Composable get() = MaterialTheme.colorScheme.primary
+private val LAVANDA: Color @Composable get() = MaterialTheme.colorScheme.primaryContainer
+private val LAVANDA_TARJETA: Color @Composable get() = MaterialTheme.colorScheme.secondaryContainer
+private val BLANCO: Color @Composable get() = MaterialTheme.colorScheme.surface
 
 @Composable
 fun SemanaScreen(viewModel: SemaforoViewModel = hiltViewModel()) {
@@ -102,98 +123,130 @@ fun SemanaScreen(viewModel: SemaforoViewModel = hiltViewModel()) {
 
         is SemaforoPantallaEstado.ConDatos -> {
             val uiState = estadoActual.estado
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                item {
-                    CabeceraDeSemana(
-                        lunes = uiState.dias.firstOrNull()?.fecha,
-                        domingo = uiState.dias.lastOrNull()?.fecha,
-                        esSemanaActual = uiState.esSemanaActual,
-                        onSemanaAnterior = { viewModel.cambiarSemana(-1) },
-                        onSemanaSiguiente = { viewModel.cambiarSemana(1) },
-                        onIrASemanaActual = { viewModel.irASemanaActual() },
-                        onElegirFecha = { viewModel.irASemanaDe(it) }
-                    )
-                }
+            Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+                OlasDeFondo()
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 24.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    item {
+                        TarjetaSemana(
+                            dias = uiState.dias,
+                            esSemanaActual = uiState.esSemanaActual,
+                            onSemanaAnterior = { viewModel.cambiarSemana(-1) },
+                            onSemanaSiguiente = { viewModel.cambiarSemana(1) },
+                            onIrASemanaActual = { viewModel.irASemanaActual() },
+                            onElegirFecha = { viewModel.irASemanaDe(it) }
+                        )
+                    }
 
-                item { FilaDeDias(uiState.dias) }
+                    item {
+                        TablonDeAnuncios(
+                            anuncios = uiState.anuncios,
+                            onPublicar = { texto -> viewModel.publicarAnuncio(texto) },
+                            onEliminar = { anuncioId -> viewModel.eliminarAnuncio(anuncioId) }
+                        )
+                    }
 
-                item {
-                    TablonDeAnuncios(
-                        anuncios = uiState.anuncios,
-                        onPublicar = { texto -> viewModel.publicarAnuncio(texto) },
-                        onEliminar = { anuncioId -> viewModel.eliminarAnuncio(anuncioId) }
-                    )
-                }
+                    items(uiState.huecosDeLaSemana) { hueco ->
+                        TarjetaHueco(hueco = hueco)
+                    }
 
-                items(uiState.huecosDeLaSemana) { hueco ->
-                    TarjetaHueco(hueco = hueco)
-                }
-
-                items(uiState.avisos) { aviso ->
-                    TarjetaAvisoConflicto(aviso = aviso)
+                    items(uiState.avisos) { aviso ->
+                        TarjetaAvisoConflicto(aviso = aviso)
+                    }
                 }
             }
         }
     }
 }
 
-/** Cabecera de la pantalla Semana: flechas para retroceder/avanzar una semana completa,
- * el rango de fechas (lunes-domingo) en el centro, y a la derecha el calendario (para
- * saltar a la semana de una fecha cualquiera) y el icono de "ir a la semana actual" —
- * mismo icono (punto de disparo) y criterio que en Guía, Familia y Menú. Los tres
- * botones de la derecha van agrupados en su propia fila para que el rango de fechas,
- * que puede ser largo, tenga todo el espacio central sin empujarlos fuera. */
+/** Dos olas suaves (lavanda y melocotón) en la parte baja de la pantalla, como en la
+ * maqueta. Se dibujan detrás de la lista y con mucha transparencia: solo decoran. */
 @Composable
-private fun CabeceraDeSemana(
-    lunes: LocalDate?,
-    domingo: LocalDate?,
+private fun OlasDeFondo() {
+    val lavanda = LAVANDA
+    val melocoton = MaterialTheme.colorScheme.tertiaryContainer
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        val w = size.width
+        val h = size.height
+        val ola1 = Path().apply {
+            moveTo(0f, h * 0.78f)
+            cubicTo(w * 0.25f, h * 0.70f, w * 0.45f, h * 0.92f, w * 0.72f, h * 0.84f)
+            cubicTo(w * 0.88f, h * 0.79f, w * 0.95f, h * 0.74f, w, h * 0.70f)
+            lineTo(w, h); lineTo(0f, h); close()
+        }
+        val ola2 = Path().apply {
+            moveTo(0f, h * 0.90f)
+            cubicTo(w * 0.30f, h * 0.82f, w * 0.55f, h * 1.0f, w * 0.80f, h * 0.92f)
+            cubicTo(w * 0.90f, h * 0.89f, w * 0.96f, h * 0.86f, w, h * 0.84f)
+            lineTo(w, h); lineTo(0f, h); close()
+        }
+        drawPath(ola1, lavanda.copy(alpha = 0.55f))
+        drawPath(ola2, melocoton.copy(alpha = 0.45f))
+    }
+}
+
+/**
+ * Tarjeta lavanda de la cabecera: flechas para retroceder/avanzar una semana, el
+ * título y el rango de fechas en el centro, y a la derecha el calendario (saltar a la
+ * semana de cualquier fecha) y el "punto de disparo" para volver a la semana actual
+ * (mismo icono y criterio que en Guía, Familia y Menú). Debajo, la fila de los siete
+ * días con su color de semáforo y un punto bajo el día de hoy.
+ */
+@Composable
+private fun TarjetaSemana(
+    dias: List<DiaSemaforo>,
     esSemanaActual: Boolean,
     onSemanaAnterior: () -> Unit,
     onSemanaSiguiente: () -> Unit,
     onIrASemanaActual: () -> Unit,
     onElegirFecha: (LocalDate) -> Unit
 ) {
+    val lunes = dias.firstOrNull()?.fecha
     var calendarioAbierto by remember { mutableStateOf(false) }
-    val formatter = DateTimeFormatter.ofPattern("d 'de' MMMM", Locale("es"))
 
-    Row(
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        shape = RoundedCornerShape(24.dp),
+        color = LocalEncajaExtraColors.current.tarjetaSuave,
+        shadowElevation = 1.dp
     ) {
-        IconButton(onClick = onSemanaAnterior) {
-            Icon(Icons.Default.ChevronLeft, contentDescription = "Semana anterior")
-        }
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.weight(1f).clickable { calendarioAbierto = true }
-        ) {
-            Text("Esta semana", style = MaterialTheme.typography.titleMedium)
-            if (lunes != null && domingo != null) {
-                Text(
-                    "${lunes.format(formatter)} – ${domingo.format(formatter)}",
-                    style = MaterialTheme.typography.labelMedium,
-                    textAlign = TextAlign.Center
-                )
+        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 14.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                BotonRedondo(Icons.Default.ChevronLeft, "Semana anterior", onSemanaAnterior)
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.weight(1f).padding(horizontal = 4.dp).clickable { calendarioAbierto = true }
+                ) {
+                    Text(
+                        if (esSemanaActual) "Esta semana" else "Semana",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = TINTA,
+                        maxLines = 1
+                    )
+                    if (lunes != null) {
+                        Text(
+                            textoRangoSemana(lunes),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = TINTA_SUAVE,
+                            textAlign = TextAlign.Center,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+                BotonRedondo(Icons.Default.CalendarMonth, "Ir a una semana", { calendarioAbierto = true })
+                Spacer(Modifier.width(6.dp))
+                BotonRedondo(Icons.Default.MyLocation, "Ir a la semana actual", onIrASemanaActual, habilitado = !esSemanaActual)
+                Spacer(Modifier.width(6.dp))
+                BotonRedondo(Icons.Default.ChevronRight, "Semana siguiente", onSemanaSiguiente)
             }
-        }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { calendarioAbierto = true }) {
-                Icon(Icons.Default.CalendarMonth, contentDescription = "Ir a una semana")
-            }
-            IconButton(onClick = onIrASemanaActual, enabled = !esSemanaActual) {
-                Icon(
-                    Icons.Default.MyLocation,
-                    contentDescription = "Ir a la semana actual",
-                    tint = if (esSemanaActual) LocalContentColor.current.copy(alpha = 0.38f) else LocalContentColor.current
-                )
-            }
-            IconButton(onClick = onSemanaSiguiente) {
-                Icon(Icons.Default.ChevronRight, contentDescription = "Semana siguiente")
-            }
+
+            Spacer(Modifier.height(16.dp))
+            FilaDeDias(dias)
         }
     }
 
@@ -216,6 +269,41 @@ private fun CabeceraDeSemana(
     }
 }
 
+/** "21 – 27 de septiembre", o "28 sept – 4 oct" si la semana cambia de mes: corto para
+ * que quepa en una línea entre los cuatro botones de la cabecera. */
+private fun textoRangoSemana(lunes: LocalDate): String {
+    val domingo = lunes.plusDays(6)
+    return if (lunes.month == domingo.month) {
+        "${lunes.dayOfMonth} – ${domingo.dayOfMonth} de ${domingo.month.getDisplayName(TextStyle.FULL, ES)}"
+    } else {
+        "${lunes.dayOfMonth} ${mesCorto(lunes)} – ${domingo.dayOfMonth} ${mesCorto(domingo)}"
+    }
+}
+
+private fun mesCorto(fecha: LocalDate): String =
+    fecha.month.getDisplayName(TextStyle.SHORT, ES).removeSuffix(".")
+
+/** Botón circular blanco con icono índigo, como los de la maqueta. Atenuado si no
+ * está habilitado (p.ej. "ir a la semana actual" cuando ya se está en ella). */
+@Composable
+private fun BotonRedondo(icono: ImageVector, descripcion: String, onClick: () -> Unit, habilitado: Boolean = true) {
+    Box(
+        modifier = Modifier
+            .size(42.dp)
+            .clip(CircleShape)
+            .background(BLANCO)
+            .clickable(enabled = habilitado, onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            icono,
+            contentDescription = descripcion,
+            tint = if (habilitado) INDIGO else INDIGO.copy(alpha = 0.35f),
+            modifier = Modifier.size(22.dp)
+        )
+    }
+}
+
 /**
  * Botón de "invitar a alguien": ahora vive en la barra superior (a la izquierda del
  * avatar), no en la lista de Semana, así que se puede usar desde cualquier pestaña.
@@ -232,9 +320,7 @@ fun BotonInvitar(viewModel: SemaforoViewModel) {
     val cuidadores by viewModel.cuidadores.collectAsState()
     val clipboard = LocalClipboardManager.current
 
-    IconButton(onClick = { mostrarSelector = true }) {
-        Icon(Icons.Default.PersonAdd, contentDescription = "Invitar a alguien")
-    }
+    BotonBarraSuperior(Icons.Default.PersonAdd, "Invitar a alguien") { mostrarSelector = true }
 
     if (mostrarSelector) {
         AlertDialog(
@@ -306,35 +392,76 @@ fun BotonInvitar(viewModel: SemaforoViewModel) {
     }
 }
 
+/** Icono dentro de un círculo lavanda muy claro, como los botones de la barra superior
+ * de la maqueta (invitar, ajustes). Público porque EncajaApp lo usa para Ajustes. */
+@Composable
+fun BotonBarraSuperior(icono: ImageVector, descripcion: String, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .padding(end = 6.dp)
+            .size(40.dp)
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.secondaryContainer)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(icono, contentDescription = descripcion, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+    }
+}
+
+/** Los siete días: letra arriba y círculo con el número, coloreado según el semáforo
+ * (lavanda = sin actividades, verde = cubierto, ámbar = aviso, rojo = hueco). El día
+ * de hoy lleva además un puntito ámbar debajo. */
 @Composable
 private fun FilaDeDias(dias: List<DiaSemaforo>) {
+    val hoy = LocalDate.now()
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         dias.forEach { dia ->
+            val esHoy = dia.fecha == hoy
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text = dia.fecha.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale("es")).take(1).uppercase(),
-                    style = MaterialTheme.typography.labelSmall
+                    text = dia.fecha.dayOfWeek.getDisplayName(TextStyle.SHORT, ES).take(1).uppercase(),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = TINTA_SUAVE
                 )
                 Box(
                     modifier = Modifier
-                        .padding(top = 4.dp)
-                        .size(34.dp)
+                        .padding(top = 6.dp)
+                        .size(40.dp)
                         .clip(CircleShape)
                         .background(colorParaEstado(dia.estado)),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         dia.fecha.dayOfMonth.toString(),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = colorTextoParaEstado(dia.estado),
-                        fontWeight = FontWeight.Bold
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = colorTextoParaEstado(dia.estado)
                     )
                 }
+                Box(
+                    modifier = Modifier
+                        .padding(top = 4.dp)
+                        .size(6.dp)
+                        .clip(CircleShape)
+                        .background(if (esHoy) LocalEncajaExtraColors.current.ambar else Color.Transparent)
+                )
             }
         }
+    }
+}
+
+/** Icono en un círculo, como cabecera de cada tarjeta (megáfono, aviso, hueco). */
+@Composable
+private fun IconoDeTarjeta(icono: ImageVector, fondo: Color, tinta: Color) {
+    Box(
+        modifier = Modifier.size(52.dp).clip(CircleShape).background(fondo),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(icono, contentDescription = null, tint = tinta, modifier = Modifier.size(28.dp))
     }
 }
 
@@ -345,49 +472,77 @@ private fun TablonDeAnuncios(
     onEliminar: (AnuncioId) -> Unit
 ) {
     var textoNuevo by remember { mutableStateOf("") }
+    val extra = LocalEncajaExtraColors.current
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.secondaryContainer)
-            .padding(12.dp)
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        color = LAVANDA_TARJETA
     ) {
-        Text("Tablón de anuncios", style = MaterialTheme.typography.titleMedium)
-        Spacer(Modifier.height(8.dp))
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconoDeTarjeta(Icons.Default.Campaign, fondo = LAVANDA, tinta = INDIGO)
+                Spacer(Modifier.width(12.dp))
+                Text(
+                    "Tablón de anuncios",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = TINTA
+                )
+            }
+            Spacer(Modifier.height(12.dp))
 
-        if (anuncios.isEmpty()) {
-            Text(
-                "Todavía no hay ningún anuncio.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSecondaryContainer
-            )
-            Spacer(Modifier.height(8.dp))
-        } else {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                anuncios.forEach { anuncio ->
-                    FilaAnuncio(anuncio = anuncio, onEliminar = { onEliminar(anuncio.id) })
+            if (anuncios.isEmpty()) {
+                Text(
+                    "Todavía no hay ningún anuncio.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = TINTA_SUAVE
+                )
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    anuncios.forEach { anuncio ->
+                        FilaAnuncio(anuncio = anuncio, onEliminar = { onEliminar(anuncio.id) })
+                    }
                 }
             }
-            Spacer(Modifier.height(8.dp))
-        }
+            Spacer(Modifier.height(14.dp))
 
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            OutlinedTextField(
-                value = textoNuevo,
-                onValueChange = { textoNuevo = it },
-                label = { Text("Nuevo anuncio") },
-                modifier = Modifier.weight(1f)
-            )
-            Spacer(Modifier.width(8.dp))
-            Button(
-                enabled = textoNuevo.isNotBlank(),
-                onClick = {
-                    onPublicar(textoNuevo)
-                    textoNuevo = ""
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                OutlinedTextField(
+                    value = textoNuevo,
+                    onValueChange = { textoNuevo = it },
+                    placeholder = { Text("Nuevo anuncio", color = TINTA_SUAVE) },
+                    leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null, tint = INDIGO) },
+                    singleLine = true,
+                    shape = RoundedCornerShape(16.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = BLANCO,
+                        unfocusedContainerColor = BLANCO,
+                        focusedBorderColor = INDIGO.copy(alpha = 0.5f),
+                        unfocusedBorderColor = Color.Transparent
+                    ),
+                    modifier = Modifier.weight(1f)
+                )
+                Spacer(Modifier.width(10.dp))
+                Button(
+                    enabled = textoNuevo.isNotBlank(),
+                    onClick = {
+                        onPublicar(textoNuevo)
+                        textoNuevo = ""
+                    },
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = extra.acento,
+                        contentColor = extra.onAcento,
+                        disabledContainerColor = extra.acento.copy(alpha = 0.45f),
+                        disabledContentColor = extra.onAcento
+                    ),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)
+                ) {
+                    Icon(Icons.Default.Send, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Publicar", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
                 }
-            ) {
-                Text("Publicar")
             }
         }
     }
@@ -398,22 +553,22 @@ private fun FilaAnuncio(anuncio: Anuncio, onEliminar: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.surface)
-            .padding(10.dp),
+            .clip(RoundedCornerShape(16.dp))
+            .background(BLANCO)
+            .padding(start = 14.dp, top = 10.dp, bottom = 10.dp, end = 4.dp),
         verticalAlignment = Alignment.Top
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 "${anuncio.autorNombre} · ${formatearFechaAnuncio(anuncio.publicadoEn)}",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                style = MaterialTheme.typography.labelMedium,
+                color = TINTA_SUAVE
             )
             Spacer(Modifier.height(2.dp))
-            Text(anuncio.texto, style = MaterialTheme.typography.bodyMedium)
+            Text(anuncio.texto, style = MaterialTheme.typography.bodyLarge, color = TINTA)
         }
         IconButton(onClick = onEliminar) {
-            Icon(Icons.Default.Delete, contentDescription = "Eliminar anuncio")
+            Icon(Icons.Default.Delete, contentDescription = "Eliminar anuncio", tint = TINTA_SUAVE)
         }
     }
 }
@@ -423,51 +578,99 @@ private fun colorParaEstado(estado: EstadoDia): Color = when (estado) {
     EstadoDia.VERDE -> LocalEncajaExtraColors.current.verdeContainer
     EstadoDia.AMBAR -> MaterialTheme.colorScheme.tertiaryContainer
     EstadoDia.ROJO -> MaterialTheme.colorScheme.errorContainer
-    EstadoDia.SIN_DATOS -> MaterialTheme.colorScheme.surfaceVariant
+    EstadoDia.SIN_DATOS -> LAVANDA
 }
 
-/** Color del número dentro de cada círculo del semáforo: mismo criterio que las
- * tarjetas de hueco y aviso de conflicto — fondo pálido del estado + texto en el
- * tono fuerte de ese mismo color, en vez de un texto neutro encima. */
+/** Color del número dentro de cada círculo del semáforo: fondo pálido del estado +
+ * texto en el tono fuerte de ese mismo color; los días sin datos, índigo sobre lavanda. */
 @Composable
 private fun colorTextoParaEstado(estado: EstadoDia): Color = when (estado) {
     EstadoDia.VERDE -> LocalEncajaExtraColors.current.onVerdeContainer
     EstadoDia.AMBAR -> MaterialTheme.colorScheme.onTertiaryContainer
     EstadoDia.ROJO -> MaterialTheme.colorScheme.onErrorContainer
-    EstadoDia.SIN_DATOS -> MaterialTheme.colorScheme.onSurfaceVariant
+    EstadoDia.SIN_DATOS -> INDIGO
 }
 
-/** "Lunes 21" en vez de la fecha ISO en bruto (2026-09-21). */
-private fun formatearFechaHueco(fecha: java.time.LocalDate): String {
-    val nombreDia = fecha.dayOfWeek.getDisplayName(TextStyle.FULL, Locale("es")).replaceFirstChar { it.uppercase() }
+/** "Martes 29" en vez de la fecha ISO en bruto (2026-09-29). */
+private fun formatearFechaHueco(fecha: LocalDate): String {
+    val nombreDia = fecha.dayOfWeek.getDisplayName(TextStyle.FULL, ES).replaceFirstChar { it.uppercase() }
     return "$nombreDia ${fecha.dayOfMonth}"
 }
 
 /** "18:30" en vez del LocalTime en bruto (18:30:00 o 18:30). */
-private fun formatearHoraHueco(hora: java.time.LocalTime): String =
-    hora.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
+private fun formatearHoraHueco(hora: LocalTime): String =
+    hora.format(DateTimeFormatter.ofPattern("HH:mm"))
+
+/**
+ * Tarjeta de aviso con el estilo de la maqueta: fondo pálido, franja de color a la
+ * izquierda, icono en círculo, título con chip a la derecha y texto debajo. La usan
+ * tanto los huecos (rojo, "Sin cubrir") como las incompatibilidades (ámbar, "Importante").
+ */
+@Composable
+private fun TarjetaAviso(
+    titulo: String,
+    chip: String,
+    texto: String,
+    fondo: Color,
+    franja: Color,
+    tinta: Color,
+    icono: ImageVector
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        color = fondo
+    ) {
+        Row(modifier = Modifier.height(IntrinsicSize.Min)) {
+            Box(modifier = Modifier.width(7.dp).fillMaxHeight().background(franja))
+            Row(
+                modifier = Modifier.padding(start = 14.dp, end = 16.dp, top = 16.dp, bottom = 16.dp),
+                verticalAlignment = Alignment.Top
+            ) {
+                IconoDeTarjeta(icono, fondo = franja.copy(alpha = 0.35f), tinta = tinta)
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            titulo,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = TINTA,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            chip,
+                            style = MaterialTheme.typography.labelLarge,
+                            color = tinta,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(franja.copy(alpha = 0.30f))
+                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                        )
+                    }
+                    Spacer(Modifier.height(6.dp))
+                    Text(texto, style = MaterialTheme.typography.bodyLarge, color = TINTA, lineHeight = 22.sp)
+                }
+            }
+        }
+    }
+}
 
 @Composable
-private fun TarjetaHueco(hueco: com.encaja.app.domain.model.Hueco) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.errorContainer)
-            .padding(12.dp)
-    ) {
-        Text(
-            text = "${formatearFechaHueco(hueco.need.fecha)} · falta cubrir",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onErrorContainer
-        )
-        Spacer(Modifier.height(6.dp))
-        Text(
-            text = "${formatearHoraHueco(hueco.need.horaInicio)} — ${hueco.need.descripcion}",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onErrorContainer
-        )
-    }
+private fun TarjetaHueco(hueco: Hueco) {
+    TarjetaAviso(
+        titulo = hueco.need.descripcion,
+        chip = "Sin cubrir",
+        texto = "${formatearFechaHueco(hueco.need.fecha)} a las ${formatearHoraHueco(hueco.need.horaInicio)}: " +
+            "todavía no hay nadie asignado para llevar o recoger.",
+        fondo = LocalEncajaExtraColors.current.rosaHueco,
+        franja = MaterialTheme.colorScheme.error,
+        tinta = MaterialTheme.colorScheme.onErrorContainer,
+        icono = Icons.Default.PriorityHigh
+    )
 }
 
 /** "Ojo, Sílvia tiene asignado llevar y recoger a Etna el sábado en "Fútbol de
@@ -479,7 +682,7 @@ private fun textoAviso(aviso: AvisoConflicto): String {
         RolResponsable.LLEVA in aviso.roles -> "llevar"
         else -> "recoger"
     }
-    val dia = aviso.need.fecha.dayOfWeek.getDisplayName(TextStyle.FULL, Locale("es"))
+    val dia = aviso.need.fecha.dayOfWeek.getDisplayName(TextStyle.FULL, ES)
     val tarea = aviso.bloque.etiqueta ?: etiquetaMotivo(aviso.bloque.motivo)
     return "Ojo, ${aviso.caregiver.nombreCompleto} tiene asignado $accion a ${aviso.child.nombre} " +
         "el $dia en \"${aviso.need.descripcion}\", pero tiene asignada \"$tarea\" a esa hora."
@@ -487,24 +690,13 @@ private fun textoAviso(aviso: AvisoConflicto): String {
 
 @Composable
 private fun TarjetaAvisoConflicto(aviso: AvisoConflicto) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.tertiaryContainer)
-            .padding(12.dp)
-    ) {
-        Text(
-            text = aviso.need.descripcion,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onTertiaryContainer
-        )
-        Spacer(Modifier.height(4.dp))
-        Text(
-            text = textoAviso(aviso),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onTertiaryContainer
-        )
-    }
+    TarjetaAviso(
+        titulo = aviso.need.descripcion,
+        chip = "Importante",
+        texto = textoAviso(aviso),
+        fondo = LocalEncajaExtraColors.current.cremaAviso,
+        franja = LocalEncajaExtraColors.current.ambar,
+        tinta = MaterialTheme.colorScheme.onTertiaryContainer,
+        icono = Icons.Default.PriorityHigh
+    )
 }
-

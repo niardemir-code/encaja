@@ -61,15 +61,12 @@ fun EncajaTheme(
     content: @Composable () -> Unit
 ) {
     val colorScheme = if (darkTheme) EsquemaNocturno else EsquemaCalido
-    val coloresExtra = if (darkTheme) {
-        EncajaExtraColors(verdeContainer = NocturnoVerdeContainer, onVerdeContainer = NocturnoVerde)
-    } else {
-        EncajaExtraColors(verdeContainer = CalidoVerdeContainer, onVerdeContainer = CalidoVerde)
-    }
+    val coloresExtra = if (darkTheme) ColoresExtraNocturno else ColoresExtraCalido
 
     CompositionLocalProvider(LocalEncajaExtraColors provides coloresExtra) {
         MaterialTheme(
             colorScheme = colorScheme,
+            typography = EncajaTypography,
             content = content
         )
     }
