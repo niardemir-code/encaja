@@ -1,7 +1,7 @@
 package com.encaja.app.domain
 
 import com.encaja.app.domain.model.*
-import com.encaja.app.domain.usecase.CalcularHuecosDelDia
+import com.encaja.app.domain.usecase.DetectarConflictosDeAsignacion
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import java.time.LocalDate
@@ -51,20 +51,23 @@ class CategoriaDisponibilidadTest {
     }
 
     @Test
-    fun `una categoria informativa no genera hueco, una que bloquea si`() {
+    fun `una categoria informativa no genera aviso de conflicto, una que bloquea si`() {
         val cuidador = Caregiver(victor, "Víctor", "Oliver", "Vila", CaregiverRole.ADMIN)
-        val patrones = listOf(PatronCuidado(lunes.dayOfWeek, victor))
-        val necesidad = CoverageNeed(CoverageNeedId("n1"), ChildId("nina"), lunes, LocalTime.of(9, 0), LocalTime.of(10, 0), "Recoger")
+        val nina = Child(ChildId("nina"), "Nina")
+        val necesidad = CoverageNeed(
+            CoverageNeedId("n1"), nina.id, lunes, LocalTime.of(9, 0), LocalTime.of(10, 0), "Recoger",
+            quienLlevaId = victor.value, quienRecogeId = victor.value
+        )
         val tele = AvailabilityBlock(victor, lunes, LocalTime.of(8, 0), LocalTime.of(15, 0), MotivoNoDisponibilidad.OTRO, categoriaId = teletrabajo.id)
         val gym = tele.copy(categoriaId = gimnasio.id)
         val categorias = CategoriasBase.combinar(listOf(gimnasio, teletrabajo))
 
         val conTele = listOf(tele).conBloqueoDeCategorias(categorias)
         assertFalse(conTele.single().bloquea)
-        assertTrue(CalcularHuecosDelDia(listOf(cuidador), patrones, emptyMap(), conTele)(listOf(necesidad)).isEmpty())
+        assertTrue(DetectarConflictosDeAsignacion(listOf(nina), listOf(cuidador), conTele)(listOf(necesidad)).isEmpty())
 
         val conGym = listOf(gym).conBloqueoDeCategorias(categorias)
-        val huecos = CalcularHuecosDelDia(listOf(cuidador), patrones, emptyMap(), conGym)(listOf(necesidad))
-        assertEquals(MotivoHueco.ASIGNADO_NO_DISPONIBLE, huecos.single().motivo)
+        val avisos = DetectarConflictosDeAsignacion(listOf(nina), listOf(cuidador), conGym)(listOf(necesidad))
+        assertEquals(2, avisos.size) // conflicto tanto para "lleva" como para "recoge", ambos asignados a Víctor
     }
 }

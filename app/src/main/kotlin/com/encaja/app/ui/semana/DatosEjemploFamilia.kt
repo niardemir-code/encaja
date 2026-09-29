@@ -61,13 +61,27 @@ object DatosEjemploFamilia {
     )
 
     val needsDeLaSemana: List<CoverageNeed> = listOf(
-        // Lunes: recogida de Júlia, cubierta por Sílvia (no hay bloqueo para ella)
-        CoverageNeed(CoverageNeedId("julia-lunes"), julia, lunes.plusDays(0), LocalTime.of(16, 30), LocalTime.of(17, 0), "Recoger a Júlia"),
-        // Martes: fútbol de Etna, a la hora en que Josefa tiene médico -> hueco
-        CoverageNeed(CoverageNeedId("etna-futbol-martes"), etna, lunes.plusDays(1), LocalTime.of(18, 30), LocalTime.of(20, 0), "Fútbol de Etna"),
-        // Miércoles: recogida de Etna, sin patrón asignado ese día pero cubierta por Sílvia vía anulación puntual (ver test)
-        CoverageNeed(CoverageNeedId("etna-miercoles"), etna, lunes.plusDays(2), LocalTime.of(16, 30), LocalTime.of(17, 0), "Recoger a Etna"),
-        // Jueves: inglés de Júlia, cubierto por Josefa según el patrón
-        CoverageNeed(CoverageNeedId("julia-jueves"), julia, lunes.plusDays(3), LocalTime.of(17, 0), LocalTime.of(18, 0), "Inglés de Júlia")
+        // Lunes: recogida de Júlia, Sílvia asignada a llevar y recoger -> cubierta
+        CoverageNeed(
+            CoverageNeedId("julia-lunes"), julia, lunes.plusDays(0), LocalTime.of(16, 30), LocalTime.of(17, 0),
+            "Recoger a Júlia", quienLlevaId = silvia.id.value, quienRecogeId = silvia.id.value
+        ),
+        // Martes: fútbol de Etna. Solo se asignó a Josefa a recogerla (nadie a llevarla) ->
+        // hueco por falta de "quien lleva"; además Josefa tiene médico justo a esa hora,
+        // así que también sale un aviso de conflicto sobre ella.
+        CoverageNeed(
+            CoverageNeedId("etna-futbol-martes"), etna, lunes.plusDays(1), LocalTime.of(18, 30), LocalTime.of(20, 0),
+            "Fútbol de Etna", quienRecogeId = josefa.id.value
+        ),
+        // Miércoles: recogida de Etna, Sílvia asignada a llevar y recoger -> cubierta
+        CoverageNeed(
+            CoverageNeedId("etna-miercoles"), etna, lunes.plusDays(2), LocalTime.of(16, 30), LocalTime.of(17, 0),
+            "Recoger a Etna", quienLlevaId = silvia.id.value, quienRecogeId = silvia.id.value
+        ),
+        // Jueves: inglés de Júlia, Josefa asignada a llevar y recoger -> cubierta
+        CoverageNeed(
+            CoverageNeedId("julia-jueves"), julia, lunes.plusDays(3), LocalTime.of(17, 0), LocalTime.of(18, 0),
+            "Inglés de Júlia", quienLlevaId = josefa.id.value, quienRecogeId = josefa.id.value
+        )
     )
 }

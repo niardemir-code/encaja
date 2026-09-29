@@ -1,9 +1,10 @@
 package com.encaja.app.domain.model
 
 /**
- * El resultado central de todo el motor: una necesidad de cobertura para
- * la que, cruzando disponibilidad y asignación, no hay nadie que pueda
- * hacerse cargo. Es lo que pinta de rojo el semáforo y la guía del día.
+ * El resultado central de todo el motor: una necesidad de cobertura que requiere
+ * acompañamiento y a la que le falta alguien asignado (a llevarla, a recogerla, o
+ * ambos) en la propia actividad. Es lo que pinta de rojo el semáforo y la guía del
+ * día. El patrón semanal de Familia es solo orientativo: no interviene aquí.
  */
 data class Hueco(
     val need: CoverageNeed,
@@ -11,10 +12,10 @@ data class Hueco(
 )
 
 enum class MotivoHueco {
-    /** Nadie tiene el cuidado asignado ese día (no hay patrón ni anulación). */
-    SIN_ASIGNACION,
-    /** Hay alguien asignado, pero esa persona no está disponible a esa hora. */
-    ASIGNADO_NO_DISPONIBLE,
-    /** Hay alguien asignado y disponible, pero no puede desplazarse y la tarea lo requiere. */
-    ASIGNADO_SIN_DESPLAZAMIENTO
+    /** No hay nadie asignado a llevarla. */
+    FALTA_QUIEN_LLEVA,
+    /** No hay nadie asignado a recogerla. */
+    FALTA_QUIEN_RECOGE,
+    /** No hay nadie asignado ni a llevarla ni a recogerla. */
+    SIN_ASIGNACION
 }

@@ -39,6 +39,27 @@ interface CoverageNeedDao {
 }
 
 @Dao
+interface AssignmentDao {
+    @Query("SELECT * FROM patrones_cuidado WHERE familyId = :familyId")
+    suspend fun obtenerPatrones(familyId: String): List<PatronCuidadoEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun guardarPatrones(patrones: List<PatronCuidadoEntity>)
+
+    @Query("DELETE FROM patrones_cuidado WHERE familyId = :familyId AND diaSemana = :diaSemana")
+    suspend fun eliminarPatron(familyId: String, diaSemana: String)
+
+    @Query("SELECT * FROM anulaciones WHERE familyId = :familyId AND fecha BETWEEN :desde AND :hasta")
+    suspend fun obtenerAnulaciones(familyId: String, desde: String, hasta: String): List<AnulacionEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun guardarAnulacion(anulacion: AnulacionEntity)
+
+    @Query("DELETE FROM anulaciones WHERE familyId = :familyId AND fecha = :fecha")
+    suspend fun eliminarAnulacion(familyId: String, fecha: String)
+}
+
+@Dao
 interface AvailabilityDao {
     @Query("SELECT * FROM availability_blocks WHERE familyId = :familyId AND fecha BETWEEN :desde AND :hasta")
     suspend fun obtener(familyId: String, desde: String, hasta: String): List<AvailabilityBlockEntity>
@@ -51,15 +72,6 @@ interface AvailabilityDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun guardarTodos(bloques: List<AvailabilityBlockEntity>)
-}
-
-@Dao
-interface FilaVisibleDao {
-    @Query("SELECT * FROM filas_visibles WHERE familyId = :familyId AND lunes = :lunes")
-    suspend fun obtener(familyId: String, lunes: String): FilaVisibleEntity?
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun guardar(fila: FilaVisibleEntity)
 }
 
 @Dao

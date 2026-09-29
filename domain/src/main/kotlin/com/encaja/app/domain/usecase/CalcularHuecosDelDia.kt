@@ -3,47 +3,25 @@ package com.encaja.app.domain.usecase
 import com.encaja.app.domain.model.*
 
 /**
- * Caso de uso central de la app. Para cada necesidad de cobertura del día,
- * comprueba tres cosas en orden: si hay alguien asignado, si esa persona
- * está disponible a esa hora, y si además puede desplazarse cuando la
- * tarea lo requiere (el caso de un cuidador que solo puede "estar con"
- * el niño, no recogerlo o llevarlo a ningún sitio).
+ * Determina qué necesidades de cobertura del día quedan sin cubrir. "Cubierta" se
+ * decide por la asignación manual de la propia actividad (quién la lleva y quién la
+ * recoge, elegidos en el diálogo de la Guía) — el patrón semanal de Familia es solo
+ * orientativo y no interviene aquí. Una tarea que no requiere desplazamiento no
+ * necesita a nadie asignado.
  */
-class CalcularHuecosDelDia(
-    private val caregivers: List<Caregiver>,
-    private val patrones: List<PatronCuidado>,
-    private val anulaciones: Anulaciones,
-    private val disponibilidad: List<AvailabilityBlock>
-) {
+class CalcularHuecosDelDia {
     operator fun invoke(needs: List<CoverageNeed>): List<Hueco> {
         return needs.mapNotNull { need ->
-            val asignadoId = resolverAsignacion(need.fecha, patrones, anulaciones)
+            if (!need.requiereDesplazamiento) return@mapNotNull null
 
+            val faltaLleva = need.quienLlevaId == null
+            val faltaRecoge = need.quienRecogeId == null
             when {
-                asignadoId == null -> Hueco(need, MotivoHueco.SIN_ASIGNACION)
-                !estaDisponible(asignadoId, need) -> Hueco(need, MotivoHueco.ASIGNADO_NO_DISPONIBLE)
-                !puedeCubrirEnPersona(asignadoId, need) -> Hueco(need, MotivoHueco.ASIGNADO_SIN_DESPLAZAMIENTO)
+                faltaLleva && faltaRecoge -> Hueco(need, MotivoHueco.SIN_ASIGNACION)
+                faltaLleva -> Hueco(need, MotivoHueco.FALTA_QUIEN_LLEVA)
+                faltaRecoge -> Hueco(need, MotivoHueco.FALTA_QUIEN_RECOGE)
                 else -> null
             }
         }
-    }
-
-    private fun estaDisponible(caregiverId: CaregiverId, need: CoverageNeed): Boolean {
-        // ocupa() también cuenta el final de un turno de noche que empezó la víspera.
-        return disponibilidad
-            .filter { it.caregiverId == caregiverId }
-            .none { it.ocupa(need.fecha, need.horaInicio, need.horaFin) }
-    }
-
-    /**
-     * Si la tarea no requiere desplazamiento, cualquiera asignado vale.
-     * Si lo requiere, hace falta que el cuidador pueda desplazarse. Un
-     * caregiverId que no aparezca en la lista se trata como "puede":
-     * evita bloquear por un dato incompleto en vez de avisar de un hueco.
-     */
-    private fun puedeCubrirEnPersona(caregiverId: CaregiverId, need: CoverageNeed): Boolean {
-        if (!need.requiereDesplazamiento) return true
-        val caregiver = caregivers.find { it.id == caregiverId } ?: return true
-        return caregiver.puedeDesplazarse
     }
 }
