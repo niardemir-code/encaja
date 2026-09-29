@@ -6,28 +6,28 @@ import org.junit.jupiter.api.Test
 class SemaforoUiStateMapperTest {
 
     private val d = DatosEjemploFamilia
-    private val mapper = SemaforoUiStateMapper(d.ninos, d.caregivers, d.patrones, d.anulaciones, d.disponibilidad)
+    private val mapper = SemaforoUiStateMapper(d.ninos, d.caregivers, d.disponibilidad)
     private val estado = mapper.construir(d.lunes, d.needsDeLaSemana)
 
     @Test
-    fun `lunes queda en verde porque no hay hueco`() {
+    fun `lunes queda en verde porque Silvia esta asignada a llevar y recoger`() {
         assertEquals(EstadoDia.VERDE, estado.dias[0].estado)
     }
 
     @Test
-    fun `martes queda en rojo por el futbol de Etna sin cubrir`() {
+    fun `martes queda en rojo por el futbol de Etna sin quien la lleve`() {
         assertEquals(EstadoDia.ROJO, estado.dias[1].estado)
         assertEquals(1, estado.dias[1].huecos.size)
         assertEquals("Fútbol de Etna", estado.dias[1].huecos.first().need.descripcion)
     }
 
     @Test
-    fun `miercoles queda en verde gracias a la anulacion manual de Silvia`() {
+    fun `miercoles queda en verde porque Silvia esta asignada a llevar y recoger`() {
         assertEquals(EstadoDia.VERDE, estado.dias[2].estado)
     }
 
     @Test
-    fun `jueves queda en verde, cubierto por Josefa segun el patron`() {
+    fun `jueves queda en verde, cubierto por Josefa`() {
         assertEquals(EstadoDia.VERDE, estado.dias[3].estado)
     }
 

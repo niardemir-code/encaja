@@ -7,7 +7,6 @@ import com.encaja.app.domain.model.Caregiver
 import com.encaja.app.domain.model.CaregiverId
 import com.encaja.app.domain.model.FamilyId
 import com.encaja.app.domain.repository.AnuncioRepository
-import com.encaja.app.domain.repository.AssignmentRepository
 import com.encaja.app.domain.repository.AuthRepository
 import com.encaja.app.domain.repository.AvailabilityRepository
 import com.encaja.app.domain.repository.CaregiverRepository
@@ -35,7 +34,6 @@ class SemaforoViewModel @Inject constructor(
     private val caregiverRepository: CaregiverRepository,
     private val coverageNeedRepository: CoverageNeedRepository,
     private val availabilityRepository: AvailabilityRepository,
-    private val assignmentRepository: AssignmentRepository,
     private val anuncioRepository: AnuncioRepository
 ) : ViewModel() {
 
@@ -146,8 +144,6 @@ class SemaforoViewModel @Inject constructor(
             coroutineScope {
                 val caregiversDeferred = async { caregiverRepository.obtenerCuidadores(familyId) }
                 val ninosDeferred = async { childRepository.obtenerNinos(familyId) }
-                val patronesDeferred = async { assignmentRepository.obtenerPatrones(familyId) }
-                val anulacionesDeferred = async { assignmentRepository.obtenerAnulaciones(familyId, lunes, domingo) }
                 val disponibilidadDeferred = async { availabilityRepository.obtenerDisponibilidad(familyId, lunes, domingo) }
                 val needsDeferred = async { coverageNeedRepository.obtenerNeeds(familyId, lunes, domingo) }
                 val anunciosDeferred = async { anuncioRepository.obtenerAnuncios(familyId) }
@@ -159,13 +155,7 @@ class SemaforoViewModel @Inject constructor(
                         ?: nombreCuidadorActual
                 }
 
-                val mapper = SemaforoUiStateMapper(
-                    ninosDeferred.await(),
-                    caregivers,
-                    patronesDeferred.await(),
-                    anulacionesDeferred.await(),
-                    disponibilidadDeferred.await()
-                )
+                val mapper = SemaforoUiStateMapper(ninosDeferred.await(), caregivers, disponibilidadDeferred.await())
                 _pantalla.value = SemaforoPantallaEstado.ConDatos(
                     mapper.construir(lunes, needsDeferred.await()).copy(anuncios = anunciosDeferred.await())
                 )

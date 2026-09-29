@@ -14,13 +14,10 @@ import java.time.LocalDate
 class SemaforoUiStateMapper(
     private val ninos: List<Child>,
     private val caregivers: List<Caregiver>,
-    private val patrones: List<PatronCuidado>,
-    private val anulaciones: Anulaciones,
     private val disponibilidad: List<AvailabilityBlock>
 ) {
     fun construir(lunes: LocalDate, needsDeLaSemana: List<CoverageNeed>): SemaforoUiState {
-        val calcularHuecos = CalcularHuecosDelDia(caregivers, patrones, anulaciones, disponibilidad)
-        val huecos = calcularHuecos(needsDeLaSemana)
+        val huecos = CalcularHuecosDelDia()(needsDeLaSemana)
         val huecosPorFecha = huecos.groupBy { it.need.fecha }
         val needsPorFecha = needsDeLaSemana.groupBy { it.fecha }
 

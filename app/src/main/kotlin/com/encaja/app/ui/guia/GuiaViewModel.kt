@@ -9,7 +9,6 @@ import kotlinx.coroutines.coroutineScope
 import com.encaja.app.domain.model.CoverageNeed
 import com.encaja.app.domain.model.CoverageNeedId
 import com.encaja.app.domain.model.FamilyId
-import com.encaja.app.domain.repository.AssignmentRepository
 import com.encaja.app.domain.repository.AuthRepository
 import com.encaja.app.domain.repository.AvailabilityRepository
 import com.encaja.app.domain.repository.CaregiverRepository
@@ -35,7 +34,6 @@ class GuiaViewModel @Inject constructor(
     private val caregiverRepository: CaregiverRepository,
     private val coverageNeedRepository: CoverageNeedRepository,
     private val availabilityRepository: AvailabilityRepository,
-    private val assignmentRepository: AssignmentRepository,
     private val familyUnitRepository: FamilyUnitRepository
 ) : ViewModel() {
 
@@ -112,8 +110,6 @@ class GuiaViewModel @Inject constructor(
                 val ninosDeferred = async { childRepository.obtenerNinos(familyId) }
                 val caregiversDeferred = async { caregiverRepository.obtenerCuidadores(familyId) }
                 val unidadesDeferred = async { familyUnitRepository.obtenerUnidades(familyId) }
-                val patronesDeferred = async { assignmentRepository.obtenerPatrones(familyId) }
-                val anulacionesDeferred = async { assignmentRepository.obtenerAnulaciones(familyId, fecha, fecha) }
                 val disponibilidadDeferred = async { availabilityRepository.obtenerDisponibilidad(familyId, fecha, fecha) }
                 val needsDeferred = async { coverageNeedRepository.obtenerNeeds(familyId, fecha, fecha) }
 
@@ -121,8 +117,6 @@ class GuiaViewModel @Inject constructor(
                     ninosDeferred.await(),
                     caregiversDeferred.await(),
                     unidadesDeferred.await(),
-                    patronesDeferred.await(),
-                    anulacionesDeferred.await(),
                     disponibilidadDeferred.await()
                 )
                 _pantalla.value = GuiaPantallaEstado.ConDatos(mapper.construir(fecha, needsDeferred.await()))

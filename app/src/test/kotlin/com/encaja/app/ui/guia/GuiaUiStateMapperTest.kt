@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test
 class GuiaUiStateMapperTest {
 
     private val d = DatosEjemploFamilia
-    private val mapper = GuiaUiStateMapper(d.ninos, d.caregivers, d.unidades, d.patrones, d.anulaciones, d.disponibilidad)
+    private val mapper = GuiaUiStateMapper(d.ninos, d.caregivers, d.unidades, d.disponibilidad)
 
     @Test
     fun `el martes el bloque de futbol de Etna sale sin cubrir`() {
@@ -31,7 +31,8 @@ class GuiaUiStateMapperTest {
 
         assertEquals(1, filaJulia.bloques.size)
         assertTrue(filaJulia.bloques.first().cubierto)
-        assertEquals("Sílvia Izquierdo", filaJulia.bloques.first().cuidadorAsignado)
+        assertEquals("Sílvia Izquierdo", filaJulia.bloques.first().quienLleva?.etiqueta)
+        assertEquals("Sílvia Izquierdo", filaJulia.bloques.first().quienRecoge?.etiqueta)
     }
 
     @Test
