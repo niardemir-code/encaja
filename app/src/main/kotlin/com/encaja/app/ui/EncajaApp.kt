@@ -34,6 +34,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.encaja.app.R
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -92,9 +93,11 @@ fun EncajaApp(onCerrarSesion: () -> Unit, viewModel: EncajaAppViewModel = hiltVi
                             modifier = Modifier.size(28.dp)
                         )
                         Text(
-                            "Encaja",
+                            "encaja",
                             modifier = Modifier.padding(start = 8.dp),
-                            fontWeight = FontWeight.Bold
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = (-0.5).sp
                         )
                     }
                 },
@@ -107,14 +110,15 @@ fun EncajaApp(onCerrarSesion: () -> Unit, viewModel: EncajaAppViewModel = hiltVi
                 },
                 actions = {
                     // El botón de invitar vive aquí (y no en la lista de Semana) para que
-                    // esté siempre a mano; usa el mismo SemaforoViewModel de la pestaña
-                    // Semana, así que solo se puede mostrar cuando esa pestaña ya existe
-                    // en el back stack (backStackEntry no es null).
-                    if (rutaActual == Destino.Semana.ruta) {
-                        backStackEntry?.let { entry ->
-                            val semanaViewModel: SemaforoViewModel = hiltViewModel(entry)
-                            BotonInvitar(semanaViewModel)
-                        }
+                    // esté siempre a mano, en todas las pestañas — no solo en Semana. Usa
+                    // el SemaforoViewModel de la pestaña Semana (que, al ser la pestaña de
+                    // inicio, siempre tiene una entrada en el back stack, se esté viendo
+                    // esa pestaña o no) para sacar de ahí la lista de cuidadores y generar
+                    // el código.
+                    val semanaEntry = runCatching { navController.getBackStackEntry(Destino.Semana.ruta) }.getOrNull()
+                    semanaEntry?.let { entry ->
+                        val semanaViewModel: SemaforoViewModel = hiltViewModel(entry)
+                        BotonInvitar(semanaViewModel)
                     }
                     if (inicialesUsuario.isNotBlank()) {
                         AvatarUsuario(inicialesUsuario)

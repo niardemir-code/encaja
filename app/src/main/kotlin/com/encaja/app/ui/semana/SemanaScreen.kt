@@ -228,7 +228,7 @@ fun BotonInvitar(viewModel: SemaforoViewModel) {
                 errorInvitacion = null
                 copiado = false
             },
-            title = { Text(if (codigoGenerado != null) "Código generado" else "¿Para quién es la invitación?") },
+            title = { Text(if (codigoGenerado != null) "Código generado" else "Invitación para cuidadores") },
             text = {
                 Column {
                     when {
