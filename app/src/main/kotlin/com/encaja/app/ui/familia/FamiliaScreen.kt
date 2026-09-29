@@ -25,6 +25,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Today
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -225,21 +226,12 @@ private fun CabeceraFamilia(
                     textAlign = TextAlign.Center,
                     maxLines = 2
                 )
-                // Siempre visible con el mismo estilo; solo responde si no estás ya en esta semana.
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(50))
-                        .background(LAVANDA)
-                        .clickable(enabled = !esSemanaActual, onClick = onIrASemanaActual)
-                        .padding(horizontal = 14.dp, vertical = 10.dp)
-                ) {
-                    Text(
-                        "Esta semana",
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.SemiBold,
-                        color = INDIGO
-                    )
-                }
+                // Icono en vez de un texto ("Esta semana") que se cortaba: mismo criterio que
+                // el botón "Ahora" de la Guía. Solo responde si no se está ya en esta semana.
+                BotonCircular(
+                    Icons.Default.Today, "Ir a la semana actual", onIrASemanaActual,
+                    habilitado = !esSemanaActual
+                )
                 Spacer(Modifier.width(6.dp))
                 BotonCircular(Icons.Default.CalendarMonth, "Ir a una semana", { calendarioAbierto = true })
                 Spacer(Modifier.width(6.dp))
@@ -314,12 +306,16 @@ private fun CabeceraTarjeta(icono: ImageVector, titulo: String, subtitulo: Strin
 }
 
 @Composable
-private fun BotonCircular(icono: ImageVector, descripcion: String, onClick: () -> Unit) {
+private fun BotonCircular(icono: ImageVector, descripcion: String, onClick: () -> Unit, habilitado: Boolean = true) {
     Box(
-        modifier = Modifier.size(40.dp).clip(CircleShape).background(LAVANDA).clickable(onClick = onClick),
+        modifier = Modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .background(LAVANDA)
+            .clickable(enabled = habilitado, onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        Icon(icono, contentDescription = descripcion, tint = INDIGO)
+        Icon(icono, contentDescription = descripcion, tint = if (habilitado) INDIGO else INDIGO.copy(alpha = 0.4f))
     }
 }
 

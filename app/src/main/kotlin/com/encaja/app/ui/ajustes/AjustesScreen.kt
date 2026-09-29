@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ChildCare
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -26,8 +27,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.encaja.app.ui.theme.PreferenciaTema
+import com.encaja.app.ui.theme.TemaPreferido
 
 /**
  * Menú raíz de Ajustes: solo enlaces a cada bloque (Niños, Cuidadores —que incluye
@@ -75,11 +79,38 @@ fun AjustesScreen(
             onClick = onAbrirTodasActividades
         )
 
+        Spacer(Modifier.height(24.dp))
+        SeccionTema()
+
         Spacer(Modifier.height(32.dp))
         OutlinedButton(onClick = onCerrarSesion, modifier = Modifier.fillMaxWidth()) {
             Text("Cerrar sesión")
         }
     }
+}
+
+/** Elegir entre seguir el tema del teléfono o forzar el claro/oscuro de la app. */
+@Composable
+private fun SeccionTema() {
+    val contexto = LocalContext.current
+    val temaActual by PreferenciaTema.actual
+
+    Text("Tema", style = MaterialTheme.typography.titleMedium)
+    Spacer(Modifier.height(8.dp))
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        OpcionTema("Sistema", TemaPreferido.SISTEMA, temaActual, contexto)
+        OpcionTema("Claro", TemaPreferido.CLARO, temaActual, contexto)
+        OpcionTema("Oscuro", TemaPreferido.OSCURO, temaActual, contexto)
+    }
+}
+
+@Composable
+private fun OpcionTema(etiqueta: String, valor: TemaPreferido, actual: TemaPreferido, contexto: android.content.Context) {
+    FilterChip(
+        selected = actual == valor,
+        onClick = { PreferenciaTema.elegir(contexto, valor) },
+        label = { Text(etiqueta) }
+    )
 }
 
 @Composable

@@ -1,9 +1,10 @@
 package com.encaja.app.ui.theme
 
 // NOTA: depende de Jetpack Compose, no compilado en este entorno.
-// Tema de Encaja: aplica automáticamente el estilo "Cálido" (claro) o
-// "Nocturno" (oscuro) según el tema del sistema del teléfono. No hay
-// selector manual dentro de la app: sigue siempre al ajuste del móvil.
+// Tema de Encaja: aplica el estilo "Cálido" (claro) o "Nocturno" (oscuro).
+// Por defecto sigue el tema del sistema del teléfono, pero se puede forzar
+// uno de los dos desde Ajustes > Tema (ver PreferenciaTema.kt); MainActivity
+// decide el [darkTheme] que se pasa aquí según esa preferencia.
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme

@@ -12,7 +12,6 @@ package com.encaja.app.ui.menu
 // único recuadro para que quede bien delimitado y alineado.
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -22,10 +21,9 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.NightsStay
+import androidx.compose.material.icons.filled.Today
 import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -137,7 +135,6 @@ private fun CabeceraMenu(
     onIrASemanaActual: () -> Unit,
     onIrASemanaDe: (LocalDate) -> Unit
 ) {
-    var menuAbierto by remember { mutableStateOf(false) }
     var calendarioAbierto by remember { mutableStateOf(false) }
 
     Row(
@@ -163,6 +160,15 @@ private fun CabeceraMenu(
             IconButton(onClick = onSemanaAnterior) {
                 Icon(Icons.Default.ChevronLeft, contentDescription = "Semana anterior")
             }
+            // Botones de ir adelante/atrás ya cubren cambiar de semana; este vuelve
+            // directo a la actual sin acumular los pasos dados con las flechas.
+            IconButton(onClick = onIrASemanaActual, enabled = !esSemanaActual) {
+                Icon(
+                    Icons.Default.Today,
+                    contentDescription = "Ir a la semana actual",
+                    tint = if (esSemanaActual) LocalContentColor.current.copy(alpha = 0.38f) else LocalContentColor.current
+                )
+            }
             IconButton(onClick = { calendarioAbierto = true }) {
                 Icon(Icons.Default.CalendarMonth, contentDescription = "Ir a una semana")
             }
@@ -171,55 +177,6 @@ private fun CabeceraMenu(
             }
         }
     }
-
-    Spacer(Modifier.height(8.dp))
-
-    Box {
-            Row(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(MaterialTheme.colorScheme.secondaryContainer)
-                    .clickable { menuAbierto = true }
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    Icons.Default.DateRange,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp),
-                    tint = MaterialTheme.colorScheme.onSecondaryContainer
-                )
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    if (esSemanaActual) "Esta semana" else "Otra semana",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                )
-                Spacer(Modifier.width(2.dp))
-                Icon(
-                    Icons.Default.KeyboardArrowRight,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp),
-                    tint = MaterialTheme.colorScheme.onSecondaryContainer
-                )
-            }
-
-            DropdownMenu(expanded = menuAbierto, onDismissRequest = { menuAbierto = false }) {
-                DropdownMenuItem(
-                    text = { Text("Semana anterior") },
-                    onClick = { menuAbierto = false; onSemanaAnterior() }
-                )
-                DropdownMenuItem(
-                    text = { Text("Esta semana") },
-                    enabled = !esSemanaActual,
-                    onClick = { menuAbierto = false; onIrASemanaActual() }
-                )
-                DropdownMenuItem(
-                    text = { Text("Semana siguiente") },
-                    onClick = { menuAbierto = false; onSemanaSiguiente() }
-                )
-            }
-        }
 
     if (calendarioAbierto) {
         val estado = rememberDatePickerState(
