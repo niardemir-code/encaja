@@ -78,14 +78,56 @@ private val ROJO: Color
     @Composable get() = MaterialTheme.colorScheme.errorContainer
 
 @Composable
-fun GuiaScreen(viewModel: GuiaViewModel = hiltViewModel()) {
+fun GuiaScreen(
+    viewModel: GuiaViewModel = hiltViewModel(),
+    // Al llegar desde un aviso de la pantalla Semana (falta cubrir / incompatibilidad):
+    // salta directamente a ese día y abre su edición, para asignar sin tener que
+    // buscarla a mano. Ambos quedan en null en la entrada normal por la pestaña.
+    fechaInicial: LocalDate? = null,
+    necesidadIdInicial: String? = null,
+    // Al cerrar esa edición (guardar, borrar o cancelar) hay que volver a Semana en
+    // vez de quedarse en Guía, ya que el usuario nunca pidió venir aquí a mirar el
+    // día entero: solo quería resolver ese aviso concreto.
+    onVolverDespuesDeAsignar: () -> Unit = {}
+) {
     val pantalla by viewModel.pantalla.collectAsState()
     var actividadEnCreacion by remember { mutableStateOf(false) }
     var actividadEnEdicion by remember { mutableStateOf<CoverageNeed?>(null) }
+    var necesidadPendiente by remember(necesidadIdInicial) { mutableStateOf(necesidadIdInicial) }
+    // True mientras la actividad en edición es la que se abrió sola al llegar desde un
+    // aviso (no una que el usuario haya abierto a mano tocándola en la propia Guía).
+    var edicionVieneDeAviso by remember(necesidadIdInicial) { mutableStateOf(false) }
+
+    fun cerrarEdicion() {
+        actividadEnEdicion = null
+        if (edicionVieneDeAviso) {
+            edicionVieneDeAviso = false
+            onVolverDespuesDeAsignar()
+        }
+    }
 
     // El ViewModel sobrevive a los cambios de pestaña; se recarga al reentrar para
-    // reflejar cambios hechos desde otra pestaña (p.ej. borrar una actividad).
-    LaunchedEffect(Unit) { viewModel.recargar() }
+    // reflejar cambios hechos desde otra pestaña (p.ej. borrar una actividad). Si se
+    // llega con una fecha concreta (desde un aviso), se salta a ese día en vez de la
+    // recarga normal.
+    LaunchedEffect(fechaInicial) {
+        if (fechaInicial != null) viewModel.irADia(fechaInicial) else viewModel.recargar()
+    }
+
+    // En cuanto los datos de ese día están cargados, busca la actividad pendiente y
+    // abre su diálogo de edición. Se limpia tras abrirlo para no volver a hacerlo si
+    // el usuario lo cierra y se queda en la pantalla.
+    LaunchedEffect(pantalla, necesidadPendiente) {
+        val pendiente = necesidadPendiente ?: return@LaunchedEffect
+        val estado = (pantalla as? GuiaPantallaEstado.ConDatos)?.estado ?: return@LaunchedEffect
+        if (fechaInicial != null && estado.fecha != fechaInicial) return@LaunchedEffect
+        val need = estado.filas.flatMap { it.bloques }.map { it.need }.firstOrNull { it.id.value == pendiente }
+        if (need != null) {
+            actividadEnEdicion = need
+            edicionVieneDeAviso = true
+            necesidadPendiente = null
+        }
+    }
 
     val estadoConDatos = pantalla as? GuiaPantallaEstado.ConDatos
 
@@ -238,17 +280,17 @@ fun GuiaScreen(viewModel: GuiaViewModel = hiltViewModel()) {
                             patronSerieCargando = patronSerieCargando,
                             onGuardar = { needs, aplicarATodaLaSerie ->
                                 viewModel.guardarActividades(needs, aplicarATodaLaSerie)
-                                actividadEnEdicion = null
+                                cerrarEdicion()
                             },
                             onEliminar = { aplicarATodaLaSerie ->
                                 viewModel.eliminarActividad(need.id, need.grupoRepeticionId, need.fecha, aplicarATodaLaSerie)
-                                actividadEnEdicion = null
+                                cerrarEdicion()
                             },
                             onActualizarSerie = { plantilla, nuevasFechas ->
                                 viewModel.actualizarSerie(plantilla, nuevasFechas)
-                                actividadEnEdicion = null
+                                cerrarEdicion()
                             },
-                            onCerrar = { actividadEnEdicion = null }
+                            onCerrar = { cerrarEdicion() }
                         )
                     }
                 }

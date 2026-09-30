@@ -43,10 +43,13 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.encaja.app.R
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import java.time.LocalDate
 import com.encaja.app.ui.actividades.TodasActividadesScreen
 import com.encaja.app.ui.ajustes.AjustesCuidadoresScreen
 import com.encaja.app.ui.ajustes.AjustesNinosScreen
@@ -60,12 +63,25 @@ import com.encaja.app.ui.semana.BotonInvitar
 import com.encaja.app.ui.semana.SemaforoViewModel
 import com.encaja.app.ui.semana.SemanaScreen
 
-private sealed class Destino(val ruta: String, val etiqueta: String, val icono: ImageVector) {
-    data object Semana : Destino("semana", "Semana", Icons.Default.DateRange)
-    data object Guia : Destino("guia", "Guía", Icons.AutoMirrored.Filled.List)
-    data object Familia : Destino("familia", "Familia", Icons.Default.Group)
-    data object Menu : Destino("menu", "Menú", Icons.Default.Restaurant)
-    data object Compra : Destino("compra", "Compra", Icons.Default.ShoppingCart)
+/** Ruta base de Guía (para navegar desde la pestaña, sin argumentos) y su plantilla
+ * completa (para declarar el composable y para comparar contra la ruta actual, que
+ * Navigation siempre expone como la plantilla, no como la ruta base). Los dos
+ * argumentos son opcionales: sin ellos es la pestaña normal; con ellos —usado desde
+ * un aviso de Semana— salta directamente a esa fecha y abre esa actividad. */
+private const val RUTA_GUIA_BASE = "guia"
+private const val RUTA_GUIA_PLANTILLA = "guia?fecha={fecha}&necesidadId={necesidadId}"
+
+private sealed class Destino(val ruta: String, val rutaNavegacion: String = ruta, val etiqueta: String, val icono: ImageVector) {
+    data object Semana : Destino(ruta = "semana", etiqueta = "Semana", icono = Icons.Default.DateRange)
+    data object Guia : Destino(
+        ruta = RUTA_GUIA_PLANTILLA,
+        rutaNavegacion = RUTA_GUIA_BASE,
+        etiqueta = "Guía",
+        icono = Icons.AutoMirrored.Filled.List
+    )
+    data object Familia : Destino(ruta = "familia", etiqueta = "Familia", icono = Icons.Default.Group)
+    data object Menu : Destino(ruta = "menu", etiqueta = "Menú", icono = Icons.Default.Restaurant)
+    data object Compra : Destino(ruta = "compra", etiqueta = "Compra", icono = Icons.Default.ShoppingCart)
 }
 
 private val destinosBarraInferior = listOf(Destino.Semana, Destino.Guia, Destino.Familia, Destino.Menu, Destino.Compra)
@@ -134,7 +150,11 @@ fun EncajaApp(onCerrarSesion: () -> Unit, viewModel: EncajaAppViewModel = hiltVi
                     if (inicialesUsuario.isNotBlank()) {
                         AvatarUsuario(inicialesUsuario)
                     }
-                    BotonBarraSuperior(Icons.Default.Settings, "Ajustes") { navController.navigate(RUTA_AJUSTES) }
+                    BotonBarraSuperior(Icons.Default.Settings, "Ajustes") {
+                        if (rutaActual != RUTA_AJUSTES) {
+                            navController.navigate(RUTA_AJUSTES) { launchSingleTop = true }
+                        }
+                    }
                     Spacer(Modifier.width(6.dp))
                 }
             )
@@ -153,15 +173,19 @@ fun EncajaApp(onCerrarSesion: () -> Unit, viewModel: EncajaAppViewModel = hiltVi
                         ),
                         selected = rutaActual == destino.ruta,
                         onClick = {
-                            // saveState/restoreState es lo que hace que cada pestaña conserve su
-                            // propio estado (p.ej. el día o la semana en que se estaba) al volver a
-                            // ella, en vez de recrearse desde cero cada vez.
-                            navController.navigate(destino.ruta) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
+                            // Antes esto usaba saveState/restoreState para conservar el estado de
+                            // cada pestaña al volver a ella. Pero eso guarda la pila entera que
+                            // hay por encima de "semana" (incluida Ajustes, si se había abierto) y
+                            // podía restaurarla más tarde por error: así es como Ajustes se quedaba
+                            // "pegada" y reaparecía al volver a una pestaña. Cada pantalla ya vuelve
+                            // a cargar sus datos al reentrar (ver sus LaunchedEffect), así que no
+                            // hace falta conservar nada: un simple popUpTo sin guardar estado deja
+                            // la pila siempre limpia (como mucho "semana" + la pestaña actual).
+                            if (rutaActual != destino.ruta) {
+                                navController.navigate(destino.rutaNavegacion) {
+                                    popUpTo(navController.graph.findStartDestination().id)
+                                    launchSingleTop = true
                                 }
-                                launchSingleTop = true
-                                restoreState = true
                             }
                         },
                         icon = { Icon(destino.icono, contentDescription = destino.etiqueta) },
@@ -176,8 +200,38 @@ fun EncajaApp(onCerrarSesion: () -> Unit, viewModel: EncajaAppViewModel = hiltVi
             startDestination = Destino.Semana.ruta,
             modifier = Modifier.padding(padding)
         ) {
-            composable(Destino.Semana.ruta) { SemanaScreen() }
-            composable(Destino.Guia.ruta) { GuiaScreen() }
+            composable(Destino.Semana.ruta) {
+                SemanaScreen(
+                    // Desde un aviso o un hueco: salta a la Guía, a ese día, y abre
+                    // directamente esa actividad para poder asignarla.
+                    onAbrirActividad = { fecha, necesidadId ->
+                        val idCodificado = java.net.URLEncoder.encode(necesidadId, "UTF-8")
+                        navController.navigate("$RUTA_GUIA_BASE?fecha=$fecha&necesidadId=$idCodificado") {
+                            popUpTo(navController.graph.findStartDestination().id)
+                            launchSingleTop = true
+                        }
+                    }
+                )
+            }
+            composable(
+                route = Destino.Guia.ruta,
+                arguments = listOf(
+                    navArgument("fecha") { type = NavType.StringType; nullable = true; defaultValue = null },
+                    navArgument("necesidadId") { type = NavType.StringType; nullable = true; defaultValue = null }
+                )
+            ) { backStackEntry ->
+                val fechaArg = backStackEntry.arguments?.getString("fecha")
+                    ?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+                val necesidadIdArg = backStackEntry.arguments?.getString("necesidadId")
+                GuiaScreen(
+                    fechaInicial = fechaArg,
+                    necesidadIdInicial = necesidadIdArg,
+                    // Se llegó aquí resolviendo un aviso concreto de Semana (no
+                    // pidieron ver el día entero): al terminar (guardar, borrar o
+                    // cancelar), se vuelve a Semana en vez de quedarse en Guía.
+                    onVolverDespuesDeAsignar = { navController.popBackStack() }
+                )
+            }
             composable(Destino.Familia.ruta) { FamiliaScreen() }
             composable(Destino.Menu.ruta) { MenuScreen() }
             composable(Destino.Compra.ruta) { CompraScreen() }
