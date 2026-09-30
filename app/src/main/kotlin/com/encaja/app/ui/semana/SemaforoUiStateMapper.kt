@@ -30,20 +30,20 @@ class SemaforoUiStateMapper(
             val fecha = lunes.plusDays(offset.toLong())
             val huecosDelDia = huecosPorFecha[fecha].orEmpty()
             val estado = when {
+                // Un día ya pasado no tiene nada que resolver (estuviera como estuviera),
+                // así que se queda sin color, para no confundir con los que sí lo tienen.
+                fecha < hoy -> EstadoDia.SIN_DATOS
                 huecosDelDia.isNotEmpty() -> EstadoDia.ROJO
-                // Una incompatibilidad de un día ya pasado no es accionable (la actividad
-                // se cubrió igualmente), así que el día queda en verde, no en ámbar.
-                !avisosPorFecha[fecha].isNullOrEmpty() && fecha >= hoy -> EstadoDia.AMBAR
+                !avisosPorFecha[fecha].isNullOrEmpty() -> EstadoDia.AMBAR
                 needsPorFecha[fecha].isNullOrEmpty() -> EstadoDia.SIN_DATOS
                 else -> EstadoDia.VERDE
             }
             DiaSemaforo(fecha, estado, huecosDelDia, needs = needsPorFecha[fecha].orEmpty())
         }
 
-        // El círculo de cada día conserva su color aunque ya haya pasado (para poder
-        // repasar la semana), pero las tarjetas de debajo son avisos accionables: un
-        // hueco o incompatibilidad de un día ya pasado no hay nada que hacer con él,
-        // así que desaparece de estas listas en cuanto la fecha queda atrás.
+        // Las tarjetas de debajo son avisos accionables: un hueco o incompatibilidad de
+        // un día ya pasado no hay nada que hacer con él, así que desaparece de estas
+        // listas en cuanto la fecha queda atrás (igual que el color de su círculo).
         val huecosVigentes = huecos.filter { it.need.fecha >= hoy }
         val avisosVigentes = avisos.filter { it.need.fecha >= hoy }
 

@@ -1,5 +1,6 @@
 package com.encaja.app.data.firestore
 
+import com.encaja.app.domain.model.CategoriaId
 import com.encaja.app.domain.model.TurnoId
 import com.encaja.app.domain.model.TurnoTrabajo
 import java.time.LocalTime
@@ -10,13 +11,15 @@ object TurnoTrabajoFirestoreMapper {
     fun aDocumento(turno: TurnoTrabajo): Map<String, Any?> = mapOf(
         "nombre" to turno.nombre,
         "horaInicio" to turno.horaInicio.toString(),
-        "horaFin" to turno.horaFin.toString()
+        "horaFin" to turno.horaFin.toString(),
+        "categoriaId" to turno.categoriaId?.value
     )
 
     fun desdeDocumento(id: String, datos: Map<String, Any?>): TurnoTrabajo? {
         val nombre = datos["nombre"] as? String ?: return null
         val inicio = (datos["horaInicio"] as? String)?.let { runCatching { LocalTime.parse(it) }.getOrNull() } ?: return null
         val fin = (datos["horaFin"] as? String)?.let { runCatching { LocalTime.parse(it) }.getOrNull() } ?: return null
-        return TurnoTrabajo(TurnoId(id), nombre, inicio, fin)
+        val categoriaId = (datos["categoriaId"] as? String)?.let { CategoriaId(it) }
+        return TurnoTrabajo(TurnoId(id), nombre, inicio, fin, categoriaId)
     }
 }

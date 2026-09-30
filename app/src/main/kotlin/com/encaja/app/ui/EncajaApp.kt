@@ -202,18 +202,10 @@ fun EncajaApp(onCerrarSesion: () -> Unit, viewModel: EncajaAppViewModel = hiltVi
         ) {
             composable(Destino.Semana.ruta) {
                 SemanaScreen(
-                    // Desde un aviso o un hueco: salta a la Guía, a ese día, y abre
-                    // directamente esa actividad para poder asignarla.
-                    onAbrirActividad = { fecha, necesidadId ->
-                        val idCodificado = java.net.URLEncoder.encode(necesidadId, "UTF-8")
-                        navController.navigate("$RUTA_GUIA_BASE?fecha=$fecha&necesidadId=$idCodificado") {
-                            popUpTo(navController.graph.findStartDestination().id)
-                            launchSingleTop = true
-                        }
-                    },
                     // Desde el círculo de un día ámbar/rojo que ya no tiene un aviso o
-                    // hueco vigente (p.ej. un día pasado): solo salta a ese día en la
-                    // Guía, sin intentar abrir ninguna actividad en concreto.
+                    // hueco vigente: solo salta a ese día en la Guía, sin intentar abrir
+                    // ninguna actividad en concreto. (Los avisos se editan en la propia
+                    // Semana, sin pasar por aquí.)
                     onVerDia = { fecha ->
                         navController.navigate("$RUTA_GUIA_BASE?fecha=$fecha") {
                             popUpTo(navController.graph.findStartDestination().id)

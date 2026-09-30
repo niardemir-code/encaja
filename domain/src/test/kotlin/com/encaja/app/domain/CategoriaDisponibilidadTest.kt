@@ -21,17 +21,31 @@ class CategoriaDisponibilidadTest {
     }
 
     @Test
-    fun `una personalizacion de serie solo cambia emoji y color`() {
+    fun `una personalizacion de serie cambia todo menos el id y el motivo`() {
         val guardada = CategoriaDisponibilidad(
             CategoriasBase.idDe(MotivoNoDisponibilidad.TRABAJO), "Otro nombre", "🏭", 0xFF123456,
             ModoCategoria.DIAS, bloquea = false, base = MotivoNoDisponibilidad.TRABAJO
         )
         val trabajo = CategoriasBase.combinar(listOf(guardada)).first()
-        assertEquals("Trabajo", trabajo.nombre)
+        assertEquals("Otro nombre", trabajo.nombre)
         assertEquals("🏭", trabajo.emoji)
         assertEquals(0xFF123456, trabajo.color)
-        assertEquals(ModoCategoria.HORAS, trabajo.modo)
-        assertTrue(trabajo.bloquea)
+        assertEquals(ModoCategoria.DIAS, trabajo.modo)
+        assertFalse(trabajo.bloquea)
+        assertEquals(MotivoNoDisponibilidad.TRABAJO, trabajo.base)
+        assertEquals(CategoriasBase.idDe(MotivoNoDisponibilidad.TRABAJO), trabajo.id)
+    }
+
+    @Test
+    fun `una de serie marcada como informativa deja de ocupar tambien en sus bloques antiguos`() {
+        val trabajoInformativo = CategoriasBase.predeterminadas.first { it.base == MotivoNoDisponibilidad.TRABAJO }
+            .copy(bloquea = false)
+        val categorias = CategoriasBase.combinar(listOf(trabajoInformativo))
+        val bloque = AvailabilityBlock(
+            CaregiverId("v"), LocalDate.of(2026, 9, 15), LocalTime.of(8, 0), LocalTime.of(15, 0),
+            MotivoNoDisponibilidad.TRABAJO
+        )
+        assertFalse(listOf(bloque).conBloqueoDeCategorias(categorias).single().bloquea)
     }
 
     @Test

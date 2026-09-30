@@ -36,10 +36,18 @@ data class DiaDisponibilidadCuidador(val fecha: LocalDate, val bloqueos: List<Av
 
 data class CuidadorDisponibilidadSemana(val caregiver: Caregiver, val dias: List<DiaDisponibilidadCuidador>)
 
+/**
+ * Una unidad familiar en la cuadrícula: sus 7 días llevan, juntos, los bloqueos de
+ * todos sus miembros (la unidad "va junta", así que si uno está ocupado la unidad no
+ * está del todo libre). Es solo de lectura: la disponibilidad se edita por persona.
+ */
+data class UnidadDisponibilidadSemana(val unidad: FamilyUnit, val dias: List<DiaDisponibilidadCuidador>)
+
 data class FamiliaUiState(
     val lunes: LocalDate,
     val esSemanaActual: Boolean,
     val cuidadores: List<CuidadorDisponibilidadSemana>,
+    val unidades: List<UnidadDisponibilidadSemana> = emptyList(),
     /** Turnos de trabajo con nombre que ha definido la familia, para elegirlos de un toque. */
     val turnos: List<TurnoTrabajo> = emptyList(),
     /** Todas las categorías: las 5 de serie (con su personalización) y las propias. */

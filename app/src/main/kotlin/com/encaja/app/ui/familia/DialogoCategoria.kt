@@ -3,10 +3,10 @@
 package com.encaja.app.ui.familia
 
 // NOTA: depende de Jetpack Compose (Material 3), no compilado en este entorno.
-// Editor de categorías de disponibilidad. Para una categoría propia se elige
-// todo: nombre, si se apunta por horas o por días, si ocupa a la persona,
-// color e icono (galería de emojis). Para una de serie (Trabajo, Médico...)
-// solo el icono y el color, porque su comportamiento es fijo.
+// Editor de categorías de disponibilidad. Todas (propias y de serie) tienen los
+// mismos campos: nombre, si se apunta por horas o por días, si ocupa a la persona,
+// color e icono (galería de emojis). Las de serie (Trabajo, Médico...) solo se
+// diferencian en que no se pueden borrar.
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -60,8 +60,8 @@ fun DialogoCategoria(
     var galeriaAbierta by remember { mutableStateOf(false) }
     var confirmarBorrado by remember { mutableStateOf(false) }
 
-    val nombreRepetido = !esBase && nombre.isNotBlank() && !nombreCategoriaValido(nombre, categorias, inicial?.id)
-    val puedeGuardar = esBase || nombreCategoriaValido(nombre, categorias, inicial?.id)
+    val nombreRepetido = nombre.isNotBlank() && !nombreCategoriaValido(nombre, categorias, inicial?.id)
+    val puedeGuardar = nombreCategoriaValido(nombre, categorias, inicial?.id)
 
     AlertDialog(
         onDismissRequest = onCerrar,
@@ -103,12 +103,14 @@ fun DialogoCategoria(
 
                 if (esBase) {
                     Text(
-                        "Es una categoría de serie: puedes cambiar su icono y su color. Si le pones otro " +
+                        "Categoría de serie: puedes cambiarlo todo menos borrarla. Si le pones otro " +
                             "icono, las casillas lo mostrarán en lugar de las horas (al tocarlas se ven).",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                } else {
+                    Spacer(Modifier.height(8.dp))
+                }
+                run {
                     OutlinedTextField(
                         value = nombre,
                         onValueChange = { nombre = it.take(24) },
@@ -136,7 +138,7 @@ fun DialogoCategoria(
                         )
                     }
                     Text(
-                        if (modo == ModoCategoria.HORAS) "Un rato de un día (de tal a tal hora) o el día entero."
+                        if (modo == ModoCategoria.HORAS) "Un rato de un día (de tal a tal hora) o el día entero, con horarios guardados para elegir de un toque."
                         else "Uno o varios días seguidos, eligiendo desde y hasta.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -211,19 +213,15 @@ fun DialogoCategoria(
         confirmButton = {
             TextButton(
                 onClick = {
-                    val guardada = if (inicial != null && esBase) {
-                        inicial.copy(emoji = emoji, color = color)
-                    } else {
-                        CategoriaDisponibilidad(
-                            id = inicial?.id ?: idNueva,
-                            nombre = nombre.trim(),
-                            emoji = emoji,
-                            color = color,
-                            modo = modo,
-                            bloquea = bloquea,
-                            base = null
-                        )
-                    }
+                    val guardada = CategoriaDisponibilidad(
+                        id = inicial?.id ?: idNueva,
+                        nombre = nombre.trim(),
+                        emoji = emoji,
+                        color = color,
+                        modo = modo,
+                        bloquea = bloquea,
+                        base = inicial?.base
+                    )
                     onGuardar(guardada)
                 },
                 enabled = puedeGuardar

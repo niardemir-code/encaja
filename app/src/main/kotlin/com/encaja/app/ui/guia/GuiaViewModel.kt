@@ -23,7 +23,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.time.DayOfWeek
 import java.time.LocalDate
-import java.util.UUID
 import javax.inject.Inject
 
 @HiltViewModel
@@ -34,7 +33,8 @@ class GuiaViewModel @Inject constructor(
     private val caregiverRepository: CaregiverRepository,
     private val coverageNeedRepository: CoverageNeedRepository,
     private val availabilityRepository: AvailabilityRepository,
-    private val familyUnitRepository: FamilyUnitRepository
+    private val familyUnitRepository: FamilyUnitRepository,
+    private val editor: EditorDeActividades
 ) : ViewModel() {
 
     private val _pantalla = MutableStateFlow<GuiaPantallaEstado>(GuiaPantallaEstado.Cargando)
@@ -124,84 +124,35 @@ class GuiaViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Guarda una o varias actividades (varias si se crearon con "Repetir cada semana").
-     * Si [aplicarATodaLaSerie] es true, [needs] trae una única ocurrencia editada que ya
-     * pertenece a un grupo: sus cambios (todo menos la fecha) se copian a ella y a todas
-     * las ocurrencias posteriores del grupo, conservando el id y la fecha de cada una.
-     */
+    /** Ver [EditorDeActividades.guardar]. */
     fun guardarActividades(needs: List<CoverageNeed>, aplicarATodaLaSerie: Boolean) {
         val familyId = familyIdActual ?: return
-        if (needs.isEmpty()) return
         viewModelScope.launch {
-            if (aplicarATodaLaSerie) {
-                val plantilla = needs.first()
-                val grupoId = plantilla.grupoRepeticionId
-                val posteriores = if (grupoId != null) {
-                    coverageNeedRepository.obtenerNeedsDelGrupo(familyId, grupoId)
-                        .filter { !it.fecha.isBefore(plantilla.fecha) }
-                } else {
-                    listOf(plantilla)
-                }
-                val actualizadas = posteriores.map { existente -> plantilla.copy(id = existente.id, fecha = existente.fecha) }
-                coverageNeedRepository.guardarNeeds(familyId, actualizadas)
-            } else {
-                coverageNeedRepository.guardarNeeds(familyId, needs)
-            }
+            editor.guardar(familyId, needs, aplicarATodaLaSerie)
             cargarDia()
         }
     }
 
-    /**
-     * Borra una actividad. Si [aplicarATodaLaSerie] es true y pertenece a un grupo
-     * ([grupoRepeticionId]), borra también todas las ocurrencias posteriores (desde
-     * [fecha] en adelante) de esa misma serie.
-     */
+    /** Ver [EditorDeActividades.eliminar]. */
     fun eliminarActividad(id: CoverageNeedId, grupoRepeticionId: String?, fecha: LocalDate, aplicarATodaLaSerie: Boolean) {
         val familyId = familyIdActual ?: return
         viewModelScope.launch {
-            if (aplicarATodaLaSerie && grupoRepeticionId != null) {
-                val idsABorrar = coverageNeedRepository.obtenerNeedsDelGrupo(familyId, grupoRepeticionId)
-                    .filter { !it.fecha.isBefore(fecha) }
-                    .map { it.id }
-                coverageNeedRepository.eliminarNeeds(familyId, idsABorrar)
-            } else {
-                coverageNeedRepository.eliminarNeed(familyId, id)
-            }
+            editor.eliminar(familyId, id, grupoRepeticionId, fecha, aplicarATodaLaSerie)
             cargarDia()
         }
     }
 
-    /**
-     * El patrón real (días de la semana y última fecha) con el que se repite hoy la
-     * serie [grupoRepeticionId], mirando solo las ocurrencias a partir de [desde] — para
-     * preseleccionar el selector de días al abrir "Repetir" sobre una serie ya existente.
-     */
+    /** Ver [EditorDeActividades.patronDeSerie]. */
     suspend fun patronDeSerie(grupoRepeticionId: String, desde: LocalDate): Pair<Set<DayOfWeek>, LocalDate?> {
         val familyId = familyIdActual ?: return emptySet<DayOfWeek>() to null
-        val ocurrencias = coverageNeedRepository.obtenerNeedsDelGrupo(familyId, grupoRepeticionId)
-            .filter { !it.fecha.isBefore(desde) }
-        val dias = ocurrencias.map { it.fecha.dayOfWeek }.toSet()
-        val hasta = ocurrencias.maxByOrNull { it.fecha }?.fecha
-        return dias to hasta
+        return editor.patronDeSerie(familyId, grupoRepeticionId, desde)
     }
 
-    /**
-     * Cambia el patrón semanal de la serie de [plantilla] a partir de su fecha: las
-     * ocurrencias de [nuevasFechas] que ya existían conservan su id, las nuevas se crean
-     * y las que ya no encajan en el patrón se borran (ver [diferenciaSerie]).
-     */
+    /** Ver [EditorDeActividades.actualizarSerie]. */
     fun actualizarSerie(plantilla: CoverageNeed, nuevasFechas: List<LocalDate>) {
         val familyId = familyIdActual ?: return
-        val grupoId = plantilla.grupoRepeticionId ?: return
         viewModelScope.launch {
-            val existentesDesdeSuFecha = coverageNeedRepository.obtenerNeedsDelGrupo(familyId, grupoId)
-                .filter { !it.fecha.isBefore(plantilla.fecha) }
-            val (aGuardar, aBorrar) = diferenciaSerie(plantilla, existentesDesdeSuFecha, nuevasFechas) {
-                CoverageNeedId(UUID.randomUUID().toString())
-            }
-            if (aGuardar.isNotEmpty()) coverageNeedRepository.guardarNeeds(familyId, aGuardar)
-            if (aBorrar.isNotEmpty()) coverageNeedRepository.eliminarNeeds(familyId, aBorrar.map { it.id })
+            editor.actualizarSerie(familyId, plantilla, nuevasFechas)
             cargarDia()
         }
     }

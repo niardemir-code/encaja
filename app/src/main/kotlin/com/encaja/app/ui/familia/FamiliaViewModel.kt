@@ -10,7 +10,6 @@ import com.encaja.app.domain.model.CategoriaDisponibilidad
 import com.encaja.app.domain.model.CategoriaId
 import com.encaja.app.domain.model.CategoriasBase
 import com.encaja.app.domain.model.FamilyId
-import com.encaja.app.domain.model.MotivoNoDisponibilidad
 import com.encaja.app.domain.model.TurnoId
 import com.encaja.app.domain.model.TurnoTrabajo
 import com.encaja.app.domain.repository.AuthRepository
@@ -18,6 +17,7 @@ import com.encaja.app.domain.repository.AvailabilityRepository
 import com.encaja.app.domain.repository.CaregiverRepository
 import com.encaja.app.domain.repository.CategoriaRepository
 import com.encaja.app.domain.repository.FamilyMembershipRepository
+import com.encaja.app.domain.repository.FamilyUnitRepository
 import com.encaja.app.domain.repository.TurnoRepository
 import com.encaja.app.domain.usecase.lunesDeEstaSemana
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -40,7 +40,8 @@ class FamiliaViewModel @Inject constructor(
     private val caregiverRepository: CaregiverRepository,
     private val availabilityRepository: AvailabilityRepository,
     private val turnoRepository: TurnoRepository,
-    private val categoriaRepository: CategoriaRepository
+    private val categoriaRepository: CategoriaRepository,
+    private val familyUnitRepository: FamilyUnitRepository
 ) : ViewModel() {
 
     private val _pantalla = MutableStateFlow<FamiliaPantallaEstado>(FamiliaPantallaEstado.Cargando)
@@ -55,23 +56,24 @@ class FamiliaViewModel @Inject constructor(
     private var lunesActual: LocalDate = LocalDate.now().lunesDeEstaSemana()
 
     /**
-     * Qué cuidadores se han ocultado de la cuadrícula, por semana (clave = lunes de esa
-     * semana). Es solo una preferencia de visualización — no se guarda en ningún sitio,
-     * así que se pierde al salir de la pantalla — pero cada semana recuerda la suya
-     * propia mientras se navega entre ellas en la misma visita.
+     * Qué personas y unidades familiares (por el id de cada una, como texto) se han
+     * ocultado de la cuadrícula, por semana (clave = lunes de esa semana). Es solo una
+     * preferencia de visualización — no se guarda en ningún sitio, así que se pierde al
+     * salir de la pantalla — pero cada semana recuerda la suya propia mientras se
+     * navega entre ellas en la misma visita.
      */
-    private val ocultosPorSemana = mutableMapOf<LocalDate, MutableSet<CaregiverId>>()
+    private val ocultosPorSemana = mutableMapOf<LocalDate, MutableSet<String>>()
 
-    private val _ocultos = MutableStateFlow<Set<CaregiverId>>(emptySet())
-    /** Cuidadores ocultos en la semana que se está viendo ahora. */
-    val ocultos: StateFlow<Set<CaregiverId>> = _ocultos.asStateFlow()
+    private val _ocultos = MutableStateFlow<Set<String>>(emptySet())
+    /** Ids (persona o unidad) ocultos en la semana que se está viendo ahora. */
+    val ocultos: StateFlow<Set<String>> = _ocultos.asStateFlow()
 
     init { cargar() }
 
-    /** Muestra u oculta a un cuidador de la cuadrícula, solo para la semana actual. */
-    fun alternarVisibilidad(caregiverId: CaregiverId) {
+    /** Muestra u oculta a una persona o unidad de la cuadrícula, solo para la semana actual. */
+    fun alternarVisibilidad(idTexto: String) {
         val ocultosDeEstaSemana = ocultosPorSemana.getOrPut(lunesActual) { mutableSetOf() }
-        if (!ocultosDeEstaSemana.remove(caregiverId)) ocultosDeEstaSemana.add(caregiverId)
+        if (!ocultosDeEstaSemana.remove(idTexto)) ocultosDeEstaSemana.add(idTexto)
         _ocultos.value = ocultosDeEstaSemana.toSet()
     }
 
@@ -120,7 +122,7 @@ class FamiliaViewModel @Inject constructor(
     /**
      * Recarga solo los datos de la semana con el desplazamiento actual: cambiar de
      * semana, o guardar algo desde un diálogo, no necesita volver a comprobar sesión
-     * ni familia (no cambian mientras se navega o se edita). Las cuatro peticiones son
+     * ni familia (no cambian mientras se navega o se edita). Las cinco peticiones son
      * independientes entre sí, así que se lanzan todas a la vez con [async] en vez de
      * esperarlas una detrás de otra: avanzar de semana tarda lo que tarda la más
      * lenta, no la suma de las cuatro.
@@ -142,8 +144,9 @@ class FamiliaViewModel @Inject constructor(
                 val disponibilidadDeferred = async { availabilityRepository.obtenerDisponibilidad(familyId, lunes, domingo) }
                 val turnosDeferred = async { turnoRepository.obtenerTurnos(familyId) }
                 val categoriasDeferred = async { categoriaRepository.obtenerCategorias(familyId) }
+                val unidadesDeferred = async { familyUnitRepository.obtenerUnidades(familyId) }
 
-                val mapper = FamiliaUiStateMapper(caregiversDeferred.await(), disponibilidadDeferred.await())
+                val mapper = FamiliaUiStateMapper(caregiversDeferred.await(), disponibilidadDeferred.await(), unidadesDeferred.await())
                 val turnos = turnosDeferred.await().sortedBy { it.horaInicio }
                 val categorias = CategoriasBase.combinar(categoriasDeferred.await())
 
@@ -155,34 +158,42 @@ class FamiliaViewModel @Inject constructor(
     }
 
     /**
-     * Guarda un turno de trabajo en las [fechas] indicadas (y, si se pide, en las mismas
-     * fechas de la semana siguiente). Si alguno de esos días ya tenía un turno de trabajo,
-     * se sustituye — así cambiar de mañana a tarde no deja los dos turnos a la vez.
+     * Guarda un tramo por horas de [categoria] para cada persona de [caregiverIds] (una,
+     * o todos los miembros de una unidad familiar) en las [fechas] indicadas (y, si se
+     * pide, en las mismas fechas de la semana siguiente). Si alguno de esos días ya tenía
+     * algo de esa misma categoría, se sustituye — así cambiar el turno de mañana a tarde
+     * no deja los dos a la vez. Vale para cualquier categoría por horas, no solo Trabajo.
      */
-    fun guardarTrabajo(
-        caregiverId: CaregiverId,
+    fun guardarHoras(
+        caregiverIds: List<CaregiverId>,
+        categoria: CategoriaDisponibilidad,
         fechas: List<LocalDate>,
         inicio: LocalTime,
         fin: LocalTime,
         duplicarSemanaSiguiente: Boolean,
-        nombreTurno: String? = null
+        etiqueta: String? = null
     ) {
         val familyId = familyIdActual ?: return
         val todas = fechasTrabajo(fechas, duplicarSemanaSiguiente)
-        if (todas.isEmpty()) return
+        if (todas.isEmpty() || caregiverIds.isEmpty()) return
 
         viewModelScope.launch {
             val existentes = availabilityRepository.obtenerDisponibilidad(familyId, todas.first(), todas.last())
-                .filter { it.caregiverId == caregiverId && it.motivo == MotivoNoDisponibilidad.TRABAJO && it.fecha in todas }
+                .filter { it.caregiverId in caregiverIds && it.fecha in todas && esDeLaCategoria(it, categoria) }
             existentes.forEach { availabilityRepository.eliminarBloque(familyId, it.caregiverId, it.fecha, it.horaInicio) }
-            todas.forEach { fecha ->
-                availabilityRepository.guardarBloque(
-                    familyId, AvailabilityBlock(caregiverId, fecha, inicio, fin, MotivoNoDisponibilidad.TRABAJO, nombreTurno)
-                )
+            caregiverIds.forEach { caregiverId ->
+                todas.forEach { fecha ->
+                    availabilityRepository.guardarBloque(familyId, bloqueDeCategoria(categoria, caregiverId, fecha, inicio, fin, etiqueta))
+                }
             }
             cargarDatos(mostrarCargando = false)
         }
     }
+
+    /** Si [bloque] se apuntó con [categoria] (las de serie van por motivo, las propias por id). */
+    private fun esDeLaCategoria(bloque: AvailabilityBlock, categoria: CategoriaDisponibilidad): Boolean =
+        if (categoria.base != null) bloque.categoriaId == null && bloque.motivo == categoria.base
+        else bloque.categoriaId == categoria.id
 
     /** Guarda bloques sueltos (una cita médica, los días de un viaje...). */
     fun guardarBloques(bloques: List<AvailabilityBlock>) {
@@ -202,20 +213,22 @@ class FamiliaViewModel @Inject constructor(
         }
     }
 
-    /** Crea un turno de trabajo con nombre (p.ej. "Mañana 6-14") para toda la familia. */
-    fun crearTurno(nombre: String, inicio: LocalTime, fin: LocalTime) {
+    /** Crea un horario guardado con nombre (p.ej. "Mañana 6-14") de una categoría, para toda la familia. */
+    fun crearTurno(nombre: String, inicio: LocalTime, fin: LocalTime, categoriaId: CategoriaId) {
         val familyId = familyIdActual ?: return
         val nombreLimpio = nombre.trim()
         if (nombreLimpio.isBlank()) return
         viewModelScope.launch {
-            turnoRepository.guardarTurno(familyId, TurnoTrabajo(TurnoId(UUID.randomUUID().toString()), nombreLimpio, inicio, fin))
+            turnoRepository.guardarTurno(
+                familyId, TurnoTrabajo(TurnoId(UUID.randomUUID().toString()), nombreLimpio, inicio, fin, categoriaId)
+            )
             cargarDatos(mostrarCargando = false)
         }
     }
 
     /**
      * Crea o actualiza una categoría. Si es nueva (id vacío) se le da un id propio.
-     * Las de serie se guardan con su mismo id fijo: solo cuentan su emoji y su color.
+     * Las de serie se guardan con su mismo id fijo (y su motivo), con todo lo personalizado.
      */
     fun guardarCategoria(categoria: CategoriaDisponibilidad) {
         val familyId = familyIdActual ?: return

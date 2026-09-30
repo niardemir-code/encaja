@@ -157,15 +157,18 @@ data class TurnoTrabajoEntity(
     val id: String,
     val nombre: String,
     val horaInicio: String,
-    val horaFin: String
+    val horaFin: String,
+    val categoriaId: String? = null
 ) {
     fun aDominio() = TurnoTrabajo(
-        TurnoId(id), nombre, java.time.LocalTime.parse(horaInicio), java.time.LocalTime.parse(horaFin)
+        TurnoId(id), nombre, java.time.LocalTime.parse(horaInicio), java.time.LocalTime.parse(horaFin),
+        categoriaId?.let { CategoriaId(it) }
     )
 
     companion object {
         fun desdeDominio(familyId: String, turno: TurnoTrabajo) = TurnoTrabajoEntity(
-            familyId, turno.id.value, turno.nombre, turno.horaInicio.toString(), turno.horaFin.toString()
+            familyId, turno.id.value, turno.nombre, turno.horaInicio.toString(), turno.horaFin.toString(),
+            turno.categoriaId?.value
         )
     }
 }

@@ -51,14 +51,17 @@ import com.encaja.app.domain.model.Anuncio
 import com.encaja.app.domain.model.AnuncioId
 import com.encaja.app.domain.model.Caregiver
 import com.encaja.app.domain.model.Child
+import com.encaja.app.domain.model.CoverageNeed
 import com.encaja.app.domain.model.Hueco
 import com.encaja.app.domain.usecase.AvisoConflicto
 import com.encaja.app.domain.usecase.RolResponsable
 import com.encaja.app.ui.familia.etiquetaMotivo
 import com.encaja.app.ui.familia.fechaAMillisUtc
 import com.encaja.app.ui.familia.millisUtcAFecha
+import com.encaja.app.ui.guia.DialogoActividad
 import com.encaja.app.ui.theme.LocalEncajaExtraColors
 import kotlinx.coroutines.launch
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -78,12 +81,9 @@ private val BLANCO: Color @Composable get() = MaterialTheme.colorScheme.surface
 @Composable
 fun SemanaScreen(
     viewModel: SemaforoViewModel = hiltViewModel(),
-    // Al tocar un aviso o un hueco, se salta a esa actividad en la Guía para poder
-    // asignarla directamente (fecha, id de la necesidad).
-    onAbrirActividad: (LocalDate, String) -> Unit = { _, _ -> },
     // Al tocar el círculo de un día del semáforo que ya no tiene un aviso o hueco
-    // "vigente" que abrir (p.ej. un día pasado): se salta a ese día en la Guía, sin
-    // intentar abrir ninguna actividad en concreto.
+    // "vigente" que abrir: se salta a ese día en la Guía, sin intentar abrir ninguna
+    // actividad en concreto.
     onVerDia: (LocalDate) -> Unit = {}
 ) {
     val pantalla by viewModel.pantalla.collectAsState()
@@ -146,7 +146,11 @@ fun SemanaScreen(
             val uiState = estadoActual.estado
             val cuidadores by viewModel.cuidadores.collectAsState()
             val ninos by viewModel.ninos.collectAsState()
+            val responsables by viewModel.responsables.collectAsState()
             var diaInfoAbierto by remember { mutableStateOf<DiaSemaforo?>(null) }
+            // Actividad abierta en edición desde un aviso o un hueco: el mismo diálogo que
+            // en la Guía, pero sin salir de esta pantalla.
+            var actividadEnEdicion by remember { mutableStateOf<CoverageNeed?>(null) }
 
             // Índice en la lista de la tarjeta de hueco/aviso de un día, para desplazarse
             // hasta ella al tocar su círculo del semáforo. La lista es: tarjeta de la
@@ -207,19 +211,52 @@ fun SemanaScreen(
                     }
 
                     items(uiState.huecosDeLaSemana) { hueco ->
-                        TarjetaHueco(
-                            hueco = hueco,
-                            onClick = { onAbrirActividad(hueco.need.fecha, hueco.need.id.value) }
-                        )
+                        TarjetaHueco(hueco = hueco, onClick = { actividadEnEdicion = hueco.need })
                     }
 
                     items(uiState.avisos) { aviso ->
-                        TarjetaAvisoConflicto(
-                            aviso = aviso,
-                            onClick = { onAbrirActividad(aviso.need.fecha, aviso.need.id.value) }
-                        )
+                        TarjetaAvisoConflicto(aviso = aviso, onClick = { actividadEnEdicion = aviso.need })
                     }
                 }
+            }
+
+            actividadEnEdicion?.let { need ->
+                // Igual que en la Guía: se pide el patrón real de la serie para
+                // preseleccionar los días al abrir "Repetir".
+                var diasSerieActual by remember(need.id) { mutableStateOf<Set<DayOfWeek>?>(null) }
+                var hastaSerieActual by remember(need.id) { mutableStateOf<LocalDate?>(null) }
+                var patronSerieCargando by remember(need.id) { mutableStateOf(need.grupoRepeticionId != null) }
+                LaunchedEffect(need.id) {
+                    val grupoId = need.grupoRepeticionId
+                    if (grupoId != null) {
+                        val (dias, hasta) = viewModel.patronDeSerie(grupoId, need.fecha)
+                        diasSerieActual = dias
+                        hastaSerieActual = hasta
+                        patronSerieCargando = false
+                    }
+                }
+                DialogoActividad(
+                    fecha = need.fecha,
+                    ninos = ninos,
+                    actividad = need,
+                    responsables = responsables,
+                    diasSerieActual = diasSerieActual,
+                    hastaSerieActual = hastaSerieActual,
+                    patronSerieCargando = patronSerieCargando,
+                    onGuardar = { needs, aplicarATodaLaSerie ->
+                        viewModel.guardarActividades(needs, aplicarATodaLaSerie)
+                        actividadEnEdicion = null
+                    },
+                    onEliminar = { aplicarATodaLaSerie ->
+                        viewModel.eliminarActividad(need.id, need.grupoRepeticionId, need.fecha, aplicarATodaLaSerie)
+                        actividadEnEdicion = null
+                    },
+                    onActualizarSerie = { plantilla, nuevasFechas ->
+                        viewModel.actualizarSerie(plantilla, nuevasFechas)
+                        actividadEnEdicion = null
+                    },
+                    onCerrar = { actividadEnEdicion = null }
+                )
             }
 
             diaInfoAbierto?.let { dia ->
@@ -685,8 +722,8 @@ private fun formatearHoraHueco(hora: LocalTime): String =
  * izquierda, icono en círculo y texto a la derecha. El chip ("Sin cubrir",
  * "Importante"...) va en su propia línea, encima del título, en vez de compartir
  * fila con él — así el título y la descripción se leen enteros y nunca se cortan,
- * por largos que sean. Toda la tarjeta es clicable: abre la actividad en la Guía
- * para poder asignar directamente quién lleva o recoge.
+ * por largos que sean. Toda la tarjeta es clicable: abre la edición de la actividad
+ * aquí mismo para poder asignar directamente quién lleva o recoge.
  */
 @Composable
 private fun TarjetaAviso(

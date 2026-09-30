@@ -24,8 +24,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FilterAlt
+import androidx.compose.material.icons.filled.Label
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -43,6 +46,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.encaja.app.domain.model.Caregiver
 import com.encaja.app.domain.model.CaregiverId
 import com.encaja.app.domain.model.CategoriaDisponibilidad
+import com.encaja.app.domain.model.CategoriaId
+import com.encaja.app.domain.model.FamilyUnit
+import com.encaja.app.domain.model.ModoCategoria
 import com.encaja.app.domain.model.categoriaEn
 import com.encaja.app.ui.theme.LocalEncajaExtraColors
 import java.time.LocalDate
@@ -67,6 +73,9 @@ private val FONDO_FILA: Color
     @Composable get() = MaterialTheme.colorScheme.surfaceVariant // filas de la cuadrícula
 
 /** Fondo y color de letra del avatar de cada persona, por orden de la lista. */
+/** Avatar de las unidades familiares: gris azulado, distinto de la paleta de personas. */
+private val COLOR_AVATAR_UNIDAD = Color(0xFFDDE3EE) to Color(0xFF3A4A6B)
+
 private val COLORES_AVATAR = listOf(
     Color(0xFFE4E2FA) to Color(0xFF3B3597),
     Color(0xFFD6F1E3) to Color(0xFF1E6B45),
@@ -77,8 +86,8 @@ private val COLORES_AVATAR = listOf(
 )
 
 // Medidas de la cuadrícula: la semana entera cabe siempre en el ancho de la pantalla.
-private val ALTO_CABECERA = 44.dp
-private val ALTO_CELDA = 50.dp
+private val ALTO_CABECERA = 40.dp
+private val ALTO_CELDA = 46.dp
 private val ESPACIO_CELDAS = 4.dp
 private val PADDING_BLOQUE = 8.dp
 
@@ -116,16 +125,34 @@ private fun ContenidoFamilia(estado: FamiliaUiState, viewModel: FamiliaViewModel
     val iniciales = remember(estado.cuidadores) {
         calcularInicialesCuidadores(estado.cuidadores.map { it.caregiver })
     }
-    var celdaEnEdicion by remember { mutableStateOf<Pair<CaregiverId, LocalDate>?>(null) }
+    // Casilla abierta: id (de persona o de unidad familiar, como texto) y fecha.
+    var celdaEnEdicion by remember { mutableStateOf<Pair<String, LocalDate>?>(null) }
     val ocultos by viewModel.ocultos.collectAsState()
     val cuidadoresVisibles = remember(estado.cuidadores, ocultos) {
-        estado.cuidadores.filter { it.caregiver.id !in ocultos }
+        estado.cuidadores.filter { it.caregiver.id.value !in ocultos }
     }
+    val unidadesVisibles = remember(estado.unidades, ocultos) {
+        estado.unidades.filter { it.unidad.id.value !in ocultos }
+    }
+    val totalFilas = estado.cuidadores.size + estado.unidades.size
+    val filasVisibles = cuidadoresVisibles.size + unidadesVisibles.size
     var selectorAbierto by remember { mutableStateOf(false) }
+    var categoriasAbiertas by remember { mutableStateOf(false) }
+    val nombres = remember(estado.cuidadores) { estado.cuidadores.associate { it.caregiver.id to it.caregiver.nombre } }
+
+    if (categoriasAbiertas) {
+        DialogoListaCategorias(
+            categorias = estado.categorias,
+            onGuardar = { viewModel.guardarCategoria(it) },
+            onEliminar = { viewModel.eliminarCategoria(it) },
+            onCerrar = { categoriasAbiertas = false }
+        )
+    }
 
     if (selectorAbierto) {
         DialogoMostrar(
             cuidadores = estado.cuidadores.map { it.caregiver },
+            unidades = estado.unidades.map { it.unidad },
             ocultos = ocultos,
             onAlternar = { viewModel.alternarVisibilidad(it) },
             onCerrar = { selectorAbierto = false }
@@ -133,28 +160,34 @@ private fun ContenidoFamilia(estado: FamiliaUiState, viewModel: FamiliaViewModel
     }
 
     // Se busca en el estado actual (no en una copia guardada al abrir), así al borrar
-    // un bloque el diálogo se actualiza solo tras la recarga.
-    celdaEnEdicion?.let { (caregiverId, fecha) ->
-        val cuidadorSemana = estado.cuidadores.firstOrNull { it.caregiver.id == caregiverId }
-        if (cuidadorSemana == null) {
+    // un bloque el diálogo se actualiza solo tras la recarga. La casilla puede ser de
+    // una persona o de una unidad familiar (entonces se aplica a todos sus miembros).
+    celdaEnEdicion?.let { (idTexto, fecha) ->
+        val cuidadorSemana = estado.cuidadores.firstOrNull { it.caregiver.id.value == idTexto }
+        val unidadSemana = estado.unidades.firstOrNull { it.unidad.id.value == idTexto }
+        val titulo = cuidadorSemana?.caregiver?.nombre ?: unidadSemana?.unidad?.nombre
+        val caregiverIds = cuidadorSemana?.let { listOf(it.caregiver.id) } ?: unidadSemana?.unidad?.miembros
+        val bloquesDelDia = (cuidadorSemana?.dias ?: unidadSemana?.dias)?.firstOrNull { it.fecha == fecha }?.bloqueos.orEmpty()
+        if (titulo == null || caregiverIds == null) {
             celdaEnEdicion = null
         } else {
             DialogoDisponibilidad(
-                caregiver = cuidadorSemana.caregiver,
+                titulo = titulo,
+                caregiverIds = caregiverIds,
+                nombres = nombres,
                 fecha = fecha,
                 lunes = estado.lunes,
-                bloquesDelDia = cuidadorSemana.dias.firstOrNull { it.fecha == fecha }?.bloqueos.orEmpty(),
+                bloquesDelDia = bloquesDelDia,
                 onEliminar = { viewModel.eliminarBloque(it) },
                 turnos = estado.turnos,
                 categorias = estado.categorias,
-                onGuardarTrabajo = { fechas, inicio, fin, duplicar, nombreTurno ->
-                    viewModel.guardarTrabajo(caregiverId, fechas, inicio, fin, duplicar, nombreTurno)
+                onGuardarHoras = { ids, categoria, fechas, inicio, fin, duplicar, etiqueta ->
+                    viewModel.guardarHoras(ids, categoria, fechas, inicio, fin, duplicar, etiqueta)
                 },
-                onCrearTurno = { nombre, inicio, fin -> viewModel.crearTurno(nombre, inicio, fin) },
+                onCrearTurno = { nombre, inicio, fin, categoriaId -> viewModel.crearTurno(nombre, inicio, fin, categoriaId) },
                 onEliminarTurno = { viewModel.eliminarTurno(it) },
                 onGuardarBloques = { viewModel.guardarBloques(it) },
                 onGuardarCategoria = { viewModel.guardarCategoria(it) },
-                onEliminarCategoria = { viewModel.eliminarCategoria(it) },
                 onCerrar = { celdaEnEdicion = null }
             )
         }
@@ -180,27 +213,19 @@ private fun ContenidoFamilia(estado: FamiliaUiState, viewModel: FamiliaViewModel
             item {
                 Tarjeta {
                     Column(modifier = Modifier.padding(14.dp)) {
-                        CabeceraTarjeta(
-                            icono = Icons.Default.CalendarMonth,
-                            titulo = "Disponibilidad",
-                            subtitulo = "Toca la casilla de una persona en un día para añadir trabajo, médico, viajes…"
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            CabeceraTarjeta(
+                                icono = Icons.Default.Label,
+                                titulo = "Categorías",
+                                subtitulo = "Qué significa cada color de las casillas.",
+                                modifier = Modifier.weight(1f)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            // Lápiz: abre la lista de categorías para editarlas o crear nuevas.
+                            BotonCircular(Icons.Default.Edit, "Editar categorías", { categoriasAbiertas = true })
+                        }
                         Spacer(Modifier.height(12.dp))
                         Leyenda(estado.categorias)
-                    }
-                }
-            }
-
-            if (estado.cuidadores.size > 1) {
-                item {
-                    // Justo antes de la cuadrícula: abre el diálogo para elegir a quién ver
-                    // (los cambios se aplican al momento y solo para esta semana).
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                        BotonMostrar(
-                            visibles = cuidadoresVisibles.size,
-                            total = estado.cuidadores.size,
-                            onClick = { selectorAbierto = true }
-                        )
                     }
                 }
             }
@@ -209,10 +234,31 @@ private fun ContenidoFamilia(estado: FamiliaUiState, viewModel: FamiliaViewModel
                 TarjetaCuadricula(
                     lunes = estado.lunes,
                     cuidadores = cuidadoresVisibles,
+                    unidades = unidadesVisibles,
                     categorias = estado.categorias,
                     iniciales = iniciales,
-                    onClickDia = { caregiverId, fecha -> celdaEnEdicion = caregiverId to fecha },
-                    hayOcultosPorFiltro = estado.cuidadores.isNotEmpty() && cuidadoresVisibles.isEmpty()
+                    onClickDia = { idTexto, fecha -> celdaEnEdicion = idTexto to fecha },
+                    hayOcultosPorFiltro = totalFilas > 0 && filasVisibles == 0,
+                    cabecera = {
+                        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            CabeceraTarjeta(
+                                icono = Icons.Default.CalendarMonth,
+                                titulo = "Disponibilidad",
+                                subtitulo = "Toca la casilla de una persona en un día para apuntar algo.",
+                                modifier = Modifier.weight(1f)
+                            )
+                            if (totalFilas > 1) {
+                                Spacer(Modifier.width(8.dp))
+                                // Filtro de cuidadores: abre el diálogo para elegir a quién ver (se
+                                // aplica al momento y solo para esta semana).
+                                BotonCircular(
+                                    Icons.Default.FilterAlt,
+                                    if (filasVisibles == totalFilas) "Cuidadores" else "Cuidadores ($filasVisibles/$totalFilas)",
+                                    { selectorAbierto = true }
+                                )
+                            }
+                        }
+                    }
                 )
             }
         }
@@ -234,12 +280,12 @@ private fun CabeceraFamilia(
     Column(modifier = modifier) {
         Text(
             "Familia",
-            fontSize = 32.sp,
-            lineHeight = 36.sp,
+            fontSize = 26.sp,
+            lineHeight = 30.sp,
             fontWeight = FontWeight.ExtraBold,
             color = TINTA
         )
-        Text("Coordinados, todo encaja", style = MaterialTheme.typography.bodyLarge, color = TINTA_SUAVE)
+        Text("Coordinados, todo encaja", style = MaterialTheme.typography.bodyMedium, color = TINTA_SUAVE)
         Spacer(Modifier.height(12.dp))
 
         Tarjeta {
@@ -251,7 +297,7 @@ private fun CabeceraFamilia(
                 Text(
                     textoRangoSemana(lunes),
                     modifier = Modifier.weight(1f).padding(horizontal = 6.dp),
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = TINTA,
                     textAlign = TextAlign.Center,
@@ -324,15 +370,15 @@ private fun Tarjeta(modifier: Modifier = Modifier, contenido: @Composable Column
 private fun CabeceraTarjeta(icono: ImageVector, titulo: String, subtitulo: String, modifier: Modifier = Modifier) {
     Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Box(
-            modifier = Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(LAVANDA),
+            modifier = Modifier.size(38.dp).clip(RoundedCornerShape(11.dp)).background(LAVANDA),
             contentAlignment = Alignment.Center
         ) {
-            Icon(icono, contentDescription = null, tint = INDIGO, modifier = Modifier.size(24.dp))
+            Icon(icono, contentDescription = null, tint = INDIGO, modifier = Modifier.size(21.dp))
         }
-        Spacer(Modifier.width(12.dp))
-        Column {
-            Text(titulo, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = TINTA)
-            Text(subtitulo, style = MaterialTheme.typography.bodySmall, color = TINTA_SUAVE)
+        Spacer(Modifier.width(10.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(titulo, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = TINTA, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(subtitulo, style = MaterialTheme.typography.labelMedium, color = TINTA_SUAVE)
         }
     }
 }
@@ -341,7 +387,7 @@ private fun CabeceraTarjeta(icono: ImageVector, titulo: String, subtitulo: Strin
 private fun BotonCircular(icono: ImageVector, descripcion: String, onClick: () -> Unit, habilitado: Boolean = true) {
     Box(
         modifier = Modifier
-            .size(40.dp)
+            .size(38.dp)
             .clip(CircleShape)
             .background(LAVANDA)
             .clickable(enabled = habilitado, onClick = onClick),
@@ -361,16 +407,19 @@ private fun BotonCircular(icono: ImageVector, descripcion: String, onClick: () -
 private fun TarjetaCuadricula(
     lunes: LocalDate,
     cuidadores: List<CuidadorDisponibilidadSemana>,
+    unidades: List<UnidadDisponibilidadSemana>,
     categorias: List<CategoriaDisponibilidad>,
     iniciales: Map<CaregiverId, String>,
-    onClickDia: (CaregiverId, LocalDate) -> Unit,
-    hayOcultosPorFiltro: Boolean = false
+    onClickDia: (idTexto: String, LocalDate) -> Unit,
+    hayOcultosPorFiltro: Boolean = false,
+    cabecera: @Composable () -> Unit = {}
 ) {
     val fechas = (0..6).map { lunes.plusDays(it.toLong()) }
     val hoy = LocalDate.now()
 
     Tarjeta {
         Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Box(modifier = Modifier.padding(start = 4.dp, end = 4.dp, top = 4.dp)) { cabecera() }
             // Mismo padding lateral que el interior de cada bloque, para que los días cuadren.
             Row(
                 modifier = Modifier.fillMaxWidth().height(ALTO_CABECERA).padding(horizontal = PADDING_BLOQUE),
@@ -381,10 +430,10 @@ private fun TarjetaCuadricula(
                 }
             }
 
-            if (cuidadores.isEmpty()) {
+            if (cuidadores.isEmpty() && unidades.isEmpty()) {
                 Text(
                     if (hayOcultosPorFiltro) {
-                        "Has ocultado a todo el mundo; usa el botón Mostrar para volver a verlos."
+                        "Has ocultado a todo el mundo; usa el botón Cuidadores para volver a verlos."
                     } else {
                         "Añade personas en Ajustes para ver aquí su disponibilidad."
                     },
@@ -395,12 +444,27 @@ private fun TarjetaCuadricula(
             }
 
             cuidadores.forEachIndexed { indice, cuidadorSemana ->
-                BloqueCuidador(
-                    cuidadorSemana = cuidadorSemana,
-                    categorias = categorias,
+                BloqueFila(
+                    nombre = cuidadorSemana.caregiver.nombreCompleto,
                     iniciales = iniciales[cuidadorSemana.caregiver.id] ?: "",
                     colores = COLORES_AVATAR[indice % COLORES_AVATAR.size],
-                    onClickDia = { fecha -> onClickDia(cuidadorSemana.caregiver.id, fecha) }
+                    dias = cuidadorSemana.dias,
+                    categorias = categorias,
+                    onClickDia = { fecha -> onClickDia(cuidadorSemana.caregiver.id.value, fecha) }
+                )
+            }
+
+            // Unidades familiares: sus casillas juntan los bloqueos de todos sus miembros;
+            // al tocarlas se ve lo de cada uno y lo que se añade se aplica a todos.
+            unidades.forEach { unidadSemana ->
+                BloqueFila(
+                    nombre = unidadSemana.unidad.nombre,
+                    iniciales = unidadSemana.unidad.codigo.take(2).uppercase(),
+                    colores = COLOR_AVATAR_UNIDAD,
+                    dias = unidadSemana.dias,
+                    categorias = categorias,
+                    esUnidad = true,
+                    onClickDia = { fecha -> onClickDia(unidadSemana.unidad.id.value, fecha) }
                 )
             }
         }
@@ -418,24 +482,27 @@ private fun CabeceraDia(fecha: LocalDate, esHoy: Boolean, modifier: Modifier = M
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text(letraDia(fecha), style = MaterialTheme.typography.labelMedium, color = if (esHoy) INDIGO else TINTA_SUAVE)
+        Text(letraDia(fecha), style = MaterialTheme.typography.labelSmall, color = if (esHoy) INDIGO else TINTA_SUAVE)
         Text(
             "${fecha.dayOfMonth}",
-            style = MaterialTheme.typography.titleSmall,
+            style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.Bold,
             color = if (esHoy) INDIGO else TINTA
         )
     }
 }
 
-/** Una persona: avatar y nombre completo arriba, sus 7 casillas debajo. */
+/** Una fila de la cuadrícula (persona o unidad familiar): avatar y nombre arriba, sus
+ * 7 casillas debajo. Con [onClickDia] a null las casillas no se pueden tocar. */
 @Composable
-private fun BloqueCuidador(
-    cuidadorSemana: CuidadorDisponibilidadSemana,
-    categorias: List<CategoriaDisponibilidad>,
+private fun BloqueFila(
+    nombre: String,
     iniciales: String,
     colores: Pair<Color, Color>,
-    onClickDia: (LocalDate) -> Unit
+    dias: List<DiaDisponibilidadCuidador>,
+    categorias: List<CategoriaDisponibilidad>,
+    esUnidad: Boolean = false,
+    onClickDia: ((LocalDate) -> Unit)?
 ) {
     Column(
         modifier = Modifier
@@ -446,25 +513,34 @@ private fun BloqueCuidador(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
-                modifier = Modifier.size(32.dp).clip(CircleShape).background(colores.first),
+                modifier = Modifier
+                    .size(28.dp)
+                    // Las unidades llevan el avatar cuadrado redondeado, para distinguirlas
+                    // a simple vista de las personas (círculo).
+                    .clip(if (esUnidad) RoundedCornerShape(8.dp) else CircleShape)
+                    .background(colores.first),
                 contentAlignment = Alignment.Center
             ) {
-                Text(iniciales, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = colores.second)
+                Text(iniciales, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = colores.second)
             }
             Spacer(Modifier.width(10.dp))
             Text(
-                cuidadorSemana.caregiver.nombreCompleto,
-                style = MaterialTheme.typography.titleSmall,
+                nombre,
+                style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = TINTA,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
             )
+            if (esUnidad) {
+                Text("unidad familiar", style = MaterialTheme.typography.labelSmall, color = TINTA_SUAVE)
+            }
         }
         Spacer(Modifier.height(8.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(ESPACIO_CELDAS)) {
-            cuidadorSemana.dias.forEach { dia ->
-                CeldaDisponibilidad(dia, categorias, modifier = Modifier.weight(1f)) { onClickDia(dia.fecha) }
+            dias.forEach { dia ->
+                CeldaDisponibilidad(dia, categorias, modifier = Modifier.weight(1f), onClick = onClickDia?.let { f -> { f(dia.fecha) } })
             }
         }
     }
@@ -475,7 +551,7 @@ private fun CeldaDisponibilidad(
     dia: DiaDisponibilidadCuidador,
     categorias: List<CategoriaDisponibilidad>,
     modifier: Modifier = Modifier,
-    onClick: () -> Unit
+    onClick: (() -> Unit)?
 ) {
     val primero = dia.bloqueos.minByOrNull { it.horaInicio }
     Box(
@@ -483,22 +559,22 @@ private fun CeldaDisponibilidad(
             .height(ALTO_CELDA)
             .clip(RoundedCornerShape(10.dp))
             .background(if (primero == null) VERDE else Color(primero.categoriaEn(categorias).color))
-            .clickable(onClick = onClick),
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
         contentAlignment = Alignment.Center
     ) {
         val emoji = emojiCelda(dia.bloqueos, categorias)
         if (emoji != null) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(emoji, fontSize = 22.sp)
+                Text(emoji, fontSize = 19.sp)
                 if (dia.bloqueos.size > 1) {
-                    Text("+${dia.bloqueos.size - 1}", fontSize = 10.sp, fontWeight = FontWeight.Medium, color = TINTA)
+                    Text("+${dia.bloqueos.size - 1}", fontSize = 9.sp, fontWeight = FontWeight.Medium, color = TINTA)
                 }
             }
         } else textoCelda(dia.bloqueos)?.let { texto ->
             Text(
                 texto,
-                fontSize = 12.sp,
-                lineHeight = 15.sp,
+                fontSize = 11.sp,
+                lineHeight = 13.sp,
                 fontWeight = FontWeight.Medium,
                 color = TINTA,
                 textAlign = TextAlign.Center,
@@ -509,41 +585,19 @@ private fun CeldaDisponibilidad(
     }
 }
 
-/** Botón "Mostrar" (icono de filtro) con cuántas personas se ven de las que hay, p.ej.
- * "Mostrar (2/3)"; abre el diálogo para elegir quién aparece en la cuadrícula. */
-@Composable
-private fun BotonMostrar(visibles: Int, total: Int, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .clip(RoundedCornerShape(50))
-            .background(LAVANDA)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(Icons.Default.FilterAlt, contentDescription = null, tint = INDIGO, modifier = Modifier.size(18.dp))
-        Spacer(Modifier.width(6.dp))
-        Text(
-            if (visibles == total) "Mostrar" else "Mostrar ($visibles/$total)",
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold,
-            color = INDIGO
-        )
-    }
-}
-
 /** Una casilla por persona: marcada = aparece en la cuadrícula de esta semana. Los
  * cambios se aplican al momento, sin botón de "aceptar". */
 @Composable
 private fun DialogoMostrar(
     cuidadores: List<Caregiver>,
-    ocultos: Set<CaregiverId>,
-    onAlternar: (CaregiverId) -> Unit,
+    unidades: List<FamilyUnit>,
+    ocultos: Set<String>,
+    onAlternar: (String) -> Unit,
     onCerrar: () -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onCerrar,
-        title = { Text("¿A quién mostrar?") },
+        title = { Text("Cuidadores a mostrar") },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 Text(
@@ -552,18 +606,17 @@ private fun DialogoMostrar(
                     color = TINTA_SUAVE
                 )
                 Spacer(Modifier.height(8.dp))
-                cuidadores.forEach { caregiver ->
-                    val visible = caregiver.id !in ocultos
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(10.dp))
-                            .clickable { onAlternar(caregiver.id) }
-                            .padding(vertical = 2.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Checkbox(checked = visible, onCheckedChange = { onAlternar(caregiver.id) })
-                        Text(caregiver.nombreCompleto, style = MaterialTheme.typography.bodyLarge, color = TINTA)
+                if (cuidadores.isNotEmpty()) {
+                    Text("Personas", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = INDIGO)
+                    cuidadores.forEach { caregiver ->
+                        FilaCasillaMostrar(caregiver.nombreCompleto, caregiver.id.value, ocultos, onAlternar)
+                    }
+                }
+                if (unidades.isNotEmpty()) {
+                    Spacer(Modifier.height(8.dp))
+                    Text("Unidades familiares", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = INDIGO)
+                    unidades.forEach { unidad ->
+                        FilaCasillaMostrar(unidad.nombre, unidad.id.value, ocultos, onAlternar)
                     }
                 }
             }
@@ -589,8 +642,113 @@ private fun Leyenda(categorias: List<CategoriaDisponibilidad>) {
 @Composable
 private fun ElementoLeyenda(color: Color, texto: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(16.dp).clip(RoundedCornerShape(4.dp)).background(color))
+        Box(Modifier.size(14.dp).clip(RoundedCornerShape(4.dp)).background(color))
         Spacer(Modifier.width(6.dp))
-        Text(texto, style = MaterialTheme.typography.bodySmall, color = TINTA)
+        Text(texto, style = MaterialTheme.typography.labelMedium, color = TINTA)
+    }
+}
+
+@Composable
+private fun FilaCasillaMostrar(nombre: String, idTexto: String, ocultos: Set<String>, onAlternar: (String) -> Unit) {
+    val visible = idTexto !in ocultos
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .clickable { onAlternar(idTexto) }
+            .padding(vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Checkbox(checked = visible, onCheckedChange = { onAlternar(idTexto) })
+        Text(nombre, style = MaterialTheme.typography.bodyLarge, color = TINTA)
+    }
+}
+
+/**
+ * Lista de todas las categorías (de serie y propias) para editarlas de un toque o crear
+ * una nueva; se abre desde el lápiz de la tarjeta "Categorías".
+ */
+@Composable
+private fun DialogoListaCategorias(
+    categorias: List<CategoriaDisponibilidad>,
+    onGuardar: (CategoriaDisponibilidad) -> Unit,
+    onEliminar: (CategoriaId) -> Unit,
+    onCerrar: () -> Unit
+) {
+    var enEdicion by remember { mutableStateOf<CategoriaDisponibilidad?>(null) }
+    var creando by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onCerrar,
+        title = { Text("Categorías") },
+        text = {
+            Column(modifier = Modifier.heightIn(max = 480.dp).verticalScroll(rememberScrollState())) {
+                Text(
+                    "Toca una para cambiar su nombre, icono, color, si va por horas o por días y si ocupa a la persona.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TINTA_SUAVE
+                )
+                Spacer(Modifier.height(8.dp))
+                categorias.forEach { categoria ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { enEdicion = categoria }
+                            .padding(vertical = 6.dp, horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(Color(categoria.color)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(categoria.emoji, fontSize = 18.sp)
+                        }
+                        Spacer(Modifier.width(10.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(categoria.nombre, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold, color = TINTA)
+                            Text(
+                                listOf(
+                                    if (categoria.modo == ModoCategoria.HORAS) "por horas" else "por días",
+                                    if (categoria.bloquea) "ocupa" else "no ocupa"
+                                ).joinToString(" · "),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TINTA_SUAVE
+                            )
+                        }
+                        Icon(Icons.Default.Edit, contentDescription = "Editar", tint = TINTA_SUAVE, modifier = Modifier.size(18.dp))
+                    }
+                }
+                Spacer(Modifier.height(6.dp))
+                TextButton(onClick = { creando = true }) {
+                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Nueva categoría")
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onCerrar) { Text("Cerrar") } }
+    )
+
+    if (creando) {
+        DialogoCategoria(
+            inicial = null,
+            categorias = categorias,
+            onGuardar = { onGuardar(it); creando = false },
+            onEliminar = null,
+            onCerrar = { creando = false }
+        )
+    }
+
+    enEdicion?.let { categoria ->
+        DialogoCategoria(
+            inicial = categoria,
+            categorias = categorias,
+            onGuardar = { onGuardar(it); enEdicion = null },
+            onEliminar = if (categoria.esBase) null else {
+                { onEliminar(categoria.id); enEdicion = null }
+            },
+            onCerrar = { enEdicion = null }
+        )
     }
 }

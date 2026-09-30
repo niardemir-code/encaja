@@ -6,6 +6,8 @@ import com.encaja.app.domain.model.AnuncioId
 import com.encaja.app.domain.model.Caregiver
 import com.encaja.app.domain.model.CaregiverId
 import com.encaja.app.domain.model.Child
+import com.encaja.app.domain.model.CoverageNeed
+import com.encaja.app.domain.model.CoverageNeedId
 import com.encaja.app.domain.model.FamilyId
 import com.encaja.app.domain.repository.AnuncioRepository
 import com.encaja.app.domain.repository.AuthRepository
@@ -14,8 +16,11 @@ import com.encaja.app.domain.repository.CaregiverRepository
 import com.encaja.app.domain.repository.ChildRepository
 import com.encaja.app.domain.repository.CoverageNeedRepository
 import com.encaja.app.domain.repository.FamilyMembershipRepository
+import com.encaja.app.domain.repository.FamilyUnitRepository
 import com.encaja.app.domain.repository.InviteRepository
 import com.encaja.app.domain.usecase.lunesDeEstaSemana
+import com.encaja.app.ui.familia.Responsable
+import com.encaja.app.ui.guia.EditorDeActividades
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -23,6 +28,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.time.DayOfWeek
 import java.time.LocalDate
 import javax.inject.Inject
 
@@ -35,7 +41,9 @@ class SemaforoViewModel @Inject constructor(
     private val caregiverRepository: CaregiverRepository,
     private val coverageNeedRepository: CoverageNeedRepository,
     private val availabilityRepository: AvailabilityRepository,
-    private val anuncioRepository: AnuncioRepository
+    private val anuncioRepository: AnuncioRepository,
+    private val familyUnitRepository: FamilyUnitRepository,
+    private val editor: EditorDeActividades
 ) : ViewModel() {
 
     private val _pantalla = MutableStateFlow<SemaforoPantallaEstado>(SemaforoPantallaEstado.Cargando)
@@ -48,6 +56,11 @@ class SemaforoViewModel @Inject constructor(
      * información de un día verde del semáforo. */
     private val _ninos = MutableStateFlow<List<Child>>(emptyList())
     val ninos: StateFlow<List<Child>> = _ninos.asStateFlow()
+
+    /** Personas y unidades familiares, para elegir quién lleva/recoge al editar una
+     * actividad directamente desde un aviso de esta pantalla. */
+    private val _responsables = MutableStateFlow<List<Responsable>>(emptyList())
+    val responsables: StateFlow<List<Responsable>> = _responsables.asStateFlow()
 
     /** Familia del usuario ya resuelta, para que "invitar" sepa dónde escribir. Se
      * comprueba una sola vez (en [cargar]): cambiar de semana no vuelve a comprobar
@@ -162,10 +175,13 @@ class SemaforoViewModel @Inject constructor(
                 val disponibilidadDeferred = async { availabilityRepository.obtenerDisponibilidad(familyId, lunes, domingo) }
                 val needsDeferred = async { coverageNeedRepository.obtenerNeeds(familyId, lunes, domingo) }
                 val anunciosDeferred = async { anuncioRepository.obtenerAnuncios(familyId) }
+                val unidadesDeferred = async { familyUnitRepository.obtenerUnidades(familyId) }
 
                 val caregivers = caregiversDeferred.await()
                 _cuidadores.value = caregivers
                 _ninos.value = ninosDeferred.await()
+                _responsables.value = caregivers.map { Responsable.Persona(it) } +
+                    unidadesDeferred.await().map { Responsable.Unidad(it) }
                 if (caregiverIdPropio != null) {
                     nombreCuidadorActual = caregivers.firstOrNull { it.id == caregiverIdPropio }?.nombreCompleto
                         ?: nombreCuidadorActual
@@ -199,6 +215,37 @@ class SemaforoViewModel @Inject constructor(
         val familyId = familyIdActual ?: return
         viewModelScope.launch {
             anuncioRepository.eliminarAnuncio(familyId, anuncioId)
+            cargarSemana(mostrarCargando = false)
+        }
+    }
+
+    /* ── Edición de una actividad desde un aviso o hueco (mismo diálogo que en la Guía) ── */
+
+    fun guardarActividades(needs: List<CoverageNeed>, aplicarATodaLaSerie: Boolean) {
+        val familyId = familyIdActual ?: return
+        viewModelScope.launch {
+            editor.guardar(familyId, needs, aplicarATodaLaSerie)
+            cargarSemana(mostrarCargando = false)
+        }
+    }
+
+    fun eliminarActividad(id: CoverageNeedId, grupoRepeticionId: String?, fecha: LocalDate, aplicarATodaLaSerie: Boolean) {
+        val familyId = familyIdActual ?: return
+        viewModelScope.launch {
+            editor.eliminar(familyId, id, grupoRepeticionId, fecha, aplicarATodaLaSerie)
+            cargarSemana(mostrarCargando = false)
+        }
+    }
+
+    suspend fun patronDeSerie(grupoRepeticionId: String, desde: LocalDate): Pair<Set<DayOfWeek>, LocalDate?> {
+        val familyId = familyIdActual ?: return emptySet<DayOfWeek>() to null
+        return editor.patronDeSerie(familyId, grupoRepeticionId, desde)
+    }
+
+    fun actualizarSerie(plantilla: CoverageNeed, nuevasFechas: List<LocalDate>) {
+        val familyId = familyIdActual ?: return
+        viewModelScope.launch {
+            editor.actualizarSerie(familyId, plantilla, nuevasFechas)
             cargarSemana(mostrarCargando = false)
         }
     }

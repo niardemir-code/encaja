@@ -7,13 +7,12 @@ enum class ModoCategoria { HORAS, DIAS }
 
 /**
  * Un tipo de "no disponibilidad" con su nombre, emoji y color, que se ve en la
- * cuadrícula de Familia. Hay dos clases:
- *  - Las 5 de serie ([base] != null: Trabajo, Médico, Viaje, Vacaciones, Otro). Mantienen
- *    su comportamiento (Trabajo con turnos, Viaje por fechas...) y la familia solo puede
- *    cambiarles el emoji y el color.
- *  - Las creadas por la familia ([base] == null), totalmente libres: nombre, modo, color,
- *    emoji y si [bloquea] (si "ocupa" a la persona para el cálculo de huecos o es solo
- *    informativa, p.ej. "Teletrabajo").
+ * cuadrícula de Familia. Todas tienen los mismos campos configurables: nombre, emoji,
+ * color, [modo] (por horas o por días), si [bloquea] (si "ocupa" a la persona para el
+ * cálculo de huecos o es solo informativa, p.ej. "Teletrabajo") y, las que van por
+ * horas, sus horarios guardados (ver TurnoTrabajo). La única diferencia de las 5 de
+ * serie ([base] != null) es que no se pueden borrar y que sus bloques se guardan con
+ * su motivo fijo (para que los datos antiguos sigan cuadrando).
  * [color] va en ARGB (0xFFRRGGBB) para no depender de Compose en el dominio.
  */
 data class CategoriaDisponibilidad(
@@ -56,14 +55,17 @@ object CategoriasBase {
     }
 
     /**
-     * La lista completa que ve la familia: primero las 5 de serie (con el emoji y el color
-     * personalizados, si se guardaron) y detrás las propias, por orden alfabético. De una
-     * personalización de serie solo se toman emoji y color; nombre, modo y "bloquea" no cambian.
+     * La lista completa que ve la familia: primero las 5 de serie (con lo que la familia
+     * haya personalizado: nombre, emoji, color, modo y "bloquea") y detrás las propias,
+     * por orden alfabético. De una personalización de serie se conserva siempre su id
+     * y su motivo [base], que es lo que ata los bloques ya guardados.
      */
     fun combinar(guardadas: List<CategoriaDisponibilidad>): List<CategoriaDisponibilidad> {
         val porId = guardadas.associateBy { it.id }
         val bases = predeterminadas.map { base ->
-            porId[base.id]?.let { base.copy(emoji = it.emoji, color = it.color) } ?: base
+            porId[base.id]?.let {
+                base.copy(nombre = it.nombre.ifBlank { base.nombre }, emoji = it.emoji, color = it.color, modo = it.modo, bloquea = it.bloquea)
+            } ?: base
         }
         val propias = guardadas
             .filter { it.base == null && !it.id.value.startsWith(PREFIJO) }
@@ -82,12 +84,12 @@ fun AvailabilityBlock.categoriaEn(categorias: List<CategoriaDisponibilidad>): Ca
         ?: CategoriasBase.predeterminadas.first { it.base == motivo }
 
 /**
- * Marca como "no ocupa" los bloques cuya categoría propia es solo informativa, para que
- * el cálculo de huecos no los cuente. Se aplica al leer la disponibilidad, así que cambiar
- * esa opción en una categoría afecta también a los días que ya estaban apuntados.
+ * Marca como "no ocupa" los bloques cuya categoría (propia o de serie) es solo
+ * informativa, para que el cálculo de huecos no los cuente. Se aplica al leer la
+ * disponibilidad, así que cambiar esa opción en una categoría afecta también a los días
+ * que ya estaban apuntados.
  */
 fun List<AvailabilityBlock>.conBloqueoDeCategorias(categorias: List<CategoriaDisponibilidad>): List<AvailabilityBlock> {
-    val informativas = categorias.filter { !it.bloquea }.map { it.id }.toSet()
-    if (informativas.isEmpty()) return this
-    return map { if (it.categoriaId != null && it.categoriaId in informativas) it.copy(bloquea = false) else it }
+    if (categorias.all { it.bloquea }) return this
+    return map { if (!it.categoriaEn(categorias).bloquea) it.copy(bloquea = false) else it }
 }
