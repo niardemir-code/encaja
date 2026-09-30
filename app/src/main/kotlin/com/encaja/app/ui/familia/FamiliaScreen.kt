@@ -25,6 +25,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.FilterAlt
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -39,6 +40,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.encaja.app.domain.model.Caregiver
 import com.encaja.app.domain.model.CaregiverId
 import com.encaja.app.domain.model.CategoriaDisponibilidad
 import com.encaja.app.domain.model.categoriaEn
@@ -115,6 +117,10 @@ private fun ContenidoFamilia(estado: FamiliaUiState, viewModel: FamiliaViewModel
         calcularInicialesCuidadores(estado.cuidadores.map { it.caregiver })
     }
     var celdaEnEdicion by remember { mutableStateOf<Pair<CaregiverId, LocalDate>?>(null) }
+    val ocultos by viewModel.ocultos.collectAsState()
+    val cuidadoresVisibles = remember(estado.cuidadores, ocultos) {
+        estado.cuidadores.filter { it.caregiver.id !in ocultos }
+    }
 
     // Se busca en el estado actual (no en una copia guardada al abrir), así al borrar
     // un bloque el diálogo se actualiza solo tras la recarga.
@@ -161,6 +167,26 @@ private fun ContenidoFamilia(estado: FamiliaUiState, viewModel: FamiliaViewModel
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 2.dp, bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            if (estado.cuidadores.size > 1) {
+                item {
+                    Tarjeta {
+                        Column(modifier = Modifier.padding(14.dp)) {
+                            CabeceraTarjeta(
+                                icono = Icons.Default.FilterAlt,
+                                titulo = "Mostrar",
+                                subtitulo = "Elige a quién ver en la cuadrícula de esta semana."
+                            )
+                            Spacer(Modifier.height(12.dp))
+                            FiltroCuidadores(
+                                cuidadores = estado.cuidadores.map { it.caregiver },
+                                ocultos = ocultos,
+                                onAlternar = { viewModel.alternarVisibilidad(it) }
+                            )
+                        }
+                    }
+                }
+            }
+
             item {
                 Tarjeta {
                     Column(modifier = Modifier.padding(14.dp)) {
@@ -178,10 +204,11 @@ private fun ContenidoFamilia(estado: FamiliaUiState, viewModel: FamiliaViewModel
             item {
                 TarjetaCuadricula(
                     lunes = estado.lunes,
-                    cuidadores = estado.cuidadores,
+                    cuidadores = cuidadoresVisibles,
                     categorias = estado.categorias,
                     iniciales = iniciales,
-                    onClickDia = { caregiverId, fecha -> celdaEnEdicion = caregiverId to fecha }
+                    onClickDia = { caregiverId, fecha -> celdaEnEdicion = caregiverId to fecha },
+                    hayOcultosPorFiltro = estado.cuidadores.isNotEmpty() && cuidadoresVisibles.isEmpty()
                 )
             }
         }
@@ -332,7 +359,8 @@ private fun TarjetaCuadricula(
     cuidadores: List<CuidadorDisponibilidadSemana>,
     categorias: List<CategoriaDisponibilidad>,
     iniciales: Map<CaregiverId, String>,
-    onClickDia: (CaregiverId, LocalDate) -> Unit
+    onClickDia: (CaregiverId, LocalDate) -> Unit,
+    hayOcultosPorFiltro: Boolean = false
 ) {
     val fechas = (0..6).map { lunes.plusDays(it.toLong()) }
     val hoy = LocalDate.now()
@@ -351,7 +379,11 @@ private fun TarjetaCuadricula(
 
             if (cuidadores.isEmpty()) {
                 Text(
-                    "Añade personas en Ajustes para ver aquí su disponibilidad.",
+                    if (hayOcultosPorFiltro) {
+                        "Has ocultado a todo el mundo con el filtro de arriba."
+                    } else {
+                        "Añade personas en Ajustes para ver aquí su disponibilidad."
+                    },
                     modifier = Modifier.padding(8.dp),
                     style = MaterialTheme.typography.bodyMedium,
                     color = TINTA_SUAVE
@@ -468,6 +500,34 @@ private fun CeldaDisponibilidad(
                 textAlign = TextAlign.Center,
                 maxLines = 2,
                 softWrap = false
+            )
+        }
+    }
+}
+
+/** Un chip por cuidador para mostrarlo u ocultarlo de la cuadrícula de esta semana;
+ * marcado = visible. FlowRow para que baje de línea si no caben todos en un móvil
+ * estrecho. */
+@Composable
+private fun FiltroCuidadores(
+    cuidadores: List<Caregiver>,
+    ocultos: Set<CaregiverId>,
+    onAlternar: (CaregiverId) -> Unit
+) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        cuidadores.forEach { caregiver ->
+            val visible = caregiver.id !in ocultos
+            FilterChip(
+                selected = visible,
+                onClick = { onAlternar(caregiver.id) },
+                label = { Text(caregiver.nombreCompleto) },
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = LAVANDA,
+                    selectedLabelColor = INDIGO
+                )
             )
         }
     }

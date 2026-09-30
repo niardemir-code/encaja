@@ -4,9 +4,12 @@ package com.encaja.app.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.encaja.app.domain.model.FamilyId
 import com.encaja.app.domain.repository.AuthRepository
 import com.encaja.app.domain.repository.CaregiverRepository
+import com.encaja.app.domain.repository.CoverageNeedRepository
 import com.encaja.app.domain.repository.FamilyMembershipRepository
+import com.encaja.app.domain.usecase.actividadesAntiguas
 import com.encaja.app.ui.familia.calcularInicialesCuidadores
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,7 +27,8 @@ import javax.inject.Inject
 class EncajaAppViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val familyMembershipRepository: FamilyMembershipRepository,
-    private val caregiverRepository: CaregiverRepository
+    private val caregiverRepository: CaregiverRepository,
+    private val coverageNeedRepository: CoverageNeedRepository
 ) : ViewModel() {
 
     private val _inicialesUsuario = MutableStateFlow("")
@@ -48,6 +52,21 @@ class EncajaAppViewModel @Inject constructor(
             } else {
                 sesion.email?.trim()?.take(2)?.uppercase() ?: "?"
             }
+
+            if (membresia != null) limpiarActividadesAntiguas(membresia.familyId)
         }
+    }
+
+    /**
+     * Borra de golpe, una vez por cada arranque de la app, las actividades con más
+     * de un mes de antigüedad — para no acumular datos que ya no hace falta
+     * conservar. Se hace aquí (no en cada pestaña) precisamente porque este
+     * ViewModel vive todo lo que vive la app, así que solo se ejecuta una vez por
+     * sesión en vez de cada vez que se entra en Semana o en Guía.
+     */
+    private suspend fun limpiarActividadesAntiguas(familyId: FamilyId) {
+        val todas = coverageNeedRepository.obtenerTodosLosNeeds(familyId)
+        val aBorrar = actividadesAntiguas(todas)
+        if (aBorrar.isNotEmpty()) coverageNeedRepository.eliminarNeeds(familyId, aBorrar)
     }
 }

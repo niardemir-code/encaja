@@ -1,6 +1,7 @@
 package com.encaja.app.ui.semana
 
 import com.encaja.app.domain.model.Anuncio
+import com.encaja.app.domain.model.CoverageNeed
 import com.encaja.app.domain.model.Hueco
 import com.encaja.app.domain.usecase.AvisoConflicto
 import java.time.LocalDate
@@ -16,7 +17,11 @@ enum class EstadoDia { VERDE, AMBAR, ROJO, SIN_DATOS }
 data class DiaSemaforo(
     val fecha: LocalDate,
     val estado: EstadoDia,
-    val huecos: List<Hueco>
+    val huecos: List<Hueco>,
+    /** Todas las actividades (CoverageNeed) de ese día, huecos y avisos incluidos —
+     * para poder mostrar su información al tocar el círculo del semáforo (sobre todo
+     * en los días verdes, donde no hay ni huecos ni avisos que abrir). */
+    val needs: List<CoverageNeed> = emptyList()
 )
 
 data class SemaforoUiState(

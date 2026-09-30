@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.encaja.app.domain.model.AnuncioId
 import com.encaja.app.domain.model.Caregiver
 import com.encaja.app.domain.model.CaregiverId
+import com.encaja.app.domain.model.Child
 import com.encaja.app.domain.model.FamilyId
 import com.encaja.app.domain.repository.AnuncioRepository
 import com.encaja.app.domain.repository.AuthRepository
@@ -42,6 +43,11 @@ class SemaforoViewModel @Inject constructor(
 
     private val _cuidadores = MutableStateFlow<List<Caregiver>>(emptyList())
     val cuidadores: StateFlow<List<Caregiver>> = _cuidadores.asStateFlow()
+
+    /** Para poder mostrar el nombre del niño y quién lleva/recoge en el diálogo de
+     * información de un día verde del semáforo. */
+    private val _ninos = MutableStateFlow<List<Child>>(emptyList())
+    val ninos: StateFlow<List<Child>> = _ninos.asStateFlow()
 
     /** Familia del usuario ya resuelta, para que "invitar" sepa dónde escribir. Se
      * comprueba una sola vez (en [cargar]): cambiar de semana no vuelve a comprobar
@@ -156,6 +162,7 @@ class SemaforoViewModel @Inject constructor(
 
                 val caregivers = caregiversDeferred.await()
                 _cuidadores.value = caregivers
+                _ninos.value = ninosDeferred.await()
                 if (caregiverIdPropio != null) {
                     nombreCuidadorActual = caregivers.firstOrNull { it.id == caregiverIdPropio }?.nombreCompleto
                         ?: nombreCuidadorActual

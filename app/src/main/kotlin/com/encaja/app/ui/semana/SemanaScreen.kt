@@ -14,6 +14,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -31,6 +32,7 @@ import androidx.compose.material.icons.filled.PriorityHigh
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -47,6 +49,8 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.encaja.app.domain.model.Anuncio
 import com.encaja.app.domain.model.AnuncioId
+import com.encaja.app.domain.model.Caregiver
+import com.encaja.app.domain.model.Child
 import com.encaja.app.domain.model.Hueco
 import com.encaja.app.domain.usecase.AvisoConflicto
 import com.encaja.app.domain.usecase.RolResponsable
@@ -71,14 +75,23 @@ private val LAVANDA_TARJETA: Color @Composable get() = MaterialTheme.colorScheme
 private val BLANCO: Color @Composable get() = MaterialTheme.colorScheme.surface
 
 @Composable
-fun SemanaScreen(viewModel: SemaforoViewModel = hiltViewModel()) {
+fun SemanaScreen(
+    viewModel: SemaforoViewModel = hiltViewModel(),
+    // Al tocar un aviso o un hueco, se salta a esa actividad en la Guía para poder
+    // asignarla directamente (fecha, id de la necesidad).
+    onAbrirActividad: (LocalDate, String) -> Unit = { _, _ -> },
+    // Al tocar el círculo de un día del semáforo que ya no tiene un aviso o hueco
+    // "vigente" que abrir (p.ej. un día pasado): se salta a ese día en la Guía, sin
+    // intentar abrir ninguna actividad en concreto.
+    onVerDia: (LocalDate) -> Unit = {}
+) {
     val pantalla by viewModel.pantalla.collectAsState()
 
-    // Igual que en Guía: el ViewModel se conserva al cambiar de pestaña (saveState/
-    // restoreState), así que sin esto se seguiría viendo lo que había la última vez
-    // que se estuvo aquí — p.ej. una actividad recién creada en Guía no aparecería
-    // en Semana hasta cambiar de semana y volver. Al reentrar en la pestaña se
-    // vuelve a componer desde cero, así que esto se ejecuta cada vez.
+    // El ViewModel se conserva al cambiar de pestaña, así que sin esto se seguiría
+    // viendo lo que había la última vez que se estuvo aquí — p.ej. una actividad
+    // recién creada en Guía no aparecería en Semana hasta cambiar de semana y volver.
+    // Al reentrar en la pestaña se vuelve a componer desde cero, así que esto se
+    // ejecuta cada vez.
     LaunchedEffect(Unit) { viewModel.recargar() }
 
     when (val estadoActual = pantalla) {
@@ -123,9 +136,20 @@ fun SemanaScreen(viewModel: SemaforoViewModel = hiltViewModel()) {
 
         is SemaforoPantallaEstado.ConDatos -> {
             val uiState = estadoActual.estado
+            val cuidadores by viewModel.cuidadores.collectAsState()
+            val ninos by viewModel.ninos.collectAsState()
+            var diaInfoAbierto by remember { mutableStateOf<DiaSemaforo?>(null) }
+
+            // rememberSaveable (no remember): al abrir un aviso desde aquí se navega a la
+            // Guía y se vuelve con popBackStack, lo que recompone esta pantalla desde cero;
+            // guardar la posición en el estado de la entrada de navegación es lo único que
+            // permite recuperarla en vez de volver siempre arriba del todo.
+            val listState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
+
             Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
                 OlasDeFondo()
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -137,7 +161,21 @@ fun SemanaScreen(viewModel: SemaforoViewModel = hiltViewModel()) {
                             onSemanaAnterior = { viewModel.cambiarSemana(-1) },
                             onSemanaSiguiente = { viewModel.cambiarSemana(1) },
                             onIrASemanaActual = { viewModel.irASemanaActual() },
-                            onElegirFecha = { viewModel.irASemanaDe(it) }
+                            onElegirFecha = { viewModel.irASemanaDe(it) },
+                            onClickDia = { dia ->
+                                when (dia.estado) {
+                                    EstadoDia.ROJO -> {
+                                        val hueco = uiState.huecosDeLaSemana.firstOrNull { it.need.fecha == dia.fecha }
+                                        if (hueco != null) onAbrirActividad(dia.fecha, hueco.need.id.value) else onVerDia(dia.fecha)
+                                    }
+                                    EstadoDia.AMBAR -> {
+                                        val aviso = uiState.avisos.firstOrNull { it.need.fecha == dia.fecha }
+                                        if (aviso != null) onAbrirActividad(dia.fecha, aviso.need.id.value) else onVerDia(dia.fecha)
+                                    }
+                                    EstadoDia.VERDE -> diaInfoAbierto = dia
+                                    EstadoDia.SIN_DATOS -> Unit
+                                }
+                            }
                         )
                     }
 
@@ -150,13 +188,28 @@ fun SemanaScreen(viewModel: SemaforoViewModel = hiltViewModel()) {
                     }
 
                     items(uiState.huecosDeLaSemana) { hueco ->
-                        TarjetaHueco(hueco = hueco)
+                        TarjetaHueco(
+                            hueco = hueco,
+                            onClick = { onAbrirActividad(hueco.need.fecha, hueco.need.id.value) }
+                        )
                     }
 
                     items(uiState.avisos) { aviso ->
-                        TarjetaAvisoConflicto(aviso = aviso)
+                        TarjetaAvisoConflicto(
+                            aviso = aviso,
+                            onClick = { onAbrirActividad(aviso.need.fecha, aviso.need.id.value) }
+                        )
                     }
                 }
+            }
+
+            diaInfoAbierto?.let { dia ->
+                DialogoInfoDia(
+                    dia = dia,
+                    cuidadores = cuidadores,
+                    ninos = ninos,
+                    onCerrar = { diaInfoAbierto = null }
+                )
             }
         }
     }
@@ -202,7 +255,8 @@ private fun TarjetaSemana(
     onSemanaAnterior: () -> Unit,
     onSemanaSiguiente: () -> Unit,
     onIrASemanaActual: () -> Unit,
-    onElegirFecha: (LocalDate) -> Unit
+    onElegirFecha: (LocalDate) -> Unit,
+    onClickDia: (DiaSemaforo) -> Unit = {}
 ) {
     val lunes = dias.firstOrNull()?.fecha
     var calendarioAbierto by remember { mutableStateOf(false) }
@@ -246,7 +300,7 @@ private fun TarjetaSemana(
             }
 
             Spacer(Modifier.height(16.dp))
-            FilaDeDias(dias)
+            FilaDeDias(dias, onClickDia)
         }
     }
 
@@ -411,9 +465,11 @@ fun BotonBarraSuperior(icono: ImageVector, descripcion: String, onClick: () -> U
 
 /** Los siete días: letra arriba y círculo con el número, coloreado según el semáforo
  * (lavanda = sin actividades, verde = cubierto, ámbar = aviso, rojo = hueco). El día
- * de hoy lleva además un puntito ámbar debajo. */
+ * de hoy lleva además un puntito ámbar debajo. Cada círculo es clicable (salvo los
+ * "sin datos", que no tienen nada que abrir): ámbar/rojo llevan al aviso o hueco de
+ * ese día en la Guía, y verde abre un resumen de las actividades del día. */
 @Composable
-private fun FilaDeDias(dias: List<DiaSemaforo>) {
+private fun FilaDeDias(dias: List<DiaSemaforo>, onClickDia: (DiaSemaforo) -> Unit = {}) {
     val hoy = LocalDate.now()
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
@@ -432,7 +488,8 @@ private fun FilaDeDias(dias: List<DiaSemaforo>) {
                         .padding(top = 6.dp)
                         .size(40.dp)
                         .clip(CircleShape)
-                        .background(colorParaEstado(dia.estado)),
+                        .background(colorParaEstado(dia.estado))
+                        .clickable(enabled = dia.estado != EstadoDia.SIN_DATOS) { onClickDia(dia) },
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -507,42 +564,45 @@ private fun TablonDeAnuncios(
             }
             Spacer(Modifier.height(14.dp))
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                OutlinedTextField(
-                    value = textoNuevo,
-                    onValueChange = { textoNuevo = it },
-                    placeholder = { Text("Nuevo anuncio", color = TINTA_SUAVE) },
-                    leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null, tint = INDIGO) },
-                    singleLine = true,
-                    shape = RoundedCornerShape(16.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = BLANCO,
-                        unfocusedContainerColor = BLANCO,
-                        focusedBorderColor = INDIGO.copy(alpha = 0.5f),
-                        unfocusedBorderColor = Color.Transparent
-                    ),
-                    modifier = Modifier.weight(1f)
-                )
-                Spacer(Modifier.width(10.dp))
-                Button(
-                    enabled = textoNuevo.isNotBlank(),
-                    onClick = {
-                        onPublicar(textoNuevo)
-                        textoNuevo = ""
-                    },
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = extra.acento,
-                        contentColor = extra.onAcento,
-                        disabledContainerColor = extra.acento.copy(alpha = 0.45f),
-                        disabledContentColor = extra.onAcento
-                    ),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)
-                ) {
-                    Icon(Icons.Default.Send, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("Publicar", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
-                }
+            // A todo lo ancho y sin singleLine: crece hacia abajo a medida que se escribe
+            // (sin límite de líneas) en vez de desplazar el texto ya escrito, y el botón
+            // de publicar va debajo, también a todo lo ancho.
+            OutlinedTextField(
+                value = textoNuevo,
+                onValueChange = { textoNuevo = it },
+                placeholder = { Text("Nuevo anuncio", color = TINTA_SUAVE) },
+                leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null, tint = INDIGO) },
+                shape = RoundedCornerShape(16.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = BLANCO,
+                    unfocusedContainerColor = BLANCO,
+                    focusedBorderColor = INDIGO.copy(alpha = 0.5f),
+                    unfocusedBorderColor = Color.Transparent
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 56.dp)
+            )
+            Spacer(Modifier.height(10.dp))
+            Button(
+                enabled = textoNuevo.isNotBlank(),
+                onClick = {
+                    onPublicar(textoNuevo)
+                    textoNuevo = ""
+                },
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = extra.acento,
+                    contentColor = extra.onAcento,
+                    disabledContainerColor = extra.acento.copy(alpha = 0.45f),
+                    disabledContentColor = extra.onAcento
+                ),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.Send, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Publicar", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
             }
         }
     }
@@ -603,8 +663,11 @@ private fun formatearHoraHueco(hora: LocalTime): String =
 
 /**
  * Tarjeta de aviso con el estilo de la maqueta: fondo pálido, franja de color a la
- * izquierda, icono en círculo, título con chip a la derecha y texto debajo. La usan
- * tanto los huecos (rojo, "Sin cubrir") como las incompatibilidades (ámbar, "Importante").
+ * izquierda, icono en círculo y texto a la derecha. El chip ("Sin cubrir",
+ * "Importante"...) va en su propia línea, encima del título, en vez de compartir
+ * fila con él — así el título y la descripción se leen enteros y nunca se cortan,
+ * por largos que sean. Toda la tarjeta es clicable: abre la actividad en la Guía
+ * para poder asignar directamente quién lleva o recoge.
  */
 @Composable
 private fun TarjetaAviso(
@@ -614,10 +677,11 @@ private fun TarjetaAviso(
     fondo: Color,
     franja: Color,
     tinta: Color,
-    icono: ImageVector
+    icono: ImageVector,
+    onClick: () -> Unit
 ) {
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).clickable(onClick = onClick),
         shape = RoundedCornerShape(22.dp),
         color = fondo
     ) {
@@ -630,27 +694,22 @@ private fun TarjetaAviso(
                 IconoDeTarjeta(icono, fondo = franja.copy(alpha = 0.35f), tinta = tinta)
                 Spacer(Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            titulo,
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = TINTA,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f)
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            chip,
-                            style = MaterialTheme.typography.labelLarge,
-                            color = tinta,
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(franja.copy(alpha = 0.30f))
-                                .padding(horizontal = 10.dp, vertical = 4.dp)
-                        )
-                    }
+                    Text(
+                        chip,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = tinta,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(franja.copy(alpha = 0.30f))
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        titulo,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = TINTA
+                    )
                     Spacer(Modifier.height(6.dp))
                     Text(texto, style = MaterialTheme.typography.bodyLarge, color = TINTA, lineHeight = 22.sp)
                 }
@@ -660,7 +719,7 @@ private fun TarjetaAviso(
 }
 
 @Composable
-private fun TarjetaHueco(hueco: Hueco) {
+private fun TarjetaHueco(hueco: Hueco, onClick: () -> Unit) {
     TarjetaAviso(
         titulo = hueco.need.descripcion,
         chip = "Sin cubrir",
@@ -669,7 +728,8 @@ private fun TarjetaHueco(hueco: Hueco) {
         fondo = LocalEncajaExtraColors.current.rosaHueco,
         franja = MaterialTheme.colorScheme.error,
         tinta = MaterialTheme.colorScheme.onErrorContainer,
-        icono = Icons.Default.PriorityHigh
+        icono = Icons.Default.PriorityHigh,
+        onClick = onClick
     )
 }
 
@@ -689,7 +749,7 @@ private fun textoAviso(aviso: AvisoConflicto): String {
 }
 
 @Composable
-private fun TarjetaAvisoConflicto(aviso: AvisoConflicto) {
+private fun TarjetaAvisoConflicto(aviso: AvisoConflicto, onClick: () -> Unit) {
     TarjetaAviso(
         titulo = aviso.need.descripcion,
         chip = "Importante",
@@ -697,6 +757,57 @@ private fun TarjetaAvisoConflicto(aviso: AvisoConflicto) {
         fondo = LocalEncajaExtraColors.current.cremaAviso,
         franja = LocalEncajaExtraColors.current.ambar,
         tinta = MaterialTheme.colorScheme.onTertiaryContainer,
-        icono = Icons.Default.PriorityHigh
+        icono = Icons.Default.PriorityHigh,
+        onClick = onClick
+    )
+}
+
+/** Resumen de las actividades de un día verde del semáforo: al no haber ningún aviso
+ * ni hueco que abrir, este diálogo es lo único a lo que puede llevar tocar su círculo. */
+@Composable
+private fun DialogoInfoDia(
+    dia: DiaSemaforo,
+    cuidadores: List<Caregiver>,
+    ninos: List<Child>,
+    onCerrar: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onCerrar,
+        title = { Text(formatearFechaHueco(dia.fecha)) },
+        text = {
+            if (dia.needs.isEmpty()) {
+                Text("Ese día no hay ninguna actividad registrada.")
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    dia.needs.sortedBy { it.horaInicio }.forEach { need ->
+                        Column {
+                            Text(need.descripcion, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            val nombreNino = ninos.firstOrNull { it.id == need.childId }?.nombre
+                            Text(
+                                buildString {
+                                    append(formatearHoraHueco(need.horaInicio))
+                                    append(" – ")
+                                    append(formatearHoraHueco(need.horaFin))
+                                    if (nombreNino != null) append(" · $nombreNino")
+                                },
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            if (need.requiereDesplazamiento) {
+                                val lleva = cuidadores.firstOrNull { it.id.value == need.quienLlevaId }?.nombreCompleto
+                                val recoge = cuidadores.firstOrNull { it.id.value == need.quienRecogeId }?.nombreCompleto
+                                Spacer(Modifier.height(2.dp))
+                                Text(
+                                    "Lleva: ${lleva ?: "Sin asignar"} · Recoge: ${recoge ?: "Sin asignar"}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onCerrar) { Text("Cerrar") } }
     )
 }

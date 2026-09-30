@@ -35,7 +35,7 @@ class SemaforoUiStateMapper(
                 needsPorFecha[fecha].isNullOrEmpty() -> EstadoDia.SIN_DATOS
                 else -> EstadoDia.VERDE
             }
-            DiaSemaforo(fecha, estado, huecosDelDia)
+            DiaSemaforo(fecha, estado, huecosDelDia, needs = needsPorFecha[fecha].orEmpty())
         }
 
         // El círculo de cada día conserva su color aunque ya haya pasado (para poder

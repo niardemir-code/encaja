@@ -51,7 +51,29 @@ class FamiliaViewModel @Inject constructor(
     /** Semanas de desplazamiento respecto a la actual: 0 = esta semana, -1 = anterior, +1 = siguiente. */
     private var offsetSemanas = 0
 
+    /** Lunes de la semana que se está mostrando ahora mismo (se actualiza en [cargarDatos]). */
+    private var lunesActual: LocalDate = LocalDate.now().lunesDeEstaSemana()
+
+    /**
+     * Qué cuidadores se han ocultado de la cuadrícula, por semana (clave = lunes de esa
+     * semana). Es solo una preferencia de visualización — no se guarda en ningún sitio,
+     * así que se pierde al salir de la pantalla — pero cada semana recuerda la suya
+     * propia mientras se navega entre ellas en la misma visita.
+     */
+    private val ocultosPorSemana = mutableMapOf<LocalDate, MutableSet<CaregiverId>>()
+
+    private val _ocultos = MutableStateFlow<Set<CaregiverId>>(emptySet())
+    /** Cuidadores ocultos en la semana que se está viendo ahora. */
+    val ocultos: StateFlow<Set<CaregiverId>> = _ocultos.asStateFlow()
+
     init { cargar() }
+
+    /** Muestra u oculta a un cuidador de la cuadrícula, solo para la semana actual. */
+    fun alternarVisibilidad(caregiverId: CaregiverId) {
+        val ocultosDeEstaSemana = ocultosPorSemana.getOrPut(lunesActual) { mutableSetOf() }
+        if (!ocultosDeEstaSemana.remove(caregiverId)) ocultosDeEstaSemana.add(caregiverId)
+        _ocultos.value = ocultosDeEstaSemana.toSet()
+    }
 
     /** Recarga completa: vuelve a comprobar sesión y familia (por si han cambiado). Se
      * usa al entrar en la pestaña; cambiar de semana o guardar algo no lo necesita. */
@@ -112,6 +134,8 @@ class FamiliaViewModel @Inject constructor(
 
             val lunes = LocalDate.now().lunesDeEstaSemana().plusWeeks(offsetSemanas.toLong())
             val domingo = lunes.plusDays(6)
+            lunesActual = lunes
+            _ocultos.value = ocultosPorSemana[lunes].orEmpty()
 
             coroutineScope {
                 val caregiversDeferred = async { caregiverRepository.obtenerCuidadores(familyId) }

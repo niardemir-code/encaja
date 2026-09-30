@@ -210,6 +210,15 @@ fun EncajaApp(onCerrarSesion: () -> Unit, viewModel: EncajaAppViewModel = hiltVi
                             popUpTo(navController.graph.findStartDestination().id)
                             launchSingleTop = true
                         }
+                    },
+                    // Desde el círculo de un día ámbar/rojo que ya no tiene un aviso o
+                    // hueco vigente (p.ej. un día pasado): solo salta a ese día en la
+                    // Guía, sin intentar abrir ninguna actividad en concreto.
+                    onVerDia = { fecha ->
+                        navController.navigate("$RUTA_GUIA_BASE?fecha=$fecha") {
+                            popUpTo(navController.graph.findStartDestination().id)
+                            launchSingleTop = true
+                        }
                     }
                 )
             }
