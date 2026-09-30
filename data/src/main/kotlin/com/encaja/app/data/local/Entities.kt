@@ -134,19 +134,20 @@ data class CategoriaEntity(
     val color: Long,
     val modo: String,
     val bloquea: Boolean,
-    val base: String?
+    val base: String?,
+    val eliminada: Boolean = false
 ) {
     /** null si la fila de caché tiene un valor que ya no existe (p.ej. un modo renombrado). */
     fun aDominio(): CategoriaDisponibilidad? {
         val modoDominio = runCatching { ModoCategoria.valueOf(modo) }.getOrNull() ?: return null
         val baseDominio = base?.let { runCatching { MotivoNoDisponibilidad.valueOf(it) }.getOrNull() }
-        return CategoriaDisponibilidad(CategoriaId(id), nombre, emoji, color, modoDominio, bloquea, baseDominio)
+        return CategoriaDisponibilidad(CategoriaId(id), nombre, emoji, color, modoDominio, bloquea, baseDominio, eliminada)
     }
 
     companion object {
         fun desdeDominio(familyId: String, categoria: CategoriaDisponibilidad) = CategoriaEntity(
             familyId, categoria.id.value, categoria.nombre, categoria.emoji, categoria.color,
-            categoria.modo.name, categoria.bloquea, categoria.base?.name
+            categoria.modo.name, categoria.bloquea, categoria.base?.name, categoria.eliminada
         )
     }
 }

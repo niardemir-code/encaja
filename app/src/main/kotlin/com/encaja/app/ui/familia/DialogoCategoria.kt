@@ -5,8 +5,8 @@ package com.encaja.app.ui.familia
 // NOTA: depende de Jetpack Compose (Material 3), no compilado en este entorno.
 // Editor de categorías de disponibilidad. Todas (propias y de serie) tienen los
 // mismos campos: nombre, si se apunta por horas o por días, si ocupa a la persona,
-// color e icono (galería de emojis). Las de serie (Trabajo, Médico...) solo se
-// diferencian en que no se pueden borrar.
+// color e icono (galería de emojis). Las de serie (Trabajo, Médico...) también se
+// pueden borrar; quedan ocultas y se pueden recuperar desde la lista de categorías.
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -103,8 +103,8 @@ fun DialogoCategoria(
 
                 if (esBase) {
                     Text(
-                        "Categoría de serie: puedes cambiarlo todo menos borrarla. Si le pones otro " +
-                            "icono, las casillas lo mostrarán en lugar de las horas (al tocarlas se ven).",
+                        "Categoría de serie: puedes cambiarlo todo (y borrarla, se puede recuperar). Si le " +
+                            "pones otro icono, las casillas lo mostrarán en lugar de las horas (al tocarlas se ven).",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -242,7 +242,12 @@ fun DialogoCategoria(
         AlertDialog(
             onDismissRequest = { confirmarBorrado = false },
             title = { Text("¿Borrar \"${nombre.trim()}\"?") },
-            text = { Text("Los días ya apuntados con esta categoría no se borran: pasarán a verse como \"Otro\".") },
+            text = {
+                Text(
+                    if (esBase) "Se ocultará de la lista (podrás recuperarla desde \"Categorías\"). Los días ya apuntados con ella no se borran."
+                    else "Los días ya apuntados con esta categoría no se borran: pasarán a verse como \"Otro\"."
+                )
+            },
             confirmButton = {
                 TextButton(onClick = { confirmarBorrado = false; onEliminar() }) {
                     Text("Borrar", color = MaterialTheme.colorScheme.error)

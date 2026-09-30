@@ -148,10 +148,13 @@ class FamiliaViewModel @Inject constructor(
 
                 val mapper = FamiliaUiStateMapper(caregiversDeferred.await(), disponibilidadDeferred.await(), unidadesDeferred.await())
                 val turnos = turnosDeferred.await().sortedBy { it.horaInicio }
-                val categorias = CategoriasBase.combinar(categoriasDeferred.await())
+                val guardadas = categoriasDeferred.await()
+                val categorias = CategoriasBase.combinar(guardadas)
+                val eliminadas = CategoriasBase.eliminadas(guardadas)
 
                 _pantalla.value = FamiliaPantallaEstado.ConDatos(
-                    mapper.construir(lunes, esSemanaActual = offsetSemanas == 0).copy(turnos = turnos, categorias = categorias)
+                    mapper.construir(lunes, esSemanaActual = offsetSemanas == 0)
+                        .copy(turnos = turnos, categorias = categorias, categoriasEliminadas = eliminadas)
                 )
             }
         }
@@ -242,13 +245,28 @@ class FamiliaViewModel @Inject constructor(
     }
 
     /**
-     * Borra una categoría propia. Los días que ya estaban apuntados con ella no se borran:
-     * pasan a verse como "Otro" (y a ocupar a la persona), que es con lo que se guardaron.
+     * Borra una categoría. Las propias se borran del todo; las de serie se guardan marcadas
+     * como eliminadas (si no, reaparecerían con sus valores de serie) y se pueden
+     * recuperar. Los días que ya estaban apuntados con ella no se borran: pasan a verse
+     * con el aspecto de serie de su motivo (o como "Otro" si era propia).
      */
-    fun eliminarCategoria(categoriaId: CategoriaId) {
+    fun eliminarCategoria(categoria: CategoriaDisponibilidad) {
         val familyId = familyIdActual ?: return
         viewModelScope.launch {
-            categoriaRepository.eliminarCategoria(familyId, categoriaId)
+            if (categoria.esBase) {
+                categoriaRepository.guardarCategoria(familyId, categoria.copy(eliminada = true))
+            } else {
+                categoriaRepository.eliminarCategoria(familyId, categoria.id)
+            }
+            cargarDatos(mostrarCargando = false)
+        }
+    }
+
+    /** Vuelve a mostrar una categoría de serie que se había borrado, con sus valores de serie. */
+    fun recuperarCategoria(categoria: CategoriaDisponibilidad) {
+        val familyId = familyIdActual ?: return
+        viewModelScope.launch {
+            categoriaRepository.eliminarCategoria(familyId, categoria.id)
             cargarDatos(mostrarCargando = false)
         }
     }

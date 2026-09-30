@@ -50,6 +50,8 @@ data class FamiliaUiState(
     val unidades: List<UnidadDisponibilidadSemana> = emptyList(),
     /** Turnos de trabajo con nombre que ha definido la familia, para elegirlos de un toque. */
     val turnos: List<TurnoTrabajo> = emptyList(),
-    /** Todas las categorías: las 5 de serie (con su personalización) y las propias. */
-    val categorias: List<CategoriaDisponibilidad> = CategoriasBase.predeterminadas
+    /** Todas las categorías: las de serie (con su personalización, menos las borradas) y las propias. */
+    val categorias: List<CategoriaDisponibilidad> = CategoriasBase.predeterminadas,
+    /** Las de serie que la familia ha borrado, por si quiere recuperarlas. */
+    val categoriasEliminadas: List<CategoriaDisponibilidad> = emptyList()
 )

@@ -22,7 +22,10 @@ data class CategoriaDisponibilidad(
     val color: Long,
     val modo: ModoCategoria,
     val bloquea: Boolean = true,
-    val base: MotivoNoDisponibilidad? = null
+    val base: MotivoNoDisponibilidad? = null,
+    /** Solo en las de serie: la familia la ha borrado. Se guarda así (en vez de borrar el
+     * documento) porque, si no, volvería a aparecer con sus valores de serie. */
+    val eliminada: Boolean = false
 ) {
     val esBase: Boolean get() = base != null
 }
@@ -62,15 +65,21 @@ object CategoriasBase {
      */
     fun combinar(guardadas: List<CategoriaDisponibilidad>): List<CategoriaDisponibilidad> {
         val porId = guardadas.associateBy { it.id }
-        val bases = predeterminadas.map { base ->
-            porId[base.id]?.let {
-                base.copy(nombre = it.nombre.ifBlank { base.nombre }, emoji = it.emoji, color = it.color, modo = it.modo, bloquea = it.bloquea)
-            } ?: base
+        val bases = predeterminadas.mapNotNull { base ->
+            val guardada = porId[base.id] ?: return@mapNotNull base
+            if (guardada.eliminada) return@mapNotNull null
+            base.copy(nombre = guardada.nombre.ifBlank { base.nombre }, emoji = guardada.emoji, color = guardada.color, modo = guardada.modo, bloquea = guardada.bloquea)
         }
         val propias = guardadas
             .filter { it.base == null && !it.id.value.startsWith(PREFIJO) }
             .sortedBy { it.nombre.lowercase() }
         return bases + propias
+    }
+
+    /** Las de serie que la familia ha borrado (para poder recuperarlas). */
+    fun eliminadas(guardadas: List<CategoriaDisponibilidad>): List<CategoriaDisponibilidad> {
+        val porId = guardadas.associateBy { it.id }
+        return predeterminadas.filter { porId[it.id]?.eliminada == true }
     }
 }
 

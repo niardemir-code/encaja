@@ -36,7 +36,6 @@ import com.encaja.app.domain.model.CategoriaDisponibilidad
 import com.encaja.app.domain.model.CategoriaId
 import com.encaja.app.domain.model.ModoCategoria
 import com.encaja.app.domain.model.categoriaEn
-import com.encaja.app.domain.model.MotivoNoDisponibilidad
 import com.encaja.app.domain.model.TurnoId
 import com.encaja.app.domain.model.TurnoTrabajo
 import kotlinx.coroutines.delay
@@ -52,12 +51,9 @@ private val DIAS_LABORABLES = setOf(
     DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY
 )
 
-/** Texto de ayuda del campo libre de cada categoría. */
-private fun etiquetaCampo(categoria: CategoriaDisponibilidad): String = when (categoria.base) {
-    MotivoNoDisponibilidad.OTRO -> "¿Qué es?"
-    MotivoNoDisponibilidad.VIAJE -> "Destino (opcional)"
-    else -> "Detalle (opcional)"
-}
+/** Texto de ayuda del campo libre: el mismo para todas las categorías. */
+@Suppress("UNUSED_PARAMETER")
+private fun etiquetaCampo(categoria: CategoriaDisponibilidad): String = "Detalle (opcional)"
 
 private fun nombreDia(fecha: LocalDate): String =
     fecha.dayOfWeek.getDisplayName(TextStyle.FULL, ES).replaceFirstChar { it.uppercase() } + " ${fecha.dayOfMonth}"

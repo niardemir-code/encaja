@@ -14,7 +14,8 @@ object CategoriaFirestoreMapper {
         "color" to categoria.color,
         "modo" to categoria.modo.name,
         "bloquea" to categoria.bloquea,
-        "base" to categoria.base?.name
+        "base" to categoria.base?.name,
+        "eliminada" to categoria.eliminada
     )
 
     fun desdeDocumento(id: String, datos: Map<String, Any?>): CategoriaDisponibilidad? {
@@ -25,6 +26,7 @@ object CategoriaFirestoreMapper {
         val modo = (datos["modo"] as? String)?.let { runCatching { ModoCategoria.valueOf(it) }.getOrNull() } ?: return null
         val bloquea = datos["bloquea"] as? Boolean ?: true
         val base = (datos["base"] as? String)?.let { runCatching { MotivoNoDisponibilidad.valueOf(it) }.getOrNull() }
-        return CategoriaDisponibilidad(CategoriaId(id), nombre, emoji, color, modo, bloquea, base)
+        val eliminada = datos["eliminada"] as? Boolean ?: false
+        return CategoriaDisponibilidad(CategoriaId(id), nombre, emoji, color, modo, bloquea, base, eliminada)
     }
 }

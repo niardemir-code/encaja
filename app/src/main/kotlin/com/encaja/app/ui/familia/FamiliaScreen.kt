@@ -46,7 +46,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.encaja.app.domain.model.Caregiver
 import com.encaja.app.domain.model.CaregiverId
 import com.encaja.app.domain.model.CategoriaDisponibilidad
-import com.encaja.app.domain.model.CategoriaId
 import com.encaja.app.domain.model.FamilyUnit
 import com.encaja.app.domain.model.ModoCategoria
 import com.encaja.app.domain.model.categoriaEn
@@ -71,6 +70,9 @@ private val LAVANDA: Color
     @Composable get() = MaterialTheme.colorScheme.primaryContainer // pastillas, botones redondos, fondo de iconos
 private val FONDO_FILA: Color
     @Composable get() = MaterialTheme.colorScheme.surfaceVariant // filas de la cuadrícula
+/** Texto dentro de las casillas: siempre oscuro, porque los colores de las categorías son
+ * pastel también en modo Nocturno y con letra clara no se leía. */
+private val TINTA_CELDA = Color(0xFF26224A)
 
 /** Fondo y color de letra del avatar de cada persona, por orden de la lista. */
 /** Avatar de las unidades familiares: gris azulado, distinto de la paleta de personas. */
@@ -143,8 +145,10 @@ private fun ContenidoFamilia(estado: FamiliaUiState, viewModel: FamiliaViewModel
     if (categoriasAbiertas) {
         DialogoListaCategorias(
             categorias = estado.categorias,
+            eliminadas = estado.categoriasEliminadas,
             onGuardar = { viewModel.guardarCategoria(it) },
             onEliminar = { viewModel.eliminarCategoria(it) },
+            onRecuperar = { viewModel.recuperarCategoria(it) },
             onCerrar = { categoriasAbiertas = false }
         )
     }
@@ -567,7 +571,7 @@ private fun CeldaDisponibilidad(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(emoji, fontSize = 19.sp)
                 if (dia.bloqueos.size > 1) {
-                    Text("+${dia.bloqueos.size - 1}", fontSize = 9.sp, fontWeight = FontWeight.Medium, color = TINTA)
+                    Text("+${dia.bloqueos.size - 1}", fontSize = 9.sp, fontWeight = FontWeight.Medium, color = TINTA_CELDA)
                 }
             }
         } else textoCelda(dia.bloqueos)?.let { texto ->
@@ -576,7 +580,7 @@ private fun CeldaDisponibilidad(
                 fontSize = 11.sp,
                 lineHeight = 13.sp,
                 fontWeight = FontWeight.Medium,
-                color = TINTA,
+                color = TINTA_CELDA,
                 textAlign = TextAlign.Center,
                 maxLines = 2,
                 softWrap = false
@@ -671,8 +675,10 @@ private fun FilaCasillaMostrar(nombre: String, idTexto: String, ocultos: Set<Str
 @Composable
 private fun DialogoListaCategorias(
     categorias: List<CategoriaDisponibilidad>,
+    eliminadas: List<CategoriaDisponibilidad>,
     onGuardar: (CategoriaDisponibilidad) -> Unit,
-    onEliminar: (CategoriaId) -> Unit,
+    onEliminar: (CategoriaDisponibilidad) -> Unit,
+    onRecuperar: (CategoriaDisponibilidad) -> Unit,
     onCerrar: () -> Unit
 ) {
     var enEdicion by remember { mutableStateOf<CategoriaDisponibilidad?>(null) }
@@ -725,6 +731,15 @@ private fun DialogoListaCategorias(
                     Spacer(Modifier.width(6.dp))
                     Text("Nueva categoría")
                 }
+                if (eliminadas.isNotEmpty()) {
+                    Spacer(Modifier.height(6.dp))
+                    Text("Borradas (toca para recuperar)", style = MaterialTheme.typography.labelMedium, color = TINTA_SUAVE)
+                    eliminadas.forEach { categoria ->
+                        TextButton(onClick = { onRecuperar(categoria) }) {
+                            Text("${categoria.emoji} ${categoria.nombre}")
+                        }
+                    }
+                }
             }
         },
         confirmButton = { TextButton(onClick = onCerrar) { Text("Cerrar") } }
@@ -745,9 +760,7 @@ private fun DialogoListaCategorias(
             inicial = categoria,
             categorias = categorias,
             onGuardar = { onGuardar(it); enEdicion = null },
-            onEliminar = if (categoria.esBase) null else {
-                { onEliminar(categoria.id); enEdicion = null }
-            },
+            onEliminar = { onEliminar(categoria); enEdicion = null },
             onCerrar = { enEdicion = null }
         )
     }

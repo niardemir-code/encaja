@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalMaterial3Api::class)
+@file:OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 
 package com.encaja.app.ui.semana
 
@@ -10,12 +10,15 @@ package com.encaja.app.ui.semana
 // (EncajaApp.kt), no aquí.
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -36,6 +39,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -169,7 +173,9 @@ fun SemanaScreen(
                 OlasDeFondo()
                 LazyColumn(
                     state = listState,
-                    modifier = Modifier.fillMaxSize(),
+                    // imePadding: con el teclado abierto la lista se encoge en vez de quedar
+                    // tapada, para que el campo del tablón siga a la vista mientras se escribe.
+                    modifier = Modifier.fillMaxSize().imePadding(),
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
@@ -586,6 +592,13 @@ private fun TablonDeAnuncios(
 ) {
     var textoNuevo by remember { mutableStateOf("") }
     val extra = LocalEncajaExtraColors.current
+    // Cada vez que el texto crece (o al enfocar el campo), se pide que el campo quede a
+    // la vista: si no, a medida que se escribe se va quedando escondido tras el teclado.
+    val traerALaVista = remember { BringIntoViewRequester() }
+    var conFoco by remember { mutableStateOf(false) }
+    LaunchedEffect(textoNuevo, conFoco) {
+        if (conFoco) traerALaVista.bringIntoView()
+    }
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -638,6 +651,8 @@ private fun TablonDeAnuncios(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 56.dp)
+                    .bringIntoViewRequester(traerALaVista)
+                    .onFocusChanged { conFoco = it.isFocused }
             )
             Spacer(Modifier.height(10.dp))
             Button(
