@@ -121,6 +121,16 @@ private fun ContenidoFamilia(estado: FamiliaUiState, viewModel: FamiliaViewModel
     val cuidadoresVisibles = remember(estado.cuidadores, ocultos) {
         estado.cuidadores.filter { it.caregiver.id !in ocultos }
     }
+    var selectorAbierto by remember { mutableStateOf(false) }
+
+    if (selectorAbierto) {
+        DialogoMostrar(
+            cuidadores = estado.cuidadores.map { it.caregiver },
+            ocultos = ocultos,
+            onAlternar = { viewModel.alternarVisibilidad(it) },
+            onCerrar = { selectorAbierto = false }
+        )
+    }
 
     // Se busca en el estado actual (no en una copia guardada al abrir), así al borrar
     // un bloque el diálogo se actualiza solo tras la recarga.
@@ -167,26 +177,6 @@ private fun ContenidoFamilia(estado: FamiliaUiState, viewModel: FamiliaViewModel
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 2.dp, bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            if (estado.cuidadores.size > 1) {
-                item {
-                    Tarjeta {
-                        Column(modifier = Modifier.padding(14.dp)) {
-                            CabeceraTarjeta(
-                                icono = Icons.Default.FilterAlt,
-                                titulo = "Mostrar",
-                                subtitulo = "Elige a quién ver en la cuadrícula de esta semana."
-                            )
-                            Spacer(Modifier.height(12.dp))
-                            FiltroCuidadores(
-                                cuidadores = estado.cuidadores.map { it.caregiver },
-                                ocultos = ocultos,
-                                onAlternar = { viewModel.alternarVisibilidad(it) }
-                            )
-                        }
-                    }
-                }
-            }
-
             item {
                 Tarjeta {
                     Column(modifier = Modifier.padding(14.dp)) {
@@ -197,6 +187,20 @@ private fun ContenidoFamilia(estado: FamiliaUiState, viewModel: FamiliaViewModel
                         )
                         Spacer(Modifier.height(12.dp))
                         Leyenda(estado.categorias)
+                    }
+                }
+            }
+
+            if (estado.cuidadores.size > 1) {
+                item {
+                    // Justo antes de la cuadrícula: abre el diálogo para elegir a quién ver
+                    // (los cambios se aplican al momento y solo para esta semana).
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        BotonMostrar(
+                            visibles = cuidadoresVisibles.size,
+                            total = estado.cuidadores.size,
+                            onClick = { selectorAbierto = true }
+                        )
                     }
                 }
             }
@@ -380,7 +384,7 @@ private fun TarjetaCuadricula(
             if (cuidadores.isEmpty()) {
                 Text(
                     if (hayOcultosPorFiltro) {
-                        "Has ocultado a todo el mundo con el filtro de arriba."
+                        "Has ocultado a todo el mundo; usa el botón Mostrar para volver a verlos."
                     } else {
                         "Añade personas en Ajustes para ver aquí su disponibilidad."
                     },
@@ -505,32 +509,67 @@ private fun CeldaDisponibilidad(
     }
 }
 
-/** Un chip por cuidador para mostrarlo u ocultarlo de la cuadrícula de esta semana;
- * marcado = visible. FlowRow para que baje de línea si no caben todos en un móvil
- * estrecho. */
+/** Botón "Mostrar" (icono de filtro) con cuántas personas se ven de las que hay, p.ej.
+ * "Mostrar (2/3)"; abre el diálogo para elegir quién aparece en la cuadrícula. */
 @Composable
-private fun FiltroCuidadores(
+private fun BotonMostrar(visibles: Int, total: Int, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(LAVANDA)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(Icons.Default.FilterAlt, contentDescription = null, tint = INDIGO, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(6.dp))
+        Text(
+            if (visibles == total) "Mostrar" else "Mostrar ($visibles/$total)",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = INDIGO
+        )
+    }
+}
+
+/** Una casilla por persona: marcada = aparece en la cuadrícula de esta semana. Los
+ * cambios se aplican al momento, sin botón de "aceptar". */
+@Composable
+private fun DialogoMostrar(
     cuidadores: List<Caregiver>,
     ocultos: Set<CaregiverId>,
-    onAlternar: (CaregiverId) -> Unit
+    onAlternar: (CaregiverId) -> Unit,
+    onCerrar: () -> Unit
 ) {
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        cuidadores.forEach { caregiver ->
-            val visible = caregiver.id !in ocultos
-            FilterChip(
-                selected = visible,
-                onClick = { onAlternar(caregiver.id) },
-                label = { Text(caregiver.nombreCompleto) },
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = LAVANDA,
-                    selectedLabelColor = INDIGO
+    AlertDialog(
+        onDismissRequest = onCerrar,
+        title = { Text("¿A quién mostrar?") },
+        text = {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                Text(
+                    "Solo para esta semana; las demás semanas tienen su propia selección.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TINTA_SUAVE
                 )
-            )
-        }
-    }
+                Spacer(Modifier.height(8.dp))
+                cuidadores.forEach { caregiver ->
+                    val visible = caregiver.id !in ocultos
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .clickable { onAlternar(caregiver.id) }
+                            .padding(vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(checked = visible, onCheckedChange = { onAlternar(caregiver.id) })
+                        Text(caregiver.nombreCompleto, style = MaterialTheme.typography.bodyLarge, color = TINTA)
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onCerrar) { Text("Cerrar") } }
+    )
 }
 
 /** Qué significa cada color de las casillas. FlowRow para que baje de línea en móviles estrechos. */

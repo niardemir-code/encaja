@@ -58,6 +58,7 @@ import com.encaja.app.ui.familia.etiquetaMotivo
 import com.encaja.app.ui.familia.fechaAMillisUtc
 import com.encaja.app.ui.familia.millisUtcAFecha
 import com.encaja.app.ui.theme.LocalEncajaExtraColors
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -86,6 +87,13 @@ fun SemanaScreen(
     onVerDia: (LocalDate) -> Unit = {}
 ) {
     val pantalla by viewModel.pantalla.collectAsState()
+
+    // Posición de la lista. Vive aquí arriba (no dentro de la rama "con datos") y en
+    // rememberSaveable: así sobrevive tanto a la recarga al reentrar como al viaje a la
+    // Guía y vuelta (popBackStack recompone esta pantalla desde cero y solo lo guardado
+    // en el estado de la entrada de navegación se recupera).
+    val listState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
+    val coroutineScope = rememberCoroutineScope()
 
     // El ViewModel se conserva al cambiar de pestaña, así que sin esto se seguiría
     // viendo lo que había la última vez que se estuvo aquí — p.ej. una actividad
@@ -140,11 +148,18 @@ fun SemanaScreen(
             val ninos by viewModel.ninos.collectAsState()
             var diaInfoAbierto by remember { mutableStateOf<DiaSemaforo?>(null) }
 
-            // rememberSaveable (no remember): al abrir un aviso desde aquí se navega a la
-            // Guía y se vuelve con popBackStack, lo que recompone esta pantalla desde cero;
-            // guardar la posición en el estado de la entrada de navegación es lo único que
-            // permite recuperarla en vez de volver siempre arriba del todo.
-            val listState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
+            // Índice en la lista de la tarjeta de hueco/aviso de un día, para desplazarse
+            // hasta ella al tocar su círculo del semáforo. La lista es: tarjeta de la
+            // semana (0), tablón (1), luego los huecos y luego los avisos.
+            val primerIndiceHuecos = 2
+            val primerIndiceAvisos = primerIndiceHuecos + uiState.huecosDeLaSemana.size
+            fun indiceDeTarjeta(dia: DiaSemaforo): Int? = when (dia.estado) {
+                EstadoDia.ROJO -> uiState.huecosDeLaSemana.indexOfFirst { it.need.fecha == dia.fecha }
+                    .takeIf { it >= 0 }?.let { primerIndiceHuecos + it }
+                EstadoDia.AMBAR -> uiState.avisos.indexOfFirst { it.need.fecha == dia.fecha }
+                    .takeIf { it >= 0 }?.let { primerIndiceAvisos + it }
+                else -> null
+            }
 
             Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
                 OlasDeFondo()
@@ -164,13 +179,17 @@ fun SemanaScreen(
                             onElegirFecha = { viewModel.irASemanaDe(it) },
                             onClickDia = { dia ->
                                 when (dia.estado) {
-                                    EstadoDia.ROJO -> {
-                                        val hueco = uiState.huecosDeLaSemana.firstOrNull { it.need.fecha == dia.fecha }
-                                        if (hueco != null) onAbrirActividad(dia.fecha, hueco.need.id.value) else onVerDia(dia.fecha)
-                                    }
-                                    EstadoDia.AMBAR -> {
-                                        val aviso = uiState.avisos.firstOrNull { it.need.fecha == dia.fecha }
-                                        if (aviso != null) onAbrirActividad(dia.fecha, aviso.need.id.value) else onVerDia(dia.fecha)
+                                    // Rojo/ámbar: baja hasta la tarjeta del hueco o aviso de ese
+                                    // día, aquí mismo en Semana (desde ella ya se puede abrir la
+                                    // edición). Si ya no hay tarjeta (día pasado), se va al día
+                                    // en la Guía.
+                                    EstadoDia.ROJO, EstadoDia.AMBAR -> {
+                                        val indice = indiceDeTarjeta(dia)
+                                        if (indice != null) {
+                                            coroutineScope.launch { listState.animateScrollToItem(indice) }
+                                        } else {
+                                            onVerDia(dia.fecha)
+                                        }
                                     }
                                     EstadoDia.VERDE -> diaInfoAbierto = dia
                                     EstadoDia.SIN_DATOS -> Unit

@@ -31,7 +31,9 @@ class SemaforoUiStateMapper(
             val huecosDelDia = huecosPorFecha[fecha].orEmpty()
             val estado = when {
                 huecosDelDia.isNotEmpty() -> EstadoDia.ROJO
-                !avisosPorFecha[fecha].isNullOrEmpty() -> EstadoDia.AMBAR
+                // Una incompatibilidad de un día ya pasado no es accionable (la actividad
+                // se cubrió igualmente), así que el día queda en verde, no en ámbar.
+                !avisosPorFecha[fecha].isNullOrEmpty() && fecha >= hoy -> EstadoDia.AMBAR
                 needsPorFecha[fecha].isNullOrEmpty() -> EstadoDia.SIN_DATOS
                 else -> EstadoDia.VERDE
             }

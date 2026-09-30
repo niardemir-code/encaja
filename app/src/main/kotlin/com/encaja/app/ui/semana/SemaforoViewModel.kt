@@ -67,7 +67,7 @@ class SemaforoViewModel @Inject constructor(
     /** Recarga completa: vuelve a comprobar sesión y familia (por si han cambiado) y
      * recarga la semana que se estuviera viendo. Se usa al entrar en la pestaña y tras
      * publicar/borrar un anuncio o canjear un código. */
-    fun recargar() = cargar()
+    fun recargar() = cargar(mostrarCargando = _pantalla.value !is SemaforoPantallaEstado.ConDatos)
 
     /** Avanza o retrocede semanas desde la cabecera (-1 anterior, +1 siguiente). No hace
      * falta volver a comprobar sesión ni familia: solo cambian los datos de la semana. */
@@ -115,9 +115,12 @@ class SemaforoViewModel @Inject constructor(
 
     /** Primera carga (o recarga forzada): valida sesión y familia — lo único que de
      * verdad puede tardar un poco — y solo entonces pide los datos de la semana. */
-    private fun cargar() {
+    private fun cargar(mostrarCargando: Boolean = true) {
         viewModelScope.launch {
-            _pantalla.value = SemaforoPantallaEstado.Cargando
+            // Si ya había datos en pantalla (recarga al reentrar en la pestaña), se dejan
+            // visibles hasta que lleguen los nuevos: pasar por "Cargando" vaciaba la lista y
+            // con ella se perdía la posición del scroll.
+            if (mostrarCargando) _pantalla.value = SemaforoPantallaEstado.Cargando
 
             val uid = authRepository.sesionActual()?.uid
             if (uid == null) {
