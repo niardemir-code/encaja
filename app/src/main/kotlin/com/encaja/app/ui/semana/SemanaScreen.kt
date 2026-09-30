@@ -13,6 +13,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -43,7 +44,9 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -57,6 +60,7 @@ import com.encaja.app.domain.model.Caregiver
 import com.encaja.app.domain.model.Child
 import com.encaja.app.domain.model.CoverageNeed
 import com.encaja.app.domain.model.Hueco
+import com.encaja.app.domain.model.MotivoHueco
 import com.encaja.app.domain.usecase.AvisoConflicto
 import com.encaja.app.domain.usecase.RolResponsable
 import com.encaja.app.ui.familia.etiquetaMotivo
@@ -169,7 +173,15 @@ fun SemanaScreen(
                 else -> null
             }
 
-            Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+            // Tocar en cualquier sitio fuera del campo de texto le quita el foco (y cierra el
+            // teclado): si no, el cursor se quedaba parpadeando en el tablón.
+            val focusManager = LocalFocusManager.current
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background)
+                    .pointerInput(Unit) { detectTapGestures(onTap = { focusManager.clearFocus() }) }
+            ) {
                 OlasDeFondo()
                 LazyColumn(
                     state = listState,
@@ -217,7 +229,11 @@ fun SemanaScreen(
                     }
 
                     items(uiState.huecosDeLaSemana) { hueco ->
-                        TarjetaHueco(hueco = hueco, onClick = { actividadEnEdicion = hueco.need })
+                        TarjetaHueco(
+                            hueco = hueco,
+                            nombreNino = ninos.firstOrNull { it.id == hueco.need.childId }?.nombre,
+                            onClick = { actividadEnEdicion = hueco.need }
+                        )
                     }
 
                     items(uiState.avisos) { aviso ->
@@ -596,6 +612,7 @@ private fun TablonDeAnuncios(
     // la vista: si no, a medida que se escribe se va quedando escondido tras el teclado.
     val traerALaVista = remember { BringIntoViewRequester() }
     var conFoco by remember { mutableStateOf(false) }
+    val focusManagerTablon = LocalFocusManager.current
     LaunchedEffect(textoNuevo, conFoco) {
         if (conFoco) traerALaVista.bringIntoView()
     }
@@ -660,6 +677,7 @@ private fun TablonDeAnuncios(
                 onClick = {
                     onPublicar(textoNuevo)
                     textoNuevo = ""
+                    focusManagerTablon.clearFocus()
                 },
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(
@@ -721,6 +739,10 @@ private fun colorTextoParaEstado(estado: EstadoDia): Color = when (estado) {
     EstadoDia.ROJO -> MaterialTheme.colorScheme.onErrorContainer
     EstadoDia.SIN_DATOS -> INDIGO
 }
+
+/** "GEM · Etna": la actividad y de quién es, para saber de un vistazo a quién afecta el aviso. */
+private fun tituloConNino(descripcion: String, nombreNino: String?): String =
+    if (nombreNino.isNullOrBlank()) descripcion else "$descripcion · $nombreNino"
 
 /** "Martes 29" en vez de la fecha ISO en bruto (2026-09-29). */
 private fun formatearFechaHueco(fecha: LocalDate): String {
@@ -790,12 +812,18 @@ private fun TarjetaAviso(
 }
 
 @Composable
-private fun TarjetaHueco(hueco: Hueco, onClick: () -> Unit) {
+private fun TarjetaHueco(hueco: Hueco, nombreNino: String?, onClick: () -> Unit) {
+    val quien = nombreNino?.let { " a $it" } ?: ""
+    val queFalta = when (hueco.motivo) {
+        MotivoHueco.FALTA_QUIEN_LLEVA -> "llevar"
+        MotivoHueco.FALTA_QUIEN_RECOGE -> "recoger"
+        MotivoHueco.SIN_ASIGNACION -> "llevar ni recoger"
+    }
     TarjetaAviso(
-        titulo = hueco.need.descripcion,
+        titulo = tituloConNino(hueco.need.descripcion, nombreNino),
         chip = "Sin cubrir",
         texto = "${formatearFechaHueco(hueco.need.fecha)} a las ${formatearHoraHueco(hueco.need.horaInicio)}: " +
-            "todavía no hay nadie asignado para llevar o recoger.",
+            "todavía no hay nadie asignado para $queFalta$quien.",
         fondo = LocalEncajaExtraColors.current.rosaHueco,
         franja = MaterialTheme.colorScheme.error,
         tinta = MaterialTheme.colorScheme.onErrorContainer,
@@ -822,7 +850,7 @@ private fun textoAviso(aviso: AvisoConflicto): String {
 @Composable
 private fun TarjetaAvisoConflicto(aviso: AvisoConflicto, onClick: () -> Unit) {
     TarjetaAviso(
-        titulo = aviso.need.descripcion,
+        titulo = tituloConNino(aviso.need.descripcion, aviso.child.nombre),
         chip = "Importante",
         texto = textoAviso(aviso),
         fondo = LocalEncajaExtraColors.current.cremaAviso,

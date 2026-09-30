@@ -220,7 +220,7 @@ private fun ContenidoFamilia(estado: FamiliaUiState, viewModel: FamiliaViewModel
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             CabeceraTarjeta(
                                 icono = Icons.Default.Label,
-                                titulo = "Categorías",
+                                titulo = "Categorías de estado de los cuidadores",
                                 subtitulo = "Qué significa cada color de las casillas.",
                                 modifier = Modifier.weight(1f)
                             )
@@ -381,7 +381,7 @@ private fun CabeceraTarjeta(icono: ImageVector, titulo: String, subtitulo: Strin
         }
         Spacer(Modifier.width(10.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(titulo, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = TINTA, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(titulo, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = TINTA, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(subtitulo, style = MaterialTheme.typography.labelMedium, color = TINTA_SUAVE)
         }
     }
