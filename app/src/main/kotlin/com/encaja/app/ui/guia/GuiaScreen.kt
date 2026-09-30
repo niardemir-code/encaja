@@ -3,11 +3,13 @@
 package com.encaja.app.ui.guia
 
 // NOTA: depende de Jetpack Compose y Hilt, no compilado en este entorno.
-// Línea de tiempo real (no comprimida en el ancho de pantalla): cada niño
-// tiene una fila con sus actividades a su hora y duración exactas, y se
-// hace scroll horizontal para ver las próximas. Una línea vertical marca
-// la hora actual (solo si se está viendo el día de hoy) y el botón "Ahora"
-// de la cabecera vuelve a ese punto (y al día de hoy, si se había cambiado).
+// Rediseño con el mismo criterio que la pantalla Semana (fuente Nunito, tarjetas
+// redondeadas suaves, botones circulares): una tarjeta con la cabecera del día y la
+// línea de tiempo real (no comprimida en el ancho de pantalla; cada niño tiene una
+// fila con sus actividades a su hora y duración exactas, con scroll horizontal), una
+// pastilla roja con la hora actual y su línea vertical (solo si se está viendo hoy), y
+// debajo la lista "Actividades del día", una tarjeta por niño. El botón "Ahora"
+// (punto de disparo) vuelve a la hora actual (y al día de hoy, si se había cambiado).
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -22,20 +24,33 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -56,6 +71,8 @@ import java.time.format.TextStyle
 import java.util.Locale
 import kotlin.math.roundToInt
 
+private val ES = Locale("es")
+
 // La franja horaria que se representa en la guía: de 7:00 a 22:00.
 private val INICIO_FRANJA: LocalTime = LocalTime.of(7, 0)
 private val FIN_FRANJA: LocalTime = LocalTime.of(22, 0)
@@ -64,18 +81,38 @@ private val MINUTOS_FRANJA = java.time.Duration.between(INICIO_FRANJA, FIN_FRANJ
 // Escala de la línea de tiempo: cada minuto ocupa este ancho real (no se comprime
 // para caber en pantalla), por eso hace falta scroll horizontal para ver todo el día.
 private val ANCHO_MINUTO: Dp = 2.dp
-private val ANCHO_TOTAL_FRANJA: Dp = ANCHO_MINUTO * MINUTOS_FRANJA
-private val ANCHO_NOMBRE: Dp = 84.dp
-private val MARGEN_AHORA: Dp = 72.dp
+// Media hora de margen a cada lado del lienzo, para que la etiqueta de la primera y la
+// última hora (centradas en su marca) no queden cortadas.
+private val MARGEN_LIENZO: Dp = ANCHO_MINUTO * 30
+private val ANCHO_LIENZO: Dp = ANCHO_MINUTO * MINUTOS_FRANJA + MARGEN_LIENZO * 2
+private val ANCHO_NOMBRE: Dp = 100.dp
+private val MARGEN_AHORA: Dp = 96.dp
 
-// Icono de quién lleva/recoge: bastante grande para que sus 2 letras se lean bien
-// dentro del bloque (que mide 56.dp de alto).
-private val ANCHO_ICONO_RESPONSABLE: Dp = 32.dp
+// Alturas fijas para que la columna de nombres (fuera del scroll horizontal) y las
+// filas de la línea de tiempo (dentro) queden siempre alineadas.
+private val ALTO_REGLA: Dp = 52.dp
+private val ALTO_FILA: Dp = 72.dp
+private val ESPACIO_FILAS: Dp = 14.dp
+private val ALTO_PASTILLA_AHORA: Dp = 26.dp
+private val ANCHO_PASTILLA_AHORA: Dp = 64.dp
 
-private val VERDE: Color
-    @Composable get() = LocalEncajaExtraColors.current.verdeContainer
-private val ROJO: Color
-    @Composable get() = MaterialTheme.colorScheme.errorContainer
+// Icono de quién lleva/recoge en el bloque: bastante grande para que sus 2 letras se
+// lean bien dentro del bloque.
+private val ANCHO_ICONO_RESPONSABLE: Dp = 30.dp
+
+// Atajos a los colores del tema activo (Cálido/Nocturno) con los nombres del diseño.
+private val TINTA: Color @Composable get() = MaterialTheme.colorScheme.onBackground
+private val TINTA_SUAVE: Color @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
+private val INDIGO: Color @Composable get() = MaterialTheme.colorScheme.primary
+private val LAVANDA: Color @Composable get() = MaterialTheme.colorScheme.primaryContainer
+private val BLANCO: Color @Composable get() = MaterialTheme.colorScheme.surface
+private val VERDE: Color @Composable get() = LocalEncajaExtraColors.current.verdeContainer
+private val ON_VERDE: Color @Composable get() = LocalEncajaExtraColors.current.onVerdeContainer
+private val ROJO: Color @Composable get() = MaterialTheme.colorScheme.errorContainer
+private val ON_ROJO: Color @Composable get() = MaterialTheme.colorScheme.onErrorContainer
+
+/** Posición horizontal (dentro del lienzo) de un instante, contando el margen izquierdo. */
+private fun xDeMinutos(minutos: Int): Dp = MARGEN_LIENZO + ANCHO_MINUTO * minutos
 
 @Composable
 fun GuiaScreen(
@@ -130,12 +167,20 @@ fun GuiaScreen(
     }
 
     val estadoConDatos = pantalla as? GuiaPantallaEstado.ConDatos
+    val extra = LocalEncajaExtraColors.current
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         floatingActionButton = {
             if (estadoConDatos != null && estadoConDatos.estado.filas.isNotEmpty()) {
-                FloatingActionButton(onClick = { actividadEnCreacion = true }) {
-                    Icon(Icons.Default.Add, contentDescription = "Nueva actividad")
+                // Cuadrado redondeado en el color de acento, como en la maqueta.
+                FloatingActionButton(
+                    onClick = { actividadEnCreacion = true },
+                    shape = RoundedCornerShape(20.dp),
+                    containerColor = extra.acento,
+                    contentColor = extra.onAcento
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Nueva actividad", modifier = Modifier.size(28.dp))
                 }
             }
         }
@@ -152,7 +197,8 @@ fun GuiaScreen(
                     Box(modifier = Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
                         Text(
                             "Vincúlate a una familia desde la pestaña Semana para ver esta pantalla.",
-                            textAlign = TextAlign.Center
+                            textAlign = TextAlign.Center,
+                            color = TINTA
                         )
                     }
                 }
@@ -166,7 +212,7 @@ fun GuiaScreen(
 
                     fun destinoAhoraPx(): Int {
                         val minutosAhora = minutosDesdeInicioFranja(LocalTime.now())
-                        val px = with(density) { (ANCHO_MINUTO * minutosAhora - MARGEN_AHORA).toPx() }
+                        val px = with(density) { (xDeMinutos(minutosAhora) - MARGEN_AHORA).toPx() }
                         return px.coerceIn(0f, scrollState.maxValue.toFloat()).roundToInt()
                     }
 
@@ -183,9 +229,9 @@ fun GuiaScreen(
                         modifier = Modifier
                             .fillMaxSize()
                             .verticalScroll(rememberScrollState())
-                            .padding(16.dp)
+                            .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 96.dp)
                     ) {
-                        CabeceraDeDia(
+                        TarjetaDia(
                             fecha = fecha,
                             onDiaAnterior = { viewModel.diaAnterior() },
                             onDiaSiguiente = { viewModel.diaSiguiente() },
@@ -197,42 +243,35 @@ fun GuiaScreen(
                                     viewModel.hoy()
                                 }
                             }
-                        )
-                        Spacer(Modifier.height(16.dp))
+                        ) {
+                            if (estadoActual.estado.filas.isEmpty()) {
+                                Text(
+                                    "Todavía no hay niños dados de alta en la familia.",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = TINTA_SUAVE
+                                )
+                            } else {
+                                LineaDeTiempo(
+                                    filas = estadoActual.estado.filas,
+                                    scrollState = scrollState,
+                                    mostrarAhora = esHoy,
+                                    iniciales = estadoActual.estado.iniciales,
+                                    onEditar = { actividadEnEdicion = it }
+                                )
+                            }
+                        }
 
-                        if (estadoActual.estado.filas.isEmpty()) {
-                            Text(
-                                "Todavía no hay niños dados de alta en la familia.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        } else {
-                            ReglaHoras(scrollState)
-                            Spacer(Modifier.height(8.dp))
-                            Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
-                                estadoActual.estado.filas.forEach { fila ->
-                                    FilaTimelineDelNino(
+                        if (estadoActual.estado.filas.isNotEmpty()) {
+                            Spacer(Modifier.height(20.dp))
+                            CabeceraActividadesDelDia(onAnadir = { actividadEnCreacion = true })
+                            Spacer(Modifier.height(12.dp))
+                            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                                estadoActual.estado.filas.forEachIndexed { indice, fila ->
+                                    TarjetaActividadesDelNino(
                                         fila = fila,
-                                        scrollState = scrollState,
-                                        mostrarAhora = esHoy,
-                                        iniciales = estadoActual.estado.iniciales,
+                                        indice = indice,
                                         onEditar = { actividadEnEdicion = it }
                                     )
-                                }
-                            }
-
-                            Spacer(Modifier.height(20.dp))
-                            HorizontalDivider()
-                            Spacer(Modifier.height(12.dp))
-                            Text(
-                                "Actividades del día",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Spacer(Modifier.height(8.dp))
-                            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                                estadoActual.estado.filas.forEach { fila ->
-                                    ListaActividadesDelNino(fila = fila, onEditar = { actividadEnEdicion = it })
                                 }
                             }
                         }
@@ -299,44 +338,64 @@ fun GuiaScreen(
     }
 }
 
+/* ───────────────────────────── Cabecera y tarjeta del día ───────────────────────────── */
+
+/**
+ * Tarjeta suave con la cabecera del día (flechas, nombre del día y fecha en el centro,
+ * calendario y "punto de disparo" a la derecha — mismos botones circulares que en
+ * Semana) y, debajo, el [contenido] (la línea de tiempo).
+ */
 @Composable
-private fun CabeceraDeDia(
+private fun TarjetaDia(
     fecha: LocalDate,
     onDiaAnterior: () -> Unit,
     onDiaSiguiente: () -> Unit,
     onElegirFecha: (LocalDate) -> Unit,
-    onAhora: () -> Unit
+    onAhora: () -> Unit,
+    contenido: @Composable ColumnScope.() -> Unit
 ) {
-    val formatter = DateTimeFormatter.ofPattern("d 'de' MMMM", Locale("es"))
-    val etiquetaDia = fecha.dayOfWeek.getDisplayName(TextStyle.FULL, Locale("es"))
-        .replaceFirstChar { it.uppercase() }
+    val formatter = DateTimeFormatter.ofPattern("d 'de' MMMM", ES)
+    val etiquetaDia = fecha.dayOfWeek.getDisplayName(TextStyle.FULL, ES).replaceFirstChar { it.uppercase() }
     var calendarioAbierto by remember { mutableStateOf(false) }
 
-    Row(
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        shape = RoundedCornerShape(24.dp),
+        color = LocalEncajaExtraColors.current.tarjetaSuave,
+        shadowElevation = 1.dp
     ) {
-        IconButton(onClick = onDiaAnterior) {
-            Icon(Icons.Default.ChevronLeft, contentDescription = "Día anterior")
-        }
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.clickable { calendarioAbierto = true }
-        ) {
-            Text(etiquetaDia, style = MaterialTheme.typography.titleMedium)
-            Text(fecha.format(formatter), style = MaterialTheme.typography.labelMedium)
-        }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { calendarioAbierto = true }) {
-                Icon(Icons.Default.CalendarMonth, contentDescription = "Ir a una fecha")
+        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 14.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                BotonRedondo(Icons.Default.ChevronLeft, "Día anterior", onDiaAnterior)
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.weight(1f).padding(horizontal = 4.dp).clickable { calendarioAbierto = true }
+                ) {
+                    Text(
+                        etiquetaDia,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = TINTA,
+                        maxLines = 1
+                    )
+                    Text(
+                        fecha.format(formatter),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TINTA_SUAVE,
+                        textAlign = TextAlign.Center,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                BotonRedondo(Icons.Default.CalendarMonth, "Ir a una fecha", { calendarioAbierto = true })
+                Spacer(Modifier.width(6.dp))
+                BotonRedondo(Icons.Default.MyLocation, "Ahora", onAhora)
+                Spacer(Modifier.width(6.dp))
+                BotonRedondo(Icons.Default.ChevronRight, "Día siguiente", onDiaSiguiente)
             }
-            IconButton(onClick = onAhora) {
-                Icon(Icons.Default.MyLocation, contentDescription = "Ahora")
-            }
-            IconButton(onClick = onDiaSiguiente) {
-                Icon(Icons.Default.ChevronRight, contentDescription = "Día siguiente")
-            }
+
+            Spacer(Modifier.height(14.dp))
+            contenido()
         }
     }
 
@@ -357,23 +416,196 @@ private fun CabeceraDeDia(
     }
 }
 
-/** Regla de horas alineada con las filas de abajo: deja hueco a la izquierda para el nombre. */
+/** Botón circular con icono índigo, igual que los de la cabecera de Semana. */
 @Composable
-private fun ReglaHoras(scrollState: ScrollState) {
-    Row(verticalAlignment = Alignment.Bottom) {
-        Spacer(Modifier.width(ANCHO_NOMBRE))
-        Row(modifier = Modifier.horizontalScroll(scrollState).width(ANCHO_TOTAL_FRANJA)) {
-            var hora = INICIO_FRANJA
-            while (hora.isBefore(FIN_FRANJA)) {
-                Box(modifier = Modifier.width(ANCHO_MINUTO * 60)) {
+private fun BotonRedondo(icono: ImageVector, descripcion: String, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .size(42.dp)
+            .clip(CircleShape)
+            .background(BLANCO)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(icono, contentDescription = descripcion, tint = INDIGO, modifier = Modifier.size(22.dp))
+    }
+}
+
+/* ───────────────────────────── Línea de tiempo ───────────────────────────── */
+
+/** Colores del avatar de cada niño, por orden en la lista: verde, lavanda, melocotón... */
+@Composable
+private fun coloresAvatar(indice: Int): Pair<Color, Color> {
+    val scheme = MaterialTheme.colorScheme
+    val extra = LocalEncajaExtraColors.current
+    val paleta = listOf(
+        extra.verdeContainer to extra.onVerdeContainer,
+        scheme.primaryContainer to scheme.onPrimaryContainer,
+        scheme.tertiaryContainer to scheme.onTertiaryContainer,
+        scheme.secondaryContainer to scheme.onSecondaryContainer
+    )
+    return paleta[indice % paleta.size]
+}
+
+@Composable
+private fun AvatarNino(nombre: String, indice: Int, tamano: Dp = 36.dp) {
+    val (fondo, tinta) = coloresAvatar(indice)
+    Box(
+        modifier = Modifier.size(tamano).clip(CircleShape).background(fondo),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            nombre.take(1).uppercase(),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.ExtraBold,
+            color = tinta
+        )
+    }
+}
+
+/**
+ * La línea de tiempo entera: a la izquierda, fija, la columna con el avatar y el nombre
+ * de cada niño; a la derecha, con scroll horizontal compartido, la regla de horas, la
+ * cuadrícula, las filas con sus bloques y (si es hoy) la pastilla con la hora actual y
+ * su línea roja atravesando todas las filas.
+ */
+@Composable
+private fun LineaDeTiempo(
+    filas: List<FilaGuia>,
+    scrollState: ScrollState,
+    mostrarAhora: Boolean,
+    iniciales: Map<CaregiverId, String>,
+    onEditar: (CoverageNeed) -> Unit
+) {
+    val density = LocalDensity.current
+    var anchoVisiblePx by remember { mutableStateOf(0) }
+    val colorLinea = TINTA_SUAVE
+    val colorAhora = MaterialTheme.colorScheme.error
+    val alturaReglaPx = with(density) { ALTO_REGLA.toPx() }
+
+    Row(modifier = Modifier.fillMaxWidth()) {
+        // Columna fija de nombres, con las mismas alturas que las filas de la derecha.
+        Column(modifier = Modifier.width(ANCHO_NOMBRE)) {
+            Spacer(Modifier.height(ALTO_REGLA))
+            filas.forEachIndexed { indice, fila ->
+                if (indice > 0) Spacer(Modifier.height(ESPACIO_FILAS))
+                Row(modifier = Modifier.height(ALTO_FILA), verticalAlignment = Alignment.CenterVertically) {
+                    AvatarNino(fila.child.nombre, indice)
+                    Spacer(Modifier.width(8.dp))
                     Text(
-                        formatearHora(hora),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        fila.child.nombre,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = TINTA,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
-                hora = hora.plusHours(1)
             }
+        }
+
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .onSizeChanged { anchoVisiblePx = it.width }
+                .horizontalScroll(scrollState)
+        ) {
+            Box(
+                modifier = Modifier
+                    .width(ANCHO_LIENZO)
+                    .drawBehind {
+                        // Cuadrícula: una línea por hora (más visible) y una por cuarto (muy tenue),
+                        // desde debajo de la regla hasta el final de la última fila.
+                        var minuto = 0
+                        while (minuto <= MINUTOS_FRANJA) {
+                            val x = xDeMinutos(minuto).toPx()
+                            val esHora = minuto % 60 == 0
+                            drawLine(
+                                color = colorLinea.copy(alpha = if (esHora) 0.28f else 0.10f),
+                                start = Offset(x, alturaReglaPx - 6.dp.toPx()),
+                                end = Offset(x, size.height),
+                                strokeWidth = 1.dp.toPx()
+                            )
+                            minuto += 15
+                        }
+                    }
+            ) {
+                Column {
+                    ReglaHoras()
+                    filas.forEachIndexed { indice, fila ->
+                        if (indice > 0) Spacer(Modifier.height(ESPACIO_FILAS))
+                        FilaTimelineDelNino(
+                            fila = fila,
+                            scrollState = scrollState,
+                            iniciales = iniciales,
+                            anchoVisiblePx = anchoVisiblePx,
+                            onEditar = onEditar
+                        )
+                    }
+                }
+
+                if (mostrarAhora) {
+                    val xAhora = xDeMinutos(minutosDesdeInicioFranja(LocalTime.now()))
+                    // Línea vertical desde la pastilla hasta el final de todas las filas. Va
+                    // dentro de una caja matchParentSize porque estamos bajo un scroll
+                    // vertical (altura sin límite): fillMaxHeight a secas mediría 0.
+                    Box(modifier = Modifier.matchParentSize()) {
+                        Box(
+                            modifier = Modifier
+                                .offset(x = xAhora - 1.dp)
+                                .padding(top = ALTO_PASTILLA_AHORA - 2.dp)
+                                .width(2.dp)
+                                .fillMaxHeight()
+                                .background(colorAhora.copy(alpha = 0.85f))
+                        )
+                    }
+                    // Pastilla con la hora, centrada sobre la línea.
+                    Box(
+                        modifier = Modifier
+                            .offset(x = xAhora - ANCHO_PASTILLA_AHORA / 2)
+                            .size(width = ANCHO_PASTILLA_AHORA, height = ALTO_PASTILLA_AHORA)
+                            .clip(RoundedCornerShape(50))
+                            .background(colorAhora),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            formatearHora(LocalTime.now()),
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.onError
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Regla de horas: cada etiqueta centrada sobre su marca de la cuadrícula, pegada abajo
+ * (arriba queda el hueco para la pastilla de "ahora"). */
+@Composable
+private fun ReglaHoras() {
+    val anchoHora = ANCHO_MINUTO * 60
+    Box(modifier = Modifier.width(ANCHO_LIENZO).height(ALTO_REGLA)) {
+        var hora = INICIO_FRANJA
+        while (!hora.isAfter(FIN_FRANJA)) {
+            val minutos = minutosDesdeInicioFranja(hora)
+            Box(
+                modifier = Modifier
+                    .offset(x = xDeMinutos(minutos) - anchoHora / 2)
+                    .width(anchoHora)
+                    .fillMaxHeight()
+                    .padding(bottom = 4.dp),
+                contentAlignment = Alignment.BottomCenter
+            ) {
+                Text(
+                    formatearHora(hora),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = TINTA_SUAVE
+                )
+            }
+            if (hora == FIN_FRANJA) break
+            hora = hora.plusHours(1)
         }
     }
 }
@@ -382,115 +614,73 @@ private fun ReglaHoras(scrollState: ScrollState) {
 private fun FilaTimelineDelNino(
     fila: FilaGuia,
     scrollState: ScrollState,
-    mostrarAhora: Boolean,
     iniciales: Map<CaregiverId, String>,
+    anchoVisiblePx: Int,
     onEditar: (CoverageNeed) -> Unit
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(
-            fila.child.nombre,
-            style = MaterialTheme.typography.labelLarge,
-            maxLines = 1,
-            modifier = Modifier.width(ANCHO_NOMBRE)
-        )
-        Box(
-            modifier = Modifier
-                .horizontalScroll(scrollState)
-                .width(ANCHO_TOTAL_FRANJA)
-                .height(56.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-        ) {
-            if (fila.bloques.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        "Sin actividades",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-            fila.bloques.forEach { bloque ->
-                BloqueActividad(bloque = bloque, scrollState = scrollState, iniciales = iniciales, onEditar = onEditar)
-            }
-            if (mostrarAhora) {
-                val minutosAhora = minutosDesdeInicioFranja(LocalTime.now())
-                Box(
-                    modifier = Modifier
-                        .offset(x = ANCHO_MINUTO * minutosAhora)
-                        .width(2.dp)
-                        .fillMaxHeight()
-                        .background(MaterialTheme.colorScheme.error)
-                )
-            }
+    Box(modifier = Modifier.width(ANCHO_LIENZO).height(ALTO_FILA)) {
+        if (fila.bloques.isEmpty()) {
+            FilaSinActividades(scrollState, anchoVisiblePx)
+        }
+        fila.bloques.forEach { bloque ->
+            BloqueActividad(bloque = bloque, scrollState = scrollState, iniciales = iniciales, onEditar = onEditar)
         }
     }
 }
 
 /**
- * El listado de las actividades de un niño ese día, debajo de las líneas de tiempo:
- * mismo contenido que los bloques de arriba pero en formato de lista (hora, descripción
- * y quién lleva/recoge), más fácil de leer de un vistazo o de repasar entero sin hacer
- * scroll horizontal. Tocar una actividad la abre para editarla, igual que en la línea de
- * tiempo.
+ * Caja de borde discontinuo a lo largo de todo el día con "Sin actividades" en el centro
+ * de la parte visible: como el lienzo mide varias pantallas de ancho, el texto se
+ * desplaza con el scroll para quedar siempre a la vista.
  */
 @Composable
-private fun ListaActividadesDelNino(fila: FilaGuia, onEditar: (CoverageNeed) -> Unit) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Text(fila.child.nombre, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(4.dp))
-        if (fila.bloques.isEmpty()) {
-            Text(
-                "Sin actividades",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        } else {
-            fila.bloques.sortedBy { it.need.horaInicio }.forEach { bloque ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .clickable { onEditar(bloque.need) }
-                        .padding(vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(10.dp)
-                            .clip(CircleShape)
-                            .background(if (bloque.cubierto) VERDE else ROJO)
-                    )
-                    Spacer(Modifier.width(10.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            "${formatearHora(bloque.need.horaInicio)}–${formatearHora(bloque.need.horaFin)} · ${bloque.need.descripcion}",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        val detalle = listOfNotNull(
-                            bloque.quienLleva?.let { "Lleva: ${it.etiqueta}" },
-                            bloque.quienRecoge?.let { "Recoge: ${it.etiqueta}" }
-                        ).joinToString(" · ")
-                        if (detalle.isNotEmpty()) {
-                            Text(
-                                detalle,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-            }
-        }
+private fun FilaSinActividades(scrollState: ScrollState, anchoVisiblePx: Int) {
+    val colorBorde = TINTA_SUAVE.copy(alpha = 0.45f)
+    var anchoTextoPx by remember { mutableStateOf(0) }
+    val density = LocalDensity.current
+    val anchoLienzoPx = with(density) { ANCHO_LIENZO.toPx() }
+    val xTexto = (scrollState.value + anchoVisiblePx / 2f - anchoTextoPx / 2f)
+        .coerceIn(0f, (anchoLienzoPx - anchoTextoPx).coerceAtLeast(0f))
+        .roundToInt()
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = MARGEN_LIENZO, vertical = 4.dp)
+            .bordeDiscontinuo(colorBorde, RoundedCornerShape(16.dp)),
+        contentAlignment = Alignment.CenterStart
+    ) {
+        Text(
+            "Sin actividades",
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = TINTA_SUAVE,
+            modifier = Modifier
+                .offset { IntOffset(xTexto, 0) }
+                .onSizeChanged { anchoTextoPx = it.width }
+        )
     }
 }
 
+/** Borde de trazo discontinuo (Compose no lo trae de serie) con la forma redondeada dada. */
+private fun Modifier.bordeDiscontinuo(color: Color, forma: RoundedCornerShape): Modifier = this.drawBehind {
+    val radio = 16.dp.toPx()
+    drawRoundRect(
+        color = color,
+        cornerRadius = CornerRadius(radio, radio),
+        style = Stroke(
+            width = 1.5.dp.toPx(),
+            pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f), 0f)
+        )
+    )
+}.clip(forma)
+
 /**
- * Un bloque de actividad en la línea de tiempo. El nombre se mantiene visible mientras
- * el bloque avanza por la pantalla (se desplaza dentro del propio bloque a medida que se
- * hace scroll), siempre que quepa entero en su ancho; si no cabe, se queda al principio
- * como antes, dejando hueco a los lados para no quedar tapado por los iconos de quién
- * lleva (inicio) y quién recoge (fin) al niño, si se han elegido.
+ * Un bloque de actividad en la línea de tiempo: icono en círculo, nombre y horario. El
+ * contenido se mantiene visible mientras el bloque avanza por la pantalla (se desplaza
+ * dentro del propio bloque a medida que se hace scroll), siempre que quepa entero en su
+ * ancho; si no cabe, se queda al principio, dejando hueco a los lados para no quedar
+ * tapado por los iconos de quién lleva (inicio) y quién recoge (fin), si se han elegido.
  */
 @Composable
 private fun BloqueActividad(
@@ -502,48 +692,76 @@ private fun BloqueActividad(
     val density = LocalDensity.current
     val inicioMin = minutosDesdeInicioFranja(bloque.need.horaInicio)
     val finMin = minutosDesdeInicioFranja(bloque.need.horaFin).coerceAtLeast(inicioMin + 20)
-    val inicioPx = with(density) { (ANCHO_MINUTO * inicioMin).toPx() }
+    val inicioPx = with(density) { xDeMinutos(inicioMin).toPx() }
     val anchoBloquePx = with(density) { (ANCHO_MINUTO * (finMin - inicioMin)).toPx() }
 
-    // Reserva de espacio para que el texto nunca quede debajo de los iconos. El padding
-    // de inicio no mueve el punto de partida del cálculo de scroll (offset no consume
-    // espacio de layout), así que hay que restar los dos lados al margen máximo.
-    val paddingInicioTexto = if (bloque.quienLleva != null) ANCHO_ICONO_RESPONSABLE + 6.dp else 6.dp
-    val paddingFinTexto = if (bloque.quienRecoge != null) ANCHO_ICONO_RESPONSABLE + 6.dp else 6.dp
-    val paddingInicioTextoPx = with(density) { paddingInicioTexto.toPx() }
-    val paddingFinTextoPx = with(density) { paddingFinTexto.toPx() }
+    val fondo = if (bloque.cubierto) VERDE else ROJO
+    val tinta = if (bloque.cubierto) ON_VERDE else ON_ROJO
 
-    var labelWidthPx by remember { mutableStateOf(0f) }
-    val margenMaximoPx = (anchoBloquePx - labelWidthPx - paddingInicioTextoPx - paddingFinTextoPx).coerceAtLeast(0f)
-    val offsetLabelPx = (scrollState.value - inicioPx).coerceIn(0f, margenMaximoPx)
-    val offsetLabelDp = with(density) { offsetLabelPx.toDp() }
+    // Reserva de espacio para que el contenido nunca quede debajo de los iconos. El
+    // padding de inicio no mueve el punto de partida del cálculo de scroll (offset no
+    // consume espacio de layout), así que hay que restar los dos lados al margen máximo.
+    val paddingInicio = if (bloque.quienLleva != null) ANCHO_ICONO_RESPONSABLE + 8.dp else 8.dp
+    val paddingFin = if (bloque.quienRecoge != null) ANCHO_ICONO_RESPONSABLE + 8.dp else 8.dp
+    val paddingInicioPx = with(density) { paddingInicio.toPx() }
+    val paddingFinPx = with(density) { paddingFin.toPx() }
+
+    var anchoContenidoPx by remember { mutableStateOf(0f) }
+    val margenMaximoPx = (anchoBloquePx - anchoContenidoPx - paddingInicioPx - paddingFinPx).coerceAtLeast(0f)
+    val offsetContenidoPx = (scrollState.value - inicioPx).coerceIn(0f, margenMaximoPx)
+    val offsetContenidoDp = with(density) { offsetContenidoPx.toDp() }
 
     Box(
         modifier = Modifier
-            .offset(x = ANCHO_MINUTO * inicioMin)
+            .offset(x = xDeMinutos(inicioMin))
             .width(ANCHO_MINUTO * (finMin - inicioMin))
             .fillMaxHeight()
-            .padding(horizontal = 1.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(if (bloque.cubierto) VERDE else ROJO)
+            .padding(horizontal = 1.dp, vertical = 2.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(fondo)
+            .border(1.dp, tinta.copy(alpha = 0.35f), RoundedCornerShape(16.dp))
             .clickable { onEditar(bloque.need) }
     ) {
-        Text(
-            bloque.need.descripcion,
-            style = MaterialTheme.typography.labelSmall,
-            maxLines = 1,
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
-                .padding(start = paddingInicioTexto, end = paddingFinTexto, top = 6.dp, bottom = 6.dp)
-                .offset(x = offsetLabelDp)
-                .onGloballyPositioned { coordenadas -> labelWidthPx = coordenadas.size.width.toFloat() }
-        )
-        // Se dibujan después del texto para quedar siempre por encima, aunque el
-        // texto se desplace al hacer scroll.
+                .fillMaxHeight()
+                .padding(start = paddingInicio, end = paddingFin)
+                .offset(x = offsetContenidoDp)
+                .onGloballyPositioned { coordenadas -> anchoContenidoPx = coordenadas.size.width.toFloat() }
+        ) {
+            Box(
+                modifier = Modifier.size(36.dp).clip(CircleShape).background(tinta.copy(alpha = 0.22f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Default.School, contentDescription = null, tint = tinta, modifier = Modifier.size(20.dp))
+            }
+            Spacer(Modifier.width(8.dp))
+            Column {
+                Text(
+                    bloque.need.descripcion,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = tinta,
+                    maxLines = 1,
+                    softWrap = false
+                )
+                Text(
+                    "${formatearHora(bloque.need.horaInicio)} – ${formatearHora(bloque.need.horaFin)}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = tinta,
+                    maxLines = 1,
+                    softWrap = false
+                )
+            }
+        }
+        // Se dibujan después del contenido para quedar siempre por encima, aunque el
+        // contenido se desplace al hacer scroll.
         bloque.quienLleva?.let { responsable ->
-            IconoResponsable(responsable, iniciales, modifier = Modifier.align(Alignment.CenterStart).padding(start = 3.dp))
+            IconoResponsable(responsable, iniciales, modifier = Modifier.align(Alignment.CenterStart).padding(start = 4.dp))
         }
         bloque.quienRecoge?.let { responsable ->
-            IconoResponsable(responsable, iniciales, modifier = Modifier.align(Alignment.CenterEnd).padding(end = 3.dp))
+            IconoResponsable(responsable, iniciales, modifier = Modifier.align(Alignment.CenterEnd).padding(end = 4.dp))
         }
     }
 }
@@ -559,11 +777,183 @@ private fun IconoResponsable(responsable: Responsable, iniciales: Map<CaregiverI
         modifier = modifier
             .size(ANCHO_ICONO_RESPONSABLE)
             .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))
+            .background(BLANCO.copy(alpha = 0.95f))
             .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f), CircleShape),
         contentAlignment = Alignment.Center
     ) {
-        Text(texto, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
+        Text(texto, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TINTA, maxLines = 1, softWrap = false)
+    }
+}
+
+/* ───────────────────────────── Actividades del día ───────────────────────────── */
+
+/** Icono de lista, título grande y el botón "+ Añadir" en color de acento. */
+@Composable
+private fun CabeceraActividadesDelDia(onAnadir: () -> Unit) {
+    val extra = LocalEncajaExtraColors.current
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            Icons.Default.FormatListBulleted,
+            contentDescription = null,
+            tint = TINTA_SUAVE,
+            modifier = Modifier.size(26.dp)
+        )
+        Spacer(Modifier.width(12.dp))
+        Text(
+            "Actividades del día",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.ExtraBold,
+            color = TINTA,
+            modifier = Modifier.weight(1f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(50))
+                .background(extra.acento.copy(alpha = 0.18f))
+                .clickable(onClick = onAnadir)
+                .padding(horizontal = 14.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(Icons.Default.Add, contentDescription = null, tint = extra.acento, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(4.dp))
+            Text("Añadir", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = extra.acento)
+        }
+    }
+}
+
+/**
+ * Tarjeta de un niño con sus actividades del día en formato de lista (hora, nombre y
+ * quién lleva/recoge): mismo contenido que los bloques de arriba pero más fácil de
+ * repasar entero sin scroll horizontal. Tocar una actividad la abre para editarla.
+ */
+@Composable
+private fun TarjetaActividadesDelNino(fila: FilaGuia, indice: Int, onEditar: (CoverageNeed) -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        color = LocalEncajaExtraColors.current.tarjetaSuave,
+        shadowElevation = 1.dp
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                AvatarNino(fila.child.nombre, indice, tamano = 40.dp)
+                Spacer(Modifier.width(12.dp))
+                Text(
+                    fila.child.nombre,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = TINTA
+                )
+            }
+            Spacer(Modifier.height(12.dp))
+
+            if (fila.bloques.isEmpty()) {
+                SinActividadesEnLista()
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    fila.bloques.sortedBy { it.need.horaInicio }.forEach { bloque ->
+                        FilaActividadEnLista(bloque = bloque, onClick = { onEditar(bloque.need) })
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FilaActividadEnLista(bloque: BloqueGuia, onClick: () -> Unit) {
+    val franja = if (bloque.cubierto) ON_VERDE else MaterialTheme.colorScheme.error
+    val tintaIcono = if (bloque.cubierto) ON_VERDE else ON_ROJO
+    val fondoIcono = if (bloque.cubierto) VERDE else ROJO
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(BLANCO)
+            .clickable(onClick = onClick)
+            .height(IntrinsicSize.Min)
+    ) {
+        Box(modifier = Modifier.width(5.dp).fillMaxHeight().background(franja))
+        Column(modifier = Modifier.weight(1f).padding(start = 12.dp, end = 10.dp, top = 12.dp, bottom = 12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier.size(44.dp).clip(CircleShape).background(fondoIcono),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.School, contentDescription = null, tint = tintaIcono, modifier = Modifier.size(22.dp))
+                }
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        "${formatearHora(bloque.need.horaInicio)} – ${formatearHora(bloque.need.horaFin)}",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = TINTA
+                    )
+                    Text(bloque.need.descripcion, style = MaterialTheme.typography.bodyLarge, color = TINTA_SUAVE)
+                }
+                Icon(Icons.Default.ChevronRight, contentDescription = null, tint = TINTA_SUAVE)
+            }
+
+            val lleva = bloque.quienLleva?.etiqueta
+            val recoge = bloque.quienRecoge?.etiqueta
+            if (lleva != null || recoge != null) {
+                Spacer(Modifier.height(10.dp))
+                Row(verticalAlignment = Alignment.Top) {
+                    Icon(
+                        Icons.Default.Person,
+                        contentDescription = null,
+                        tint = TINTA_SUAVE,
+                        modifier = Modifier.size(18.dp).padding(top = 1.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Column {
+                        lleva?.let { LineaResponsable("Lleva:", it) }
+                        recoge?.let { LineaResponsable("Recoge:", it) }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LineaResponsable(etiqueta: String, nombre: String) {
+    Row {
+        Text(etiqueta, style = MaterialTheme.typography.bodyMedium, color = TINTA_SUAVE)
+        Spacer(Modifier.width(4.dp))
+        Text(nombre, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = TINTA)
+    }
+}
+
+/** Caja de borde discontinuo con icono de calendario y explicación, para un niño sin actividades. */
+@Composable
+private fun SinActividadesEnLista() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .bordeDiscontinuo(TINTA_SUAVE.copy(alpha = 0.45f), RoundedCornerShape(16.dp))
+            .padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier.size(48.dp).clip(CircleShape).background(BLANCO),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(Icons.Default.CalendarToday, contentDescription = null, tint = TINTA_SUAVE, modifier = Modifier.size(22.dp))
+        }
+        Spacer(Modifier.width(14.dp))
+        Column {
+            Text("Sin actividades", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = TINTA)
+            Text(
+                "No hay ninguna actividad programada para este día.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = TINTA_SUAVE
+            )
+        }
     }
 }
 
