@@ -1,8 +1,10 @@
 package com.encaja.app.ui.guia
 
+import com.encaja.app.avisos.ProgramadorDeAvisos
 import com.encaja.app.domain.model.CoverageNeed
 import com.encaja.app.domain.model.CoverageNeedId
 import com.encaja.app.domain.model.FamilyId
+import com.encaja.app.domain.repository.ChildRepository
 import com.encaja.app.domain.repository.CoverageNeedRepository
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -17,8 +19,20 @@ import javax.inject.Inject
  * familyId y recarga lo suyo después.
  */
 class EditorDeActividades @Inject constructor(
-    private val coverageNeedRepository: CoverageNeedRepository
+    private val coverageNeedRepository: CoverageNeedRepository,
+    private val childRepository: ChildRepository,
+    private val avisos: ProgramadorDeAvisos
 ) {
+    /** Programa en este móvil los avisos de [needs] (con el nombre del niño en el texto). */
+    private suspend fun programarAvisos(familyId: FamilyId, needs: List<CoverageNeed>) {
+        if (needs.none { it.avisoLlevarMin != null || it.avisoRecogerMin != null }) {
+            needs.forEach { avisos.cancelar(it.id) }
+            return
+        }
+        val nombres = childRepository.obtenerNinos(familyId).associate { it.id to it.nombre }
+        needs.forEach { avisos.programar(it, nombres[it.childId]) }
+    }
+
     /**
      * Guarda una o varias actividades (varias si se crearon con "Repetir cada semana").
      * Si [aplicarATodaLaSerie] es true, [needs] trae una única ocurrencia editada que ya
@@ -38,8 +52,10 @@ class EditorDeActividades @Inject constructor(
             }
             val actualizadas = posteriores.map { existente -> plantilla.copy(id = existente.id, fecha = existente.fecha) }
             coverageNeedRepository.guardarNeeds(familyId, actualizadas)
+            programarAvisos(familyId, actualizadas)
         } else {
             coverageNeedRepository.guardarNeeds(familyId, needs)
+            programarAvisos(familyId, needs)
         }
     }
 
@@ -60,8 +76,10 @@ class EditorDeActividades @Inject constructor(
                 .filter { !it.fecha.isBefore(fecha) }
                 .map { it.id }
             coverageNeedRepository.eliminarNeeds(familyId, idsABorrar)
+            idsABorrar.forEach { avisos.cancelar(it) }
         } else {
             coverageNeedRepository.eliminarNeed(familyId, id)
+            avisos.cancelar(id)
         }
     }
 
@@ -92,5 +110,7 @@ class EditorDeActividades @Inject constructor(
         }
         if (aGuardar.isNotEmpty()) coverageNeedRepository.guardarNeeds(familyId, aGuardar)
         if (aBorrar.isNotEmpty()) coverageNeedRepository.eliminarNeeds(familyId, aBorrar.map { it.id })
+        programarAvisos(familyId, aGuardar)
+        aBorrar.forEach { avisos.cancelar(it.id) }
     }
 }

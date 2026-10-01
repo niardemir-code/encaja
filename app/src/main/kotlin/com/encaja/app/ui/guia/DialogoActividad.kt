@@ -93,6 +93,8 @@ fun DialogoActividad(
     var requiereDesplazamiento by remember { mutableStateOf(actividad?.requiereDesplazamiento ?: true) }
     var quienLlevaId by remember { mutableStateOf(actividad?.quienLlevaId) }
     var quienRecogeId by remember { mutableStateOf(actividad?.quienRecogeId) }
+    var avisoLlevarMin by remember { mutableStateOf(actividad?.avisoLlevarMin) }
+    var avisoRecogerMin by remember { mutableStateOf(actividad?.avisoRecogerMin) }
     var confirmarBorrado by remember { mutableStateOf(false) }
     var repitiendo by remember { mutableStateOf(false) }
 
@@ -204,6 +206,26 @@ fun DialogoActividad(
                     )
                 }
 
+                if (requiereDesplazamiento) {
+                    Spacer(Modifier.height(12.dp))
+                    HorizontalDivider()
+                    Spacer(Modifier.height(8.dp))
+                    Text("Avisos en el móvil", style = MaterialTheme.typography.labelMedium)
+                    Spacer(Modifier.height(4.dp))
+                    SelectorAviso(
+                        titulo = "Antes de llevar",
+                        detalle = "empieza a las ${formatearHoraActividad(inicio)}",
+                        minutos = avisoLlevarMin,
+                        onElegir = { avisoLlevarMin = it }
+                    )
+                    SelectorAviso(
+                        titulo = "Antes de recoger",
+                        detalle = "termina a las ${formatearHoraActividad(fin)}",
+                        minutos = avisoRecogerMin,
+                        onElegir = { avisoRecogerMin = it }
+                    )
+                }
+
                 if (perteneceAGrupo) {
                     Spacer(Modifier.height(12.dp))
                     HorizontalDivider()
@@ -299,7 +321,9 @@ fun DialogoActividad(
                                 },
                                 quienLlevaId = quienLlevaId.takeIf { requiereDesplazamiento },
                                 quienRecogeId = quienRecogeId.takeIf { requiereDesplazamiento },
-                                grupoRepeticionId = actividad?.grupoRepeticionId
+                                grupoRepeticionId = actividad?.grupoRepeticionId,
+                                avisoLlevarMin = avisoLlevarMin.takeIf { requiereDesplazamiento },
+                                avisoRecogerMin = avisoRecogerMin.takeIf { requiereDesplazamiento }
                             ),
                             aplicarATodaLaSerie
                         )
@@ -347,7 +371,9 @@ fun DialogoActividad(
                             horaFin = f,
                             requiereDesplazamiento = requiereDesplazamiento,
                             quienLlevaId = quienLlevaId.takeIf { requiereDesplazamiento },
-                            quienRecogeId = quienRecogeId.takeIf { requiereDesplazamiento }
+                            quienRecogeId = quienRecogeId.takeIf { requiereDesplazamiento },
+                            avisoLlevarMin = avisoLlevarMin.takeIf { requiereDesplazamiento },
+                            avisoRecogerMin = avisoRecogerMin.takeIf { requiereDesplazamiento }
                         )
                         onActualizarSerie(plantilla, fechas)
                     } else {
@@ -371,7 +397,9 @@ fun DialogoActividad(
                                     else CoverageNeedId(UUID.randomUUID().toString())
                                 },
                                 quienLlevaId = quienLlevaId.takeIf { requiereDesplazamiento },
-                                quienRecogeId = quienRecogeId.takeIf { requiereDesplazamiento }
+                                quienRecogeId = quienRecogeId.takeIf { requiereDesplazamiento },
+                                avisoLlevarMin = avisoLlevarMin.takeIf { requiereDesplazamiento },
+                                avisoRecogerMin = avisoRecogerMin.takeIf { requiereDesplazamiento }
                             ),
                             false
                         )
@@ -640,5 +668,62 @@ private fun BotonFechaActividad(titulo: String, fecha: LocalDate, modifier: Modi
         ) {
             DatePicker(state = estado)
         }
+    }
+}
+
+/** Opciones de antelación de un aviso, en minutos (null = sin aviso). */
+private val OPCIONES_AVISO: List<Int?> = listOf(null, 5, 10, 15, 30, 45, 60, 90, 120)
+
+private fun textoAviso(minutos: Int?): String = when {
+    minutos == null -> "Sin aviso"
+    minutos < 60 -> "$minutos min antes"
+    minutos % 60 == 0 -> if (minutos == 60) "1 hora antes" else "${minutos / 60} horas antes"
+    else -> "${minutos / 60} h ${minutos % 60} min antes"
+}
+
+private fun formatearHoraActividad(hora: LocalTime): String =
+    "${hora.hour.toString().padStart(2, '0')}:${hora.minute.toString().padStart(2, '0')}"
+
+/**
+ * Fila "Antes de llevar · empieza a las 17:00 — 15 min antes"; al tocarla se elige la
+ * antelación en una lista. El aviso llega como notificación al móvil (ver
+ * ProgramadorDeAvisos).
+ */
+@Composable
+private fun SelectorAviso(titulo: String, detalle: String, minutos: Int?, onElegir: (Int?) -> Unit) {
+    var abierto by remember { mutableStateOf(false) }
+    Row(
+        modifier = Modifier.fillMaxWidth().clickable { abierto = true }.padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(titulo)
+            Text(detalle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Text(
+            textoAviso(minutos),
+            style = MaterialTheme.typography.labelLarge,
+            color = if (minutos == null) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary
+        )
+    }
+    if (abierto) {
+        AlertDialog(
+            onDismissRequest = { abierto = false },
+            title = { Text(titulo) },
+            text = {
+                Column {
+                    OPCIONES_AVISO.forEach { opcion ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth().clickable { onElegir(opcion); abierto = false },
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(selected = opcion == minutos, onClick = { onElegir(opcion); abierto = false })
+                            Text(textoAviso(opcion))
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { abierto = false }) { Text("Cerrar") } }
+        )
     }
 }

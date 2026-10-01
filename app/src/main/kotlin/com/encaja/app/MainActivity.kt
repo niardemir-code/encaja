@@ -1,7 +1,12 @@
 package com.encaja.app
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -19,9 +24,18 @@ import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    // Permiso de notificaciones (Android 13+), para los avisos de actividades. Se pide
+    // una vez al abrir; si se deniega, los avisos simplemente no se muestran.
+    private val pedirNotificaciones = registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         PreferenciaTema.cargar(this)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            pedirNotificaciones.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
         setContent {
             // Sigue el tema elegido en Ajustes (Sistema/Claro/Oscuro); por defecto,
             // el modo claro ("Cálido") u oscuro ("Nocturno") del teléfono.

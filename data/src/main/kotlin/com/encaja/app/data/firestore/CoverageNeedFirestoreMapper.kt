@@ -17,7 +17,9 @@ object CoverageNeedFirestoreMapper {
         "requiereDesplazamiento" to need.requiereDesplazamiento,
         "quienLlevaId" to need.quienLlevaId,
         "quienRecogeId" to need.quienRecogeId,
-        "grupoRepeticionId" to need.grupoRepeticionId
+        "grupoRepeticionId" to need.grupoRepeticionId,
+        "avisoLlevarMin" to need.avisoLlevarMin,
+        "avisoRecogerMin" to need.avisoRecogerMin
     )
 
     fun desdeDocumento(id: String, datos: Map<String, Any?>): CoverageNeed? {
@@ -30,10 +32,13 @@ object CoverageNeedFirestoreMapper {
         val quienLlevaId = datos["quienLlevaId"] as? String
         val quienRecogeId = datos["quienRecogeId"] as? String
         val grupoRepeticionId = datos["grupoRepeticionId"] as? String
+        // Firestore devuelve los números enteros como Long.
+        val avisoLlevarMin = (datos["avisoLlevarMin"] as? Number)?.toInt()
+        val avisoRecogerMin = (datos["avisoRecogerMin"] as? Number)?.toInt()
 
         return CoverageNeed(
             CoverageNeedId(id), childId, fecha, horaInicio, horaFin, descripcion, requiereDesplazamiento,
-            quienLlevaId, quienRecogeId, grupoRepeticionId
+            quienLlevaId, quienRecogeId, grupoRepeticionId, avisoLlevarMin, avisoRecogerMin
         )
     }
 }

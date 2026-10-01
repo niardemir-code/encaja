@@ -42,13 +42,15 @@ fun crearActividades(
     generarId: () -> CoverageNeedId,
     quienLlevaId: String? = null,
     quienRecogeId: String? = null,
-    grupoRepeticionId: String? = null
+    grupoRepeticionId: String? = null,
+    avisoLlevarMin: Int? = null,
+    avisoRecogerMin: Int? = null
 ): List<CoverageNeed> {
     val grupoId = grupoRepeticionId ?: if (fechas.size > 1) UUID.randomUUID().toString() else null
     return fechas.map { fecha ->
         CoverageNeed(
             generarId(), childId, fecha, inicio, fin, descripcion.trim(), requiereDesplazamiento,
-            quienLlevaId, quienRecogeId, grupoId
+            quienLlevaId, quienRecogeId, grupoId, avisoLlevarMin, avisoRecogerMin
         )
     }
 }

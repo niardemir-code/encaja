@@ -4,8 +4,10 @@ package com.encaja.app.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.encaja.app.avisos.ProgramadorDeAvisos
 import com.encaja.app.domain.model.FamilyId
 import com.encaja.app.domain.repository.AuthRepository
+import com.encaja.app.domain.repository.ChildRepository
 import com.encaja.app.domain.repository.AvailabilityRepository
 import com.encaja.app.domain.repository.CaregiverRepository
 import com.encaja.app.domain.repository.CoverageNeedRepository
@@ -30,7 +32,9 @@ class EncajaAppViewModel @Inject constructor(
     private val familyMembershipRepository: FamilyMembershipRepository,
     private val caregiverRepository: CaregiverRepository,
     private val coverageNeedRepository: CoverageNeedRepository,
-    private val availabilityRepository: AvailabilityRepository
+    private val availabilityRepository: AvailabilityRepository,
+    private val childRepository: ChildRepository,
+    private val avisos: ProgramadorDeAvisos
 ) : ViewModel() {
 
     private val _inicialesUsuario = MutableStateFlow("")
@@ -58,6 +62,7 @@ class EncajaAppViewModel @Inject constructor(
             if (membresia != null) {
                 limpiarActividadesAntiguas(membresia.familyId)
                 limpiarOcupacionesAntiguas(membresia.familyId)
+                reprogramarAvisos(membresia.familyId)
             }
         }
     }
@@ -73,6 +78,20 @@ class EncajaAppViewModel @Inject constructor(
         val todas = coverageNeedRepository.obtenerTodosLosNeeds(familyId)
         val aBorrar = actividadesAntiguas(todas)
         if (aBorrar.isNotEmpty()) coverageNeedRepository.eliminarNeeds(familyId, aBorrar)
+    }
+
+    /**
+     * Vuelve a programar en este móvil los avisos de las actividades de los próximos
+     * días (las alarmas se pierden al reiniciar el teléfono o al reinstalar, y las que
+     * cree otro miembro de la familia solo llegan aquí a través de los datos).
+     */
+    private suspend fun reprogramarAvisos(familyId: FamilyId) {
+        val hoy = java.time.LocalDate.now()
+        val proximas = coverageNeedRepository.obtenerNeeds(familyId, hoy, hoy.plusDays(60))
+            .filter { it.avisoLlevarMin != null || it.avisoRecogerMin != null }
+        if (proximas.isEmpty()) return
+        val nombres = childRepository.obtenerNinos(familyId).associate { it.id to it.nombre }
+        proximas.forEach { avisos.programar(it, nombres[it.childId]) }
     }
 
     /**

@@ -25,5 +25,10 @@ data class CoverageNeed(
     val quienRecogeId: String? = null,
     /** Id común a todas las ocurrencias creadas juntas con "Repetir cada semana",
      * para poder editarlas o borrarlas como grupo; null en una actividad puntual. */
-    val grupoRepeticionId: String? = null
+    val grupoRepeticionId: String? = null,
+    /** Minutos de antelación con los que avisar (notificación en el móvil) de que hay
+     * que llevar al niño (antes de [horaInicio]); null = sin aviso. */
+    val avisoLlevarMin: Int? = null,
+    /** Igual que [avisoLlevarMin] pero para recoger (antes de [horaFin]). */
+    val avisoRecogerMin: Int? = null
 )

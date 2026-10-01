@@ -857,6 +857,9 @@ private fun FilaActividadEnLista(bloque: BloqueGuia, onClick: () -> Unit) {
                         color = TINTA
                     )
                     Text(bloque.need.descripcion, style = MaterialTheme.typography.bodyMedium, color = TINTA_SUAVE)
+                    textoAvisos(bloque.need)?.let { avisos ->
+                        Text("🔔 $avisos", style = MaterialTheme.typography.labelSmall, color = TINTA_SUAVE)
+                    }
                 }
                 Icon(Icons.Default.ChevronRight, contentDescription = null, tint = TINTA_SUAVE)
             }
@@ -924,4 +927,14 @@ private fun SinActividadesEnLista() {
 private fun minutosDesdeInicioFranja(hora: LocalTime): Int {
     val minutos = java.time.Duration.between(INICIO_FRANJA, hora).toMinutes().toInt()
     return minutos.coerceIn(0, MINUTOS_FRANJA)
+}
+
+/** "15 min antes de llevar · 1 h antes de recoger", o null si la actividad no tiene avisos. */
+private fun textoAvisos(need: CoverageNeed): String? {
+    fun minutos(m: Int) = if (m < 60) "$m min" else if (m % 60 == 0) "${m / 60} h" else "${m / 60} h ${m % 60} min"
+    val partes = listOfNotNull(
+        need.avisoLlevarMin?.let { "${minutos(it)} antes de llevar" },
+        need.avisoRecogerMin?.let { "${minutos(it)} antes de recoger" }
+    )
+    return partes.takeIf { it.isNotEmpty() && need.requiereDesplazamiento }?.joinToString(" · ")
 }

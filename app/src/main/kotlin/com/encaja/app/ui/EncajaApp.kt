@@ -145,7 +145,11 @@ fun EncajaApp(onCerrarSesion: () -> Unit, viewModel: EncajaAppViewModel = hiltVi
                     // mismo SemaforoViewModel de esa pestaña, así que solo puede mostrarse
                     // una vez que esa pestaña ya existe en el back stack (Semana es la
                     // pantalla inicial, así que en la práctica siempre está).
-                    val semanaEntry = runCatching { navController.getBackStackEntry(Destino.Semana.ruta) }.getOrNull()
+                    // remember con la entrada actual como clave: es lo que pide Navigation
+                    // para llamar a getBackStackEntry durante la composición.
+                    val semanaEntry = remember(backStackEntry) {
+                        runCatching { navController.getBackStackEntry(Destino.Semana.ruta) }.getOrNull()
+                    }
                     semanaEntry?.let { entry ->
                         val semanaViewModel: SemaforoViewModel = hiltViewModel(entry)
                         BotonInvitar(semanaViewModel)
@@ -228,7 +232,7 @@ fun EncajaApp(onCerrarSesion: () -> Unit, viewModel: EncajaAppViewModel = hiltVi
                     ?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
                 val necesidadIdArg = backStackEntry.arguments?.getString("necesidadId")
                 GuiaScreen(
-                    viewModel = hiltViewModel(entradaDelGrafo(navController)),
+                    viewModel = hiltViewModel(entradaDelGrafo(navController, backStackEntry)),
                     fechaInicial = fechaArg,
                     necesidadIdInicial = necesidadIdArg,
                     // Se llegó aquí resolviendo un aviso concreto de Semana (no
@@ -237,9 +241,9 @@ fun EncajaApp(onCerrarSesion: () -> Unit, viewModel: EncajaAppViewModel = hiltVi
                     onVolverDespuesDeAsignar = { navController.popBackStack() }
                 )
             }
-            composable(Destino.Familia.ruta) { FamiliaScreen(viewModel = hiltViewModel(entradaDelGrafo(navController))) }
-            composable(Destino.Menu.ruta) { MenuScreen(viewModel = hiltViewModel(entradaDelGrafo(navController))) }
-            composable(Destino.Compra.ruta) { CompraScreen(viewModel = hiltViewModel(entradaDelGrafo(navController))) }
+            composable(Destino.Familia.ruta) { entry -> FamiliaScreen(viewModel = hiltViewModel(entradaDelGrafo(navController, entry))) }
+            composable(Destino.Menu.ruta) { entry -> MenuScreen(viewModel = hiltViewModel(entradaDelGrafo(navController, entry))) }
+            composable(Destino.Compra.ruta) { entry -> CompraScreen(viewModel = hiltViewModel(entradaDelGrafo(navController, entry))) }
             composable(RUTA_AJUSTES) {
                 AjustesScreen(
                     onCerrarSesion = onCerrarSesion,
@@ -265,8 +269,11 @@ fun EncajaApp(onCerrarSesion: () -> Unit, viewModel: EncajaAppViewModel = hiltVi
  * Familia y Menú a la semana actual, en vez de quedarse donde estaban.
  */
 @Composable
-private fun entradaDelGrafo(navController: androidx.navigation.NavHostController): androidx.navigation.NavBackStackEntry =
-    remember(navController) { navController.getBackStackEntry(navController.graph.id) }
+private fun entradaDelGrafo(
+    navController: androidx.navigation.NavHostController,
+    entradaActual: androidx.navigation.NavBackStackEntry
+): androidx.navigation.NavBackStackEntry =
+    remember(entradaActual) { navController.getBackStackEntry(navController.graph.id) }
 
 /** Avatar circular con las iniciales del usuario, junto al icono de Ajustes. */
 @Composable
