@@ -5,14 +5,16 @@ package com.encaja.app.ui.familia
 // NOTA: depende de Jetpack Compose (Material 3), no compilado en este entorno.
 // Hoja inferior que se abre al tocar la casilla de un cuidador (o de una unidad
 // familiar) en un día concreto de la pantalla Familia, con el diseño de la maqueta:
-//  - "Actividad de este día": lo que ya hay ese día, con lápiz (editar) y papelera.
-//  - "Categoría": rejilla de casillas (la elegida en color de acento con un check) y
-//    "Nueva categoría" con borde discontinuo.
+//  - "Actividad de este día": lo que ya hay ese día; tocar una la edita. Si solo hay
+//    una, la hoja se abre ya editándola: sin esta lista ni la rejilla de categorías,
+//    directamente en los horarios.
+//  - "Categoría" (solo al añadir): rejilla de casillas (la elegida en color de acento
+//    con un check) y "Nueva categoría" con borde discontinuo.
 //  - "Horarios" (categorías por horas): todo el día, desde/hasta, guardar como horario,
-//    detalle; y debajo "Repetir en otros días": de lunes a viernes de un toque o los
-//    días que se marquen en un calendario mensual. Las categorías por días llevan
-//    "Fechas" (desde/hasta) y detalle.
-//  - Abajo, Cancelar, Borrar (si se está editando una ocupación) y Guardar. Nada se
+//    detalle; y debajo "Repetir en otros días", un interruptor que despliega un
+//    calendario mensual para marcar los días. Las categorías por días llevan "Fechas"
+//    (desde/hasta) y detalle.
+//  - Abajo, Cancelar, papelera (si se está editando) y disquete (guardar). Nada se
 //    guarda ni se borra hasta pulsar uno de los dos.
 // Las categorías se editan desde la tarjeta "Categorías" de la pantalla.
 
@@ -140,6 +142,7 @@ fun DialogoDisponibilidad(
     var horasFin by remember(seleccionId) { mutableStateOf(turnosDeLaCategoria.firstOrNull()?.horaFin ?: LocalTime.of(10, 0)) }
     var horasTodoElDia by remember(seleccionId) { mutableStateOf(false) }
     var fechasRepetir by remember(seleccionId) { mutableStateOf(setOf(fecha)) }
+    var repetirActivo by remember(seleccionId) { mutableStateOf(false) }
     var horasEtiqueta by remember(seleccionId) { mutableStateOf("") }
     var guardarComoHorario by remember(seleccionId) { mutableStateOf(false) }
     var nombreHorario by remember(seleccionId) { mutableStateOf("") }
@@ -148,7 +151,6 @@ fun DialogoDisponibilidad(
 
     val horasFechas = fechasRepetir.sorted()
     val horasValidas = horasTodoElDia || horasInicio != horasFin
-    val laborablesDeEstaSemana = (0..4).map { lunes.plusDays(it.toLong()) }.toSet()
     val (inicioAGuardar, finAGuardar) =
         if (horasTodoElDia) AvailabilityBlock.INICIO_DIA to AvailabilityBlock.FIN_DIA else horasInicio to horasFin
     val rangoFechas = fechasEntre(rangoDesde, rangoHasta)
@@ -187,6 +189,7 @@ fun DialogoDisponibilidad(
         if (!bloque.todoElDia) { horasInicio = bloque.horaInicio; horasFin = bloque.horaFin }
         horasEtiqueta = bloque.etiqueta.orEmpty()
         fechasRepetir = setOf(bloque.fecha)
+        repetirActivo = false
         rangoDesde = bloque.fecha
         rangoHasta = bloque.fecha
     }
@@ -226,7 +229,8 @@ fun DialogoDisponibilidad(
             Spacer(Modifier.height(14.dp))
 
             // ── Actividad de este día ────────────────────────────────────────────
-            if (bloquesDelDia.isNotEmpty()) {
+            // Solo cuando no se está editando: al editar se va directo a los horarios.
+            if (bloquesDelDia.isNotEmpty() && bloqueEnEdicion == null) {
                 TarjetaSeccion {
                     Text(
                         if (bloquesDelDia.size == 1) "Actividad de este día" else "Actividades de este día (toca una para editarla)",
@@ -261,33 +265,50 @@ fun DialogoDisponibilidad(
             }
 
             // ── Categoría ─────────────────────────────────────────────────────────
-            TituloSeccion(
-                if (bloqueEnEdicion == null && caregiverIds.size > 1) "Categoría (para todos)" else "Categoría",
-                "Selecciona una categoría para esta actividad"
-            )
-            Spacer(Modifier.height(10.dp))
-            FlowRow(
-                maxItemsInEachRow = 3,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                categorias.forEach { categoria ->
-                    CasillaCategoria(
-                        categoria = categoria,
-                        elegida = categoria.id == seleccionId,
-                        modifier = Modifier.weight(1f),
-                        onClick = {
-                            bloqueEnEdicion = null
-                            seleccionId = if (seleccionId == categoria.id) null else categoria.id
-                        }
+            if (bloqueEnEdicion == null) {
+                TituloSeccion(
+                    if (caregiverIds.size > 1) "Categoría (para todos)" else "Categoría",
+                    "Selecciona una categoría para esta actividad"
+                )
+                Spacer(Modifier.height(10.dp))
+                FlowRow(
+                    maxItemsInEachRow = 3,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    categorias.forEach { categoria ->
+                        CasillaCategoria(
+                            categoria = categoria,
+                            elegida = categoria.id == seleccionId,
+                            modifier = Modifier.weight(1f),
+                            onClick = { seleccionId = if (seleccionId == categoria.id) null else categoria.id }
+                        )
+                    }
+                    CasillaNuevaCategoria(modifier = Modifier.weight(1f), onClick = { creandoCategoria = true })
+                }
+                if (seleccionada != null) Spacer(Modifier.height(18.dp))
+            } else if (seleccionada != null) {
+                // Editando: solo se recuerda qué se edita, y se va directo a los horarios.
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(Color(seleccionada.color).copy(alpha = 0.35f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(seleccionada.emoji, fontSize = 18.sp)
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    Text(
+                        "Editando ${seleccionada.nombre}",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = TINTA
                     )
                 }
-                CasillaNuevaCategoria(modifier = Modifier.weight(1f), onClick = { creandoCategoria = true })
+                Spacer(Modifier.height(14.dp))
             }
 
             // ── Formulario ────────────────────────────────────────────────────────
             if (seleccionada != null) {
-                Spacer(Modifier.height(18.dp))
                 key(seleccionada.id) {
                     if (porHoras) {
                         TituloSeccion("Horarios", "Define el horario de esta actividad")
@@ -348,50 +369,54 @@ fun DialogoDisponibilidad(
                         }
 
                         Spacer(Modifier.height(16.dp))
-                        // Repetir en otros días: de lunes a viernes de esta semana de un toque, o
-                        // los días que se quieran, en el calendario (de cualquier mes).
+                        // Repetir en otros días: interruptor (apagado por defecto) que despliega
+                        // el calendario mensual para marcar los días que se quieran.
                         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             IconoEnCirculo(Icons.Default.CalendarMonth, fondo = LAVANDA, tinta = INDIGO)
                             Spacer(Modifier.width(12.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text("Repetir en otros días", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = TINTA)
-                                Text("Toca los días del calendario", style = MaterialTheme.typography.bodySmall, color = TINTA_SUAVE)
+                                Text(
+                                    if (repetirActivo) "Toca los días del calendario" else "Solo este día",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = TINTA_SUAVE
+                                )
                             }
                             Switch(
-                                checked = laborablesDeEstaSemana.all { it in fechasRepetir },
-                                onCheckedChange = { marcado ->
-                                    fechasRepetir = if (marcado) fechasRepetir + laborablesDeEstaSemana
-                                    else (fechasRepetir - laborablesDeEstaSemana) + fecha
+                                checked = repetirActivo,
+                                onCheckedChange = { activo ->
+                                    repetirActivo = activo
+                                    if (!activo) fechasRepetir = setOf(fecha)
                                 },
                                 colors = coloresInterruptorEncaja()
                             )
-                            Spacer(Modifier.width(6.dp))
-                            Text("De lunes a viernes", style = MaterialTheme.typography.bodySmall, color = TINTA)
                         }
-                        Spacer(Modifier.height(12.dp))
-                        TarjetaSeccion(padding = 10.dp) {
-                            CalendarioMultiple(
-                                mesInicial = YearMonth.from(fecha),
-                                seleccionadas = fechasRepetir,
-                                onAlternar = { dia ->
-                                    fechasRepetir = if (dia in fechasRepetir) {
-                                        if (fechasRepetir.size > 1) fechasRepetir - dia else fechasRepetir
-                                    } else {
-                                        fechasRepetir + dia
+                        if (repetirActivo) {
+                            Spacer(Modifier.height(12.dp))
+                            TarjetaSeccion(padding = 10.dp) {
+                                CalendarioMultiple(
+                                    mesInicial = YearMonth.from(fecha),
+                                    seleccionadas = fechasRepetir,
+                                    onAlternar = { dia ->
+                                        fechasRepetir = if (dia in fechasRepetir) {
+                                            if (fechasRepetir.size > 1) fechasRepetir - dia else fechasRepetir
+                                        } else {
+                                            fechasRepetir + dia
+                                        }
                                     }
-                                }
-                            )
-                        }
-                        Spacer(Modifier.height(8.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Info, contentDescription = null, tint = TINTA_SUAVE, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text(
-                                (if (horasFechas.size == 1) "1 día" else "${horasFechas.size} días") +
-                                    ". Si alguno ya tenía ${seleccionada.nombre}, se sustituye.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = TINTA_SUAVE
-                            )
+                                )
+                            }
+                            Spacer(Modifier.height(8.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Info, contentDescription = null, tint = TINTA_SUAVE, modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    (if (horasFechas.size == 1) "1 día" else "${horasFechas.size} días") +
+                                        ". Si alguno ya tenía ${seleccionada.nombre}, se sustituye.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = TINTA_SUAVE
+                                )
+                            }
                         }
                     } else {
                         TituloSeccion("Fechas", "Uno o varios días completos")
@@ -415,7 +440,7 @@ fun DialogoDisponibilidad(
                 }
             }
 
-            // ── Botones ───────────────────────────────────────────────────────────
+            // ── Botones: Cancelar (texto), papelera (solo editando) y disquete ───────
             Spacer(Modifier.height(20.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedButton(
@@ -428,40 +453,26 @@ fun DialogoDisponibilidad(
                     Text("Cancelar", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 }
                 bloqueEnEdicion?.let { bloque ->
-                    OutlinedButton(
-                        onClick = { onEliminar(bloque); onCerrar() },
-                        modifier = Modifier.weight(1f).height(56.dp),
-                        shape = RoundedCornerShape(18.dp),
-                        border = null,
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer,
-                            contentColor = MaterialTheme.colorScheme.onErrorContainer
-                        )
-                    ) {
-                        Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(20.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("Borrar", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    }
+                    BotonCuadrado(
+                        icono = Icons.Default.Delete,
+                        descripcion = "Borrar",
+                        fondo = MaterialTheme.colorScheme.errorContainer,
+                        tinta = MaterialTheme.colorScheme.onErrorContainer,
+                        onClick = { onEliminar(bloque); onCerrar() }
+                    )
                 }
-                Button(
+                val puedeGuardar = puedeGuardarHoras || puedeGuardarRango
+                BotonCuadrado(
+                    icono = Icons.Default.Save,
+                    descripcion = "Guardar",
+                    fondo = if (puedeGuardar) ACENTO else ACENTO.copy(alpha = 0.35f),
+                    tinta = ON_ACENTO,
+                    habilitado = puedeGuardar,
                     onClick = {
                         if (porHoras) guardarHoras() else guardarRango()
                         onCerrar()
-                    },
-                    enabled = puedeGuardarHoras || puedeGuardarRango,
-                    modifier = Modifier.weight(1f).height(56.dp),
-                    shape = RoundedCornerShape(18.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = ACENTO,
-                        contentColor = ON_ACENTO,
-                        disabledContainerColor = ACENTO.copy(alpha = 0.35f),
-                        disabledContentColor = ON_ACENTO
-                    )
-                ) {
-                    Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(20.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("Guardar", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
-                }
+                    }
+                )
             }
         }
     }
@@ -482,6 +493,28 @@ fun DialogoDisponibilidad(
 }
 
 /* ───────────────────────────── Piezas del diseño ───────────────────────────── */
+
+/** Botón cuadrado redondeado solo con icono (papelera, disquete), de la altura de "Cancelar". */
+@Composable
+private fun BotonCuadrado(
+    icono: ImageVector,
+    descripcion: String,
+    fondo: Color,
+    tinta: Color,
+    habilitado: Boolean = true,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .size(56.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(fondo)
+            .clickable(enabled = habilitado, onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(icono, contentDescription = descripcion, tint = tinta, modifier = Modifier.size(24.dp))
+    }
+}
 
 @Composable
 private fun TituloSeccion(titulo: String, subtitulo: String) {
