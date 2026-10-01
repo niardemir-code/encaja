@@ -59,6 +59,7 @@ import com.encaja.app.ui.compra.CompraScreen
 import com.encaja.app.ui.familia.FamiliaScreen
 import com.encaja.app.ui.guia.GuiaScreen
 import com.encaja.app.ui.menu.MenuScreen
+import com.encaja.app.ui.ocupaciones.OcupacionesScreen
 import com.encaja.app.ui.semana.BotonBarraSuperior
 import com.encaja.app.ui.semana.BotonInvitar
 import com.encaja.app.ui.semana.SemaforoViewModel
@@ -90,10 +91,11 @@ private const val RUTA_AJUSTES = "ajustes"
 private const val RUTA_AJUSTES_NINOS = "ajustes/ninos"
 private const val RUTA_AJUSTES_CUIDADORES = "ajustes/cuidadores"
 private const val RUTA_TODAS_ACTIVIDADES = "todas_actividades"
+private const val RUTA_OCUPACIONES = "ocupaciones"
 
 /** Rutas fuera de las pestañas de la barra inferior: llevan flecha de "atrás" en vez de
  * quedarse sin icono de navegación a la izquierda. */
-private val RUTAS_CON_ATRAS = setOf(RUTA_AJUSTES, RUTA_AJUSTES_NINOS, RUTA_AJUSTES_CUIDADORES, RUTA_TODAS_ACTIVIDADES)
+private val RUTAS_CON_ATRAS = setOf(RUTA_AJUSTES, RUTA_AJUSTES_NINOS, RUTA_AJUSTES_CUIDADORES, RUTA_TODAS_ACTIVIDADES, RUTA_OCUPACIONES)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -243,12 +245,14 @@ fun EncajaApp(onCerrarSesion: () -> Unit, viewModel: EncajaAppViewModel = hiltVi
                     onCerrarSesion = onCerrarSesion,
                     onAbrirNinos = { navController.navigate(RUTA_AJUSTES_NINOS) },
                     onAbrirCuidadores = { navController.navigate(RUTA_AJUSTES_CUIDADORES) },
-                    onAbrirTodasActividades = { navController.navigate(RUTA_TODAS_ACTIVIDADES) }
+                    onAbrirTodasActividades = { navController.navigate(RUTA_TODAS_ACTIVIDADES) },
+                    onAbrirOcupaciones = { navController.navigate(RUTA_OCUPACIONES) }
                 )
             }
             composable(RUTA_AJUSTES_NINOS) { AjustesNinosScreen() }
             composable(RUTA_AJUSTES_CUIDADORES) { AjustesCuidadoresScreen() }
             composable(RUTA_TODAS_ACTIVIDADES) { TodasActividadesScreen() }
+            composable(RUTA_OCUPACIONES) { OcupacionesScreen() }
         }
     }
 }

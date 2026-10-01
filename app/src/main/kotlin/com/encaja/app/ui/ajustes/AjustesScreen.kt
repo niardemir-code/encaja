@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarViewWeek
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ChildCare
+import androidx.compose.material.icons.filled.EventBusy
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
@@ -44,6 +45,7 @@ fun AjustesScreen(
     onAbrirNinos: () -> Unit,
     onAbrirCuidadores: () -> Unit,
     onAbrirTodasActividades: () -> Unit,
+    onAbrirOcupaciones: () -> Unit = {},
     viewModel: AjustesViewModel = hiltViewModel()
 ) {
     Column(modifier = Modifier.fillMaxSize().padding(24.dp)) {
@@ -77,6 +79,13 @@ fun AjustesScreen(
             titulo = "Actividades",
             subtitulo = "Ver y editar todas las actividades",
             onClick = onAbrirTodasActividades
+        )
+        Spacer(Modifier.height(12.dp))
+        FilaAjuste(
+            icono = Icons.Default.EventBusy,
+            titulo = "Ocupaciones",
+            subtitulo = "Todo lo apuntado en Familia, para repasar y borrar",
+            onClick = onAbrirOcupaciones
         )
 
         Spacer(Modifier.height(24.dp))

@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.encaja.app.domain.model.FamilyId
 import com.encaja.app.domain.repository.AuthRepository
+import com.encaja.app.domain.repository.AvailabilityRepository
 import com.encaja.app.domain.repository.CaregiverRepository
 import com.encaja.app.domain.repository.CoverageNeedRepository
 import com.encaja.app.domain.repository.FamilyMembershipRepository
@@ -28,7 +29,8 @@ class EncajaAppViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val familyMembershipRepository: FamilyMembershipRepository,
     private val caregiverRepository: CaregiverRepository,
-    private val coverageNeedRepository: CoverageNeedRepository
+    private val coverageNeedRepository: CoverageNeedRepository,
+    private val availabilityRepository: AvailabilityRepository
 ) : ViewModel() {
 
     private val _inicialesUsuario = MutableStateFlow("")
@@ -53,7 +55,10 @@ class EncajaAppViewModel @Inject constructor(
                 sesion.email?.trim()?.take(2)?.uppercase() ?: "?"
             }
 
-            if (membresia != null) limpiarActividadesAntiguas(membresia.familyId)
+            if (membresia != null) {
+                limpiarActividadesAntiguas(membresia.familyId)
+                limpiarOcupacionesAntiguas(membresia.familyId)
+            }
         }
     }
 
@@ -68,5 +73,18 @@ class EncajaAppViewModel @Inject constructor(
         val todas = coverageNeedRepository.obtenerTodosLosNeeds(familyId)
         val aBorrar = actividadesAntiguas(todas)
         if (aBorrar.isNotEmpty()) coverageNeedRepository.eliminarNeeds(familyId, aBorrar)
+    }
+
+    /**
+     * Igual que con las actividades: las ocupaciones de Familia (trabajo, médico,
+     * viajes…) de hace más de un mes se borran para no ocupar espacio. Se piden desde
+     * un par de años atrás, que de sobra cubre lo que pueda quedar.
+     */
+    private suspend fun limpiarOcupacionesAntiguas(familyId: FamilyId) {
+        val hoy = java.time.LocalDate.now()
+        val limite = hoy.minusMonths(1)
+        val antiguas = availabilityRepository.obtenerDisponibilidad(familyId, hoy.minusYears(2), limite.minusDays(1))
+            .filter { it.fecha.isBefore(limite) }
+        antiguas.forEach { availabilityRepository.eliminarBloque(familyId, it.caregiverId, it.fecha, it.horaInicio) }
     }
 }
