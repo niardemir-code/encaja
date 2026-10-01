@@ -9,9 +9,11 @@ package com.encaja.app.ui.familia
 //  - "Categoría": rejilla de casillas (la elegida en color de acento con un check) y
 //    "Nueva categoría" con borde discontinuo.
 //  - "Horarios" (categorías por horas): todo el día, desde/hasta, guardar como horario,
-//    detalle; y debajo "Repetir en otros días" con los días de la semana y "Duplicar a
-//    la semana siguiente". Las categorías por días llevan "Fechas" (desde/hasta) y detalle.
-//  - Abajo, Cancelar y Guardar.
+//    detalle; y debajo "Repetir en otros días": de lunes a viernes de un toque o los
+//    días que se marquen en un calendario mensual. Las categorías por días llevan
+//    "Fechas" (desde/hasta) y detalle.
+//  - Abajo, Cancelar, Borrar (si se está editando una ocupación) y Guardar. Nada se
+//    guarda ni se borra hasta pulsar uno de los dos.
 // Las categorías se editan desde la tarjeta "Categorías" de la pantalla.
 
 import androidx.compose.foundation.background
@@ -27,9 +29,9 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Edit
@@ -50,6 +52,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -63,18 +66,15 @@ import com.encaja.app.domain.model.categoriaEn
 import com.encaja.app.domain.model.TurnoId
 import com.encaja.app.domain.model.TurnoTrabajo
 import com.encaja.app.ui.theme.LocalEncajaExtraColors
-import kotlinx.coroutines.delay
+import com.encaja.app.ui.theme.coloresInterruptorEncaja
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.YearMonth
 import java.time.format.TextStyle
 import java.util.Locale
 
 private val ES = Locale("es")
-
-private val DIAS_LABORABLES = setOf(
-    DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY
-)
 
 // Atajos a los colores del tema activo con los nombres del diseño.
 private val TINTA: Color @Composable get() = MaterialTheme.colorScheme.onBackground
@@ -119,14 +119,18 @@ fun DialogoDisponibilidad(
     onGuardarCategoria: (CategoriaDisponibilidad) -> Unit,
     onCerrar: () -> Unit
 ) {
+    // Si el día tiene una sola ocupación, la hoja se abre directamente editándola (con
+    // su categoría elegida y el formulario relleno); si tiene varias, se toca la que sea.
+    val bloqueInicial = remember { bloquesDelDia.singleOrNull() }
     // Se guarda el id (no la categoría) para ver siempre su versión más reciente tras editarla.
-    var seleccionId by remember { mutableStateOf<CategoriaId?>(null) }
+    var seleccionId by remember { mutableStateOf<CategoriaId?>(bloqueInicial?.categoriaEn(categorias)?.id) }
     val seleccionada = categorias.firstOrNull { it.id == seleccionId }
     val porHoras = seleccionada?.modo == ModoCategoria.HORAS
     var creandoCategoria by remember { mutableStateOf(false) }
     // Bloque de "este día" que se está editando: al guardar se borra el original y se
     // guarda el nuevo en su lugar (solo para su persona, aunque estemos en una unidad).
-    var bloqueEnEdicion by remember { mutableStateOf<AvailabilityBlock?>(null) }
+    // Nada se toca hasta pulsar Guardar o Borrar: cancelar deja todo como estaba.
+    var bloqueEnEdicion by remember { mutableStateOf<AvailabilityBlock?>(bloqueInicial) }
     val destinatarios = bloqueEnEdicion?.let { listOf(it.caregiverId) } ?: caregiverIds
 
     // Estado del formulario, elevado aquí para que Guardar (abajo del todo) lo vea. Se
@@ -135,16 +139,16 @@ fun DialogoDisponibilidad(
     var horasInicio by remember(seleccionId) { mutableStateOf(turnosDeLaCategoria.firstOrNull()?.horaInicio ?: LocalTime.of(9, 0)) }
     var horasFin by remember(seleccionId) { mutableStateOf(turnosDeLaCategoria.firstOrNull()?.horaFin ?: LocalTime.of(10, 0)) }
     var horasTodoElDia by remember(seleccionId) { mutableStateOf(false) }
-    var horasDias by remember(seleccionId) { mutableStateOf(setOf(fecha.dayOfWeek)) }
+    var fechasRepetir by remember(seleccionId) { mutableStateOf(setOf(fecha)) }
     var horasEtiqueta by remember(seleccionId) { mutableStateOf("") }
     var guardarComoHorario by remember(seleccionId) { mutableStateOf(false) }
     var nombreHorario by remember(seleccionId) { mutableStateOf("") }
     var rangoDesde by remember(seleccionId) { mutableStateOf(fecha) }
     var rangoHasta by remember(seleccionId) { mutableStateOf(fecha) }
-    var avisoSemanaCopiada by remember { mutableStateOf(false) }
 
-    val horasFechas = fechasDeLaSemana(lunes, horasDias)
+    val horasFechas = fechasRepetir.sorted()
     val horasValidas = horasTodoElDia || horasInicio != horasFin
+    val laborablesDeEstaSemana = (0..4).map { lunes.plusDays(it.toLong()) }.toSet()
     val (inicioAGuardar, finAGuardar) =
         if (horasTodoElDia) AvailabilityBlock.INICIO_DIA to AvailabilityBlock.FIN_DIA else horasInicio to horasFin
     val rangoFechas = fechasEntre(rangoDesde, rangoHasta)
@@ -152,7 +156,7 @@ fun DialogoDisponibilidad(
         (!guardarComoHorario || horasTodoElDia || nombreHorario.isNotBlank())
     val puedeGuardarRango = seleccionada != null && !porHoras && rangoFechas.size <= MAX_DIAS_RANGO
 
-    fun guardarHoras(duplicar: Boolean) {
+    fun guardarHoras() {
         val cat = seleccionada ?: return
         if (guardarComoHorario && !horasTodoElDia && nombreHorario.isNotBlank() &&
             turnoConHoras(turnosDeLaCategoria, horasInicio, horasFin) == null
@@ -160,7 +164,7 @@ fun DialogoDisponibilidad(
             onCrearTurno(nombreHorario.trim(), horasInicio, horasFin, cat.id)
         }
         bloqueEnEdicion?.let { onEliminar(it) }
-        onGuardarHoras(destinatarios, cat, horasFechas, inicioAGuardar, finAGuardar, duplicar, horasEtiqueta.trim().ifBlank { null })
+        onGuardarHoras(destinatarios, cat, horasFechas, inicioAGuardar, finAGuardar, false, horasEtiqueta.trim().ifBlank { null })
         bloqueEnEdicion = null
     }
 
@@ -182,16 +186,9 @@ fun DialogoDisponibilidad(
         horasTodoElDia = bloque.todoElDia
         if (!bloque.todoElDia) { horasInicio = bloque.horaInicio; horasFin = bloque.horaFin }
         horasEtiqueta = bloque.etiqueta.orEmpty()
-        horasDias = setOf(fecha.dayOfWeek)
+        fechasRepetir = setOf(bloque.fecha)
         rangoDesde = bloque.fecha
         rangoHasta = bloque.fecha
-    }
-
-    LaunchedEffect(avisoSemanaCopiada) {
-        if (avisoSemanaCopiada) {
-            delay(2000)
-            avisoSemanaCopiada = false
-        }
     }
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -232,7 +229,7 @@ fun DialogoDisponibilidad(
             if (bloquesDelDia.isNotEmpty()) {
                 TarjetaSeccion {
                     Text(
-                        if (bloquesDelDia.size == 1) "Actividad de este día" else "Actividades de este día",
+                        if (bloquesDelDia.size == 1) "Actividad de este día" else "Actividades de este día (toca una para editarla)",
                         style = MaterialTheme.typography.bodyMedium,
                         color = TINTA_SUAVE
                     )
@@ -251,14 +248,11 @@ fun DialogoDisponibilidad(
                                 ).joinToString(" · "),
                                 editando = editando,
                                 onEditar = {
-                                    if (editando) {
-                                        bloqueEnEdicion = null
-                                    } else {
+                                    if (!editando) {
                                         seleccionId = categoria.id
                                         bloqueEnEdicion = bloque
                                     }
-                                },
-                                onEliminar = { if (editando) bloqueEnEdicion = null; onEliminar(bloque) }
+                                }
                             )
                         }
                     }
@@ -354,44 +348,51 @@ fun DialogoDisponibilidad(
                         }
 
                         Spacer(Modifier.height(16.dp))
-                        // Repetir en otros días
+                        // Repetir en otros días: de lunes a viernes de esta semana de un toque, o
+                        // los días que se quieran, en el calendario (de cualquier mes).
                         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             IconoEnCirculo(Icons.Default.CalendarMonth, fondo = LAVANDA, tinta = INDIGO)
                             Spacer(Modifier.width(12.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text("Repetir en otros días", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = TINTA)
-                                Text("Selecciona los días de esta semana", style = MaterialTheme.typography.bodySmall, color = TINTA_SUAVE)
+                                Text("Toca los días del calendario", style = MaterialTheme.typography.bodySmall, color = TINTA_SUAVE)
                             }
                             Switch(
-                                checked = horasDias == DIAS_LABORABLES,
-                                onCheckedChange = { marcado -> horasDias = if (marcado) DIAS_LABORABLES else setOf(fecha.dayOfWeek) },
-                                colors = coloresInterruptor()
+                                checked = laborablesDeEstaSemana.all { it in fechasRepetir },
+                                onCheckedChange = { marcado ->
+                                    fechasRepetir = if (marcado) fechasRepetir + laborablesDeEstaSemana
+                                    else (fechasRepetir - laborablesDeEstaSemana) + fecha
+                                },
+                                colors = coloresInterruptorEncaja()
                             )
                             Spacer(Modifier.width(6.dp))
                             Text("De lunes a viernes", style = MaterialTheme.typography.bodySmall, color = TINTA)
                         }
                         Spacer(Modifier.height(12.dp))
-                        SelectorDias(dias = horasDias, onCambiar = { horasDias = it })
-                        Spacer(Modifier.height(10.dp))
+                        TarjetaSeccion(padding = 10.dp) {
+                            CalendarioMultiple(
+                                mesInicial = YearMonth.from(fecha),
+                                seleccionadas = fechasRepetir,
+                                onAlternar = { dia ->
+                                    fechasRepetir = if (dia in fechasRepetir) {
+                                        if (fechasRepetir.size > 1) fechasRepetir - dia else fechasRepetir
+                                    } else {
+                                        fechasRepetir + dia
+                                    }
+                                }
+                            )
+                        }
+                        Spacer(Modifier.height(8.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Info, contentDescription = null, tint = TINTA_SUAVE, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(8.dp))
                             Text(
-                                "Si alguno de esos días ya tenía ${seleccionada.nombre}, se sustituye.",
+                                (if (horasFechas.size == 1) "1 día" else "${horasFechas.size} días") +
+                                    ". Si alguno ya tenía ${seleccionada.nombre}, se sustituye.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = TINTA_SUAVE
                             )
                         }
-
-                        Spacer(Modifier.height(14.dp))
-                        FilaDuplicar(
-                            habilitado = puedeGuardarHoras,
-                            copiada = avisoSemanaCopiada,
-                            onClick = {
-                                guardarHoras(duplicar = true)
-                                avisoSemanaCopiada = true
-                            }
-                        )
                     } else {
                         TituloSeccion("Fechas", "Uno o varios días completos")
                         Spacer(Modifier.height(10.dp))
@@ -416,7 +417,7 @@ fun DialogoDisponibilidad(
 
             // ── Botones ───────────────────────────────────────────────────────────
             Spacer(Modifier.height(20.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedButton(
                     onClick = onCerrar,
                     modifier = Modifier.weight(1f).height(56.dp),
@@ -426,9 +427,25 @@ fun DialogoDisponibilidad(
                 ) {
                     Text("Cancelar", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 }
+                bloqueEnEdicion?.let { bloque ->
+                    OutlinedButton(
+                        onClick = { onEliminar(bloque); onCerrar() },
+                        modifier = Modifier.weight(1f).height(56.dp),
+                        shape = RoundedCornerShape(18.dp),
+                        border = null,
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                            contentColor = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    ) {
+                        Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Borrar", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    }
+                }
                 Button(
                     onClick = {
-                        if (porHoras) guardarHoras(duplicar = false) else guardarRango()
+                        if (porHoras) guardarHoras() else guardarRango()
                         onCerrar()
                     },
                     enabled = puedeGuardarHoras || puedeGuardarRango,
@@ -442,7 +459,7 @@ fun DialogoDisponibilidad(
                     )
                 ) {
                     Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(20.dp))
-                    Spacer(Modifier.width(8.dp))
+                    Spacer(Modifier.width(6.dp))
                     Text("Guardar", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
                 }
             }
@@ -526,21 +543,14 @@ private fun IconoEnCirculo(icono: ImageVector, fondo: Color, tinta: Color, taman
     }
 }
 
-@Composable
-private fun coloresInterruptor() = SwitchDefaults.colors(
-    checkedThumbColor = ON_ACENTO,
-    checkedTrackColor = ACENTO,
-    checkedBorderColor = Color.Transparent
-)
-
-/** Un bloque ya apuntado ese día: punto de color, icono en cuadro, nombre y horario, lápiz y papelera. */
+/** Un bloque ya apuntado ese día: punto de color, icono en cuadro, nombre y horario. Toda
+ * la fila es clicable y abre su edición; la que se está editando lleva el borde de acento. */
 @Composable
 private fun FilaBloqueDelDia(
     categoria: CategoriaDisponibilidad,
     subtitulo: String,
     editando: Boolean,
-    onEditar: () -> Unit,
-    onEliminar: () -> Unit
+    onEditar: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -548,7 +558,8 @@ private fun FilaBloqueDelDia(
             .clip(RoundedCornerShape(16.dp))
             .background(CASILLA)
             .border(1.dp, if (editando) ACENTO else BORDE.copy(alpha = 0.6f), RoundedCornerShape(16.dp))
-            .padding(start = 12.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
+            .clickable(onClick = onEditar)
+            .padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(Modifier.size(12.dp).clip(CircleShape).background(Color(categoria.color)))
@@ -564,9 +575,7 @@ private fun FilaBloqueDelDia(
             Text(categoria.nombre, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = TINTA)
             Text(subtitulo, style = MaterialTheme.typography.bodySmall, color = TINTA_SUAVE)
         }
-        BotonRedondoSuave(Icons.Default.Edit, if (editando) "Dejar de editar" else "Editar", onEditar, tinta = if (editando) ACENTO else TINTA)
-        Spacer(Modifier.width(6.dp))
-        BotonRedondoSuave(Icons.Default.Delete, "Quitar", onEliminar, tinta = MaterialTheme.colorScheme.error)
+        Icon(Icons.Default.Edit, contentDescription = "Editar", tint = if (editando) ACENTO else TINTA_SUAVE, modifier = Modifier.size(20.dp))
     }
 }
 
@@ -691,7 +700,7 @@ private fun FilaConInterruptor(
             Text(titulo, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = TINTA)
             Text(subtitulo, style = MaterialTheme.typography.bodySmall, color = TINTA_SUAVE)
         }
-        Switch(checked = activo, onCheckedChange = onCambiar, colors = coloresInterruptor())
+        Switch(checked = activo, onCheckedChange = onCambiar, colors = coloresInterruptorEncaja())
     }
 }
 
@@ -790,33 +799,83 @@ private fun CajaValor(titulo: String, valor: String, icono: ImageVector, modifie
     }
 }
 
-/** Los siete días en círculos; los marcados, en color de acento. */
+/**
+ * Calendario de un mes (con flechas para cambiar de mes) en el que se marcan los días
+ * que se quieran; los marcados van en color de acento y el de hoy lleva borde.
+ */
 @Composable
-private fun SelectorDias(dias: Set<DayOfWeek>, onCambiar: (Set<DayOfWeek>) -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+private fun CalendarioMultiple(mesInicial: YearMonth, seleccionadas: Set<LocalDate>, onAlternar: (LocalDate) -> Unit) {
+    var mes by remember { mutableStateOf(mesInicial) }
+    val hoy = LocalDate.now()
+
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        IconButton(onClick = { mes = mes.minusMonths(1) }) {
+            Icon(Icons.Default.ChevronLeft, contentDescription = "Mes anterior", tint = INDIGO)
+        }
+        Text(
+            mes.month.getDisplayName(TextStyle.FULL, ES).replaceFirstChar { it.uppercase() } + " ${mes.year}",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.ExtraBold,
+            color = TINTA,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.weight(1f)
+        )
+        IconButton(onClick = { mes = mes.plusMonths(1) }) {
+            Icon(Icons.Default.ChevronRight, contentDescription = "Mes siguiente", tint = INDIGO)
+        }
+    }
+    Row(modifier = Modifier.fillMaxWidth()) {
         DayOfWeek.values().forEach { dia ->
-            val marcado = dia in dias
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(CircleShape)
-                    .background(if (marcado) ACENTO else CASILLA)
-                    .border(1.dp, if (marcado) ACENTO else BORDE.copy(alpha = 0.6f), CircleShape)
-                    .clickable { onCambiar(if (marcado) dias - dia else dias + dia) },
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    letraDeDia(dia),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = if (marcado) ON_ACENTO else TINTA
-                )
+            Text(
+                letraDeDia(dia),
+                style = MaterialTheme.typography.labelMedium,
+                color = TINTA_SUAVE,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+    Spacer(Modifier.height(4.dp))
+
+    // Celdas del mes: huecos antes del día 1 (la semana empieza en lunes) y después del último.
+    val primerDia = mes.atDay(1)
+    val huecosInicio = primerDia.dayOfWeek.value - 1
+    val celdas: List<LocalDate?> = List(huecosInicio) { null } + (1..mes.lengthOfMonth()).map { mes.atDay(it) }
+    celdas.chunked(7).forEach { semana ->
+        Row(modifier = Modifier.fillMaxWidth()) {
+            semana.forEach { dia ->
+                Box(modifier = Modifier.weight(1f).padding(2.dp), contentAlignment = Alignment.Center) {
+                    if (dia != null) {
+                        val marcado = dia in seleccionadas
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(CircleShape)
+                                .background(if (marcado) ACENTO else Color.Transparent)
+                                .border(
+                                    width = if (dia == hoy) 2.dp else 0.dp,
+                                    color = if (dia == hoy) ACENTO else Color.Transparent,
+                                    shape = CircleShape
+                                )
+                                .clickable { onAlternar(dia) },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                dia.dayOfMonth.toString(),
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = if (marcado) FontWeight.ExtraBold else FontWeight.Medium,
+                                color = if (marcado) ON_ACENTO else TINTA
+                            )
+                        }
+                    }
+                }
             }
+            repeat(7 - semana.size) { Spacer(Modifier.weight(1f)) }
         }
     }
 }
 
-/** L M X J V S D (con X para el miércoles, como en la maqueta, para no repetir la M). */
+/** L M X J V S D (con X para el miércoles, para no repetir la M). */
 private fun letraDeDia(dia: DayOfWeek): String = when (dia) {
     DayOfWeek.MONDAY -> "L"
     DayOfWeek.TUESDAY -> "M"
@@ -825,30 +884,4 @@ private fun letraDeDia(dia: DayOfWeek): String = when (dia) {
     DayOfWeek.FRIDAY -> "V"
     DayOfWeek.SATURDAY -> "S"
     DayOfWeek.SUNDAY -> "D"
-}
-
-/** Fila "Duplicar a la semana siguiente" en tono de acento, con flecha. */
-@Composable
-private fun FilaDuplicar(habilitado: Boolean, copiada: Boolean, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(ACENTO.copy(alpha = 0.16f))
-            .border(1.dp, ACENTO.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
-            .clickable(enabled = habilitado, onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        IconoEnCirculo(Icons.Default.ContentCopy, fondo = ACENTO.copy(alpha = 0.25f), tinta = ACENTO, tamano = 36.dp)
-        Spacer(Modifier.width(12.dp))
-        Text(
-            if (copiada) "Semana copiada ✓" else "Duplicar a la semana siguiente",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.ExtraBold,
-            color = if (habilitado) ACENTO else ACENTO.copy(alpha = 0.5f),
-            modifier = Modifier.weight(1f)
-        )
-        Icon(Icons.Default.ChevronRight, contentDescription = null, tint = ACENTO)
-    }
 }

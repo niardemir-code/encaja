@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
+import com.encaja.app.ui.theme.coloresInterruptorEncaja
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -158,7 +159,7 @@ fun DialogoCategoria(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        Switch(checked = bloquea, onCheckedChange = { bloquea = it })
+                        Switch(checked = bloquea, onCheckedChange = { bloquea = it }, colors = coloresInterruptorEncaja())
                     }
                 }
 

@@ -31,6 +31,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -225,6 +226,7 @@ fun EncajaApp(onCerrarSesion: () -> Unit, viewModel: EncajaAppViewModel = hiltVi
                     ?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
                 val necesidadIdArg = backStackEntry.arguments?.getString("necesidadId")
                 GuiaScreen(
+                    viewModel = hiltViewModel(entradaDelGrafo(navController)),
                     fechaInicial = fechaArg,
                     necesidadIdInicial = necesidadIdArg,
                     // Se llegó aquí resolviendo un aviso concreto de Semana (no
@@ -233,9 +235,9 @@ fun EncajaApp(onCerrarSesion: () -> Unit, viewModel: EncajaAppViewModel = hiltVi
                     onVolverDespuesDeAsignar = { navController.popBackStack() }
                 )
             }
-            composable(Destino.Familia.ruta) { FamiliaScreen() }
-            composable(Destino.Menu.ruta) { MenuScreen() }
-            composable(Destino.Compra.ruta) { CompraScreen() }
+            composable(Destino.Familia.ruta) { FamiliaScreen(viewModel = hiltViewModel(entradaDelGrafo(navController))) }
+            composable(Destino.Menu.ruta) { MenuScreen(viewModel = hiltViewModel(entradaDelGrafo(navController))) }
+            composable(Destino.Compra.ruta) { CompraScreen(viewModel = hiltViewModel(entradaDelGrafo(navController))) }
             composable(RUTA_AJUSTES) {
                 AjustesScreen(
                     onCerrarSesion = onCerrarSesion,
@@ -250,6 +252,17 @@ fun EncajaApp(onCerrarSesion: () -> Unit, viewModel: EncajaAppViewModel = hiltVi
         }
     }
 }
+
+/**
+ * La entrada del back stack del grafo entero, para darle a cada pestaña un ViewModel
+ * que viva mientras viva la app y no solo mientras la pestaña esté en la pila. Al
+ * cambiar de pestaña, la anterior sale del back stack (popUpTo sin saveState, ver la
+ * barra inferior) y con ella moriría su ViewModel: la Guía volvería siempre a hoy, y
+ * Familia y Menú a la semana actual, en vez de quedarse donde estaban.
+ */
+@Composable
+private fun entradaDelGrafo(navController: androidx.navigation.NavHostController): androidx.navigation.NavBackStackEntry =
+    remember(navController) { navController.getBackStackEntry(navController.graph.id) }
 
 /** Avatar circular con las iniciales del usuario, junto al icono de Ajustes. */
 @Composable

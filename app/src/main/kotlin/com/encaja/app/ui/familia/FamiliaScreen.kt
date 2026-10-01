@@ -98,6 +98,10 @@ private val ES = Locale("es")
 @Composable
 fun FamiliaScreen(viewModel: FamiliaViewModel = hiltViewModel()) {
     val pantalla by viewModel.pantalla.collectAsState()
+    // El ViewModel vive ahora lo que vive la app (ver entradaDelGrafo en EncajaApp), para
+    // no perder la semana/día elegido al cambiar de pestaña; a cambio, hay que recargar
+    // al reentrar para reflejar cambios hechos desde otras pantallas.
+    LaunchedEffect(Unit) { viewModel.recargar() }
 
     Box(modifier = Modifier.fillMaxSize().background(FONDO_PANTALLA)) {
         when (val estadoActual = pantalla) {

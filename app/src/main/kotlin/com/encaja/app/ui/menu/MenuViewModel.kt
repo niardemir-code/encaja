@@ -40,7 +40,10 @@ class MenuViewModel @Inject constructor(
 
     /** Recarga completa: vuelve a comprobar sesión y familia (por si han cambiado). Se
      * usa al entrar en la pestaña; cambiar de semana no lo necesita. */
-    fun recargar() = cargar()
+    fun recargar() {
+        // Si ya había datos, se recarga la misma semana sin pasar por "Cargando".
+        if (familyIdActual != null && _pantalla.value is MenuPantallaEstado.ConDatos) cargarDatos() else cargar()
+    }
 
     /** Avanza o retrocede semanas desde el botón "Esta semana" (-1 anterior, +1 siguiente). */
     fun cambiarSemana(delta: Int) {

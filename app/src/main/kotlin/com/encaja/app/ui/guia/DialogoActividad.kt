@@ -26,6 +26,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
+import com.encaja.app.ui.theme.coloresInterruptorEncaja
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -183,7 +184,7 @@ fun DialogoActividad(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    Switch(checked = requiereDesplazamiento, onCheckedChange = { requiereDesplazamiento = it })
+                    Switch(checked = requiereDesplazamiento, onCheckedChange = { requiereDesplazamiento = it }, colors = coloresInterruptorEncaja())
                 }
 
                 if (requiereDesplazamiento && responsables.isNotEmpty()) {

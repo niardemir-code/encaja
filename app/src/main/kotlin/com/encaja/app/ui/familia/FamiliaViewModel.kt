@@ -79,7 +79,12 @@ class FamiliaViewModel @Inject constructor(
 
     /** Recarga completa: vuelve a comprobar sesión y familia (por si han cambiado). Se
      * usa al entrar en la pestaña; cambiar de semana o guardar algo no lo necesita. */
-    fun recargar() = cargar()
+    fun recargar() {
+        // Si ya había datos, se recarga la misma semana sin pasar por "Cargando" (no
+        // vacía la pantalla ni pierde la semana elegida).
+        if (familyIdActual != null && _pantalla.value is FamiliaPantallaEstado.ConDatos) cargarDatos(mostrarCargando = false)
+        else cargar()
+    }
 
     /**
      * Avanza o retrocede semanas desde la cabecera (-1 anterior, +1 siguiente).

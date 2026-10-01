@@ -25,6 +25,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,6 +43,10 @@ import com.encaja.app.domain.model.ArticuloCompraId
 @Composable
 fun CompraScreen(viewModel: CompraViewModel = hiltViewModel()) {
     val pantalla by viewModel.pantalla.collectAsState()
+    // El ViewModel vive ahora lo que vive la app (ver entradaDelGrafo en EncajaApp), para
+    // no perder la semana/día elegido al cambiar de pestaña; a cambio, hay que recargar
+    // al reentrar para reflejar cambios hechos desde otras pantallas.
+    LaunchedEffect(Unit) { viewModel.recargar() }
 
     when (val estadoActual = pantalla) {
         is CompraPantallaEstado.Cargando -> {
