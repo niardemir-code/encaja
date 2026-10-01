@@ -4,7 +4,7 @@ package com.encaja.app.ui.ocupaciones
 
 // NOTA: depende de Jetpack Compose y Hilt, no compilado en este entorno.
 // Pantalla "Ocupaciones" (Ajustes → Ocupaciones): el listado de todas las ocupaciones
-// vigentes de personas y unidades familiares, con filtro por quién (chips) y por texto,
+// vigentes de personas y unidades familiares, con filtro por quién (una ventana) y por texto,
 // una casilla por ocupación y un botón para borrar de golpe la selección. Mismo estilo
 // que "Todas las actividades".
 
@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.FilterAlt
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -40,19 +41,13 @@ fun OcupacionesScreen(viewModel: OcupacionesViewModel = hiltViewModel()) {
     var filtroQuien by remember { mutableStateOf<String?>(null) }
     var filtroTexto by remember { mutableStateOf("") }
     var confirmarBorrado by remember { mutableStateOf(false) }
+    var selectorAbierto by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { viewModel.recargar() }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Text("Ocupaciones", style = MaterialTheme.typography.headlineSmall)
-        Spacer(Modifier.height(4.dp))
-        Text(
-            "Todo lo apuntado en Familia (trabajo, médico, viajes…) de personas y unidades " +
-                "familiares, para repasarlo y borrar lo que sobre. Lo de hace más de un mes se borra solo.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(8.dp))
 
         when (val estadoActual = pantalla) {
             is OcupacionesPantallaEstado.Cargando -> CircularProgressIndicator()
@@ -63,28 +58,65 @@ fun OcupacionesScreen(viewModel: OcupacionesViewModel = hiltViewModel()) {
             )
 
             is OcupacionesPantallaEstado.ConDatos -> {
-                // Filtro por quién: Todos, cada persona y cada unidad familiar.
+                // Filtro por quién (Todos, cada persona, cada unidad): un solo botón que
+                // muestra la elección actual y abre una ventana para cambiarla, para no
+                // comerle sitio al listado. Al lado, el buscador por texto.
                 val opciones = listOf(OpcionFiltro(null, "Todos")) +
                     estadoActual.cuidadores.map { OpcionFiltro(it.id.value, it.nombre) } +
                     estadoActual.unidades.map { OpcionFiltro(it.id.value, it.nombre) }
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    opciones.forEach { opcion ->
-                        FilterChip(
-                            selected = filtroQuien == opcion.idTexto,
-                            onClick = { filtroQuien = opcion.idTexto },
-                            label = { Text(opcion.etiqueta) }
-                        )
-                    }
+                val etiquetaFiltro = opciones.firstOrNull { it.idTexto == filtroQuien }?.etiqueta ?: "Todos"
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    OutlinedTextField(
+                        value = filtroTexto,
+                        onValueChange = { filtroTexto = it },
+                        placeholder = { Text("Buscar…") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    FilterChip(
+                        selected = filtroQuien != null,
+                        onClick = { selectorAbierto = true },
+                        label = { Text(etiquetaFiltro) },
+                        leadingIcon = { Icon(Icons.Default.FilterAlt, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                    )
                 }
-                Spacer(Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = filtroTexto,
-                    onValueChange = { filtroTexto = it },
-                    label = { Text("Buscar por categoría o detalle") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(4.dp))
+
+                if (selectorAbierto) {
+                    AlertDialog(
+                        onDismissRequest = { selectorAbierto = false },
+                        title = { Text("Mostrar ocupaciones de") },
+                        text = {
+                            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                                opciones.forEachIndexed { indice, opcion ->
+                                    if (indice == 1 && estadoActual.cuidadores.isNotEmpty()) {
+                                        Text("Personas", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                                    }
+                                    if (indice == 1 + estadoActual.cuidadores.size && estadoActual.unidades.isNotEmpty()) {
+                                        Spacer(Modifier.height(6.dp))
+                                        Text("Unidades familiares", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                                    }
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .clickable { filtroQuien = opcion.idTexto; selectorAbierto = false }
+                                            .padding(vertical = 2.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        RadioButton(
+                                            selected = filtroQuien == opcion.idTexto,
+                                            onClick = { filtroQuien = opcion.idTexto; selectorAbierto = false }
+                                        )
+                                        Text(opcion.etiqueta, style = MaterialTheme.typography.bodyLarge)
+                                    }
+                                }
+                            }
+                        },
+                        confirmButton = { TextButton(onClick = { selectorAbierto = false }) { Text("Cerrar") } }
+                    )
+                }
 
                 val visibles = estadoActual.ocupaciones.filter { ocupacion ->
                     (filtroQuien == null || filtroQuien in ocupacion.idsFiltro) &&
