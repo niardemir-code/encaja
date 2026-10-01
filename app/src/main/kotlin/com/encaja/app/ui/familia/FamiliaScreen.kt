@@ -32,7 +32,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FilterAlt
-import androidx.compose.material.icons.filled.Label
+import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -188,7 +188,6 @@ private fun ContenidoFamilia(estado: FamiliaUiState, viewModel: FamiliaViewModel
                 caregiverIds = caregiverIds,
                 nombres = nombres,
                 fecha = fecha,
-                lunes = estado.lunes,
                 bloquesDelDia = bloquesDelDia,
                 onEliminar = { viewModel.eliminarBloqueDe(caregiverIds, it) },
                 turnos = estado.turnos,
@@ -226,7 +225,7 @@ private fun ContenidoFamilia(estado: FamiliaUiState, viewModel: FamiliaViewModel
                     Column(modifier = Modifier.padding(14.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             CabeceraTarjeta(
-                                icono = Icons.Default.Label,
+                                icono = Icons.AutoMirrored.Filled.Label,
                                 titulo = "Categorías de estado de los cuidadores",
                                 subtitulo = "Qué significa cada color de las casillas.",
                                 modifier = Modifier.weight(1f)

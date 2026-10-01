@@ -27,7 +27,7 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.FormatListBulleted
+import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.School
@@ -760,7 +760,7 @@ private fun CabeceraActividadesDelDia(onAnadir: () -> Unit) {
     val extra = LocalEncajaExtraColors.current
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Icon(
-            Icons.Default.FormatListBulleted,
+            Icons.AutoMirrored.Filled.FormatListBulleted,
             contentDescription = null,
             tint = TINTA_SUAVE,
             modifier = Modifier.size(22.dp)

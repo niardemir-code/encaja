@@ -21,7 +21,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -72,7 +72,7 @@ fun AjustesCuidadoresScreen(viewModel: AjustesViewModel = hiltViewModel()) {
                 )
 
                 Spacer(Modifier.height(24.dp))
-                Divider()
+                HorizontalDivider()
                 Spacer(Modifier.height(24.dp))
 
                 SeccionUnidadesFamiliares(

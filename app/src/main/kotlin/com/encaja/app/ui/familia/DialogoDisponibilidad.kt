@@ -107,7 +107,6 @@ fun DialogoDisponibilidad(
     caregiverIds: List<CaregiverId>,
     nombres: Map<CaregiverId, String>,
     fecha: LocalDate,
-    lunes: LocalDate,
     bloquesDelDia: List<AvailabilityBlock>,
     turnos: List<TurnoTrabajo>,
     categorias: List<CategoriaDisponibilidad>,
