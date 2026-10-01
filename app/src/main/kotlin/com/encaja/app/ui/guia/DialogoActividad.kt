@@ -24,6 +24,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import com.encaja.app.ui.theme.coloresInterruptorEncaja
@@ -32,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.encaja.app.domain.model.Child
 import com.encaja.app.domain.model.CoverageNeed
@@ -43,6 +46,7 @@ import com.encaja.app.ui.familia.millisUtcAFecha
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.YearMonth
 import java.time.format.TextStyle
 import java.util.Locale
 import java.util.UUID
@@ -105,6 +109,9 @@ fun DialogoActividad(
     var repetir by remember { mutableStateOf(false) }
     var diasRepeticion by remember { mutableStateOf(setOf(fechaBase.dayOfWeek)) }
     var hastaRepeticion by remember { mutableStateOf(fechaBase.plusWeeks(4)) }
+    // Días sueltos añadidos a mano con el calendario, además del patrón semanal
+    // (mismo sistema que "Repetir en otros días" de Familia).
+    var fechasExtra by remember { mutableStateOf(emptySet<LocalDate>()) }
 
     // Al editar una ocurrencia de un grupo de repetición: si el cambio (o el
     // borrado) se aplica solo a ella, o también a las siguientes del grupo.
@@ -116,7 +123,7 @@ fun DialogoActividad(
         // Al editar, fechaBase es la fecha de la actividad original: se incluye siempre,
         // marque o no el usuario su día de la semana, para no dejarla huérfana (con un
         // hueco sin cubrir de la actividad vieja) al pasar a repetirla.
-        (fechasRepetidas(fechaBase, hastaRepeticion, diasRepeticion) + fechaBase).distinct().sorted()
+        (fechasRepetidas(fechaBase, hastaRepeticion, diasRepeticion) + fechaBase + fechasExtra).distinct().sorted()
     } else {
         listOf(fechaBase)
     }
@@ -259,18 +266,27 @@ fun DialogoActividad(
                     HorizontalDivider()
                     Spacer(Modifier.height(8.dp))
                     Row(
-                        modifier = Modifier.fillMaxWidth().clickable { repetir = !repetir },
+                        modifier = Modifier.fillMaxWidth().clickable {
+                            repetir = !repetir
+                            if (!repetir) fechasExtra = emptySet()
+                        },
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Checkbox(checked = repetir, onCheckedChange = { repetir = it })
+                        Checkbox(checked = repetir, onCheckedChange = { marcado ->
+                            repetir = marcado
+                            if (!marcado) fechasExtra = emptySet()
+                        })
                         Text("Repetir cada semana")
                     }
                     if (repetir) {
                         SelectorDiasRepeticion(
+                            fechaBase = fechaBase,
                             diasRepeticion = diasRepeticion,
                             onDiasChange = { diasRepeticion = it },
                             hastaRepeticion = hastaRepeticion,
                             onHastaChange = { hastaRepeticion = it },
+                            fechasExtra = fechasExtra,
+                            onFechasExtraChange = { fechasExtra = it },
                             fechasAGuardar = fechasAGuardar
                         )
                     }
@@ -450,6 +466,8 @@ private fun DialogoRepetirActividad(
     var hastaRepeticion by remember(hastaSerieActual) {
         mutableStateOf(hastaSerieActual ?: fechaInicial.plusWeeks(4))
     }
+    // Días sueltos añadidos a mano con el calendario, además del patrón semanal.
+    var fechasExtra by remember { mutableStateOf(emptySet<LocalDate>()) }
 
     // Cambiar el patrón de una serie que ya existe es distinto de copiar la actividad a
     // otro día suelto: aquí no se elige un día de destino, se compara el nuevo patrón
@@ -458,8 +476,8 @@ private fun DialogoRepetirActividad(
 
     val horasValidas = fin.isAfter(inicio)
     val fechasAGuardar = when {
-        modoPatron -> fechasRepetidas(fechaInicial, hastaRepeticion, diasRepeticion)
-        repetirCadaSemana -> (fechasRepetidas(fecha, hastaRepeticion, diasRepeticion) + fecha).distinct().sorted()
+        modoPatron -> (fechasRepetidas(fechaInicial, hastaRepeticion, diasRepeticion) + fechasExtra).distinct().sorted()
+        repetirCadaSemana -> (fechasRepetidas(fecha, hastaRepeticion, diasRepeticion) + fecha + fechasExtra).distinct().sorted()
         else -> listOf(fecha)
     }
     val puedeConfirmar = horasValidas && fechasAGuardar.isNotEmpty()
@@ -503,10 +521,16 @@ private fun DialogoRepetirActividad(
                 HorizontalDivider()
                 Spacer(Modifier.height(8.dp))
                 Row(
-                    modifier = Modifier.fillMaxWidth().clickable { repetirCadaSemana = !repetirCadaSemana },
+                    modifier = Modifier.fillMaxWidth().clickable {
+                        repetirCadaSemana = !repetirCadaSemana
+                        if (!repetirCadaSemana) fechasExtra = emptySet()
+                    },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Checkbox(checked = repetirCadaSemana, onCheckedChange = { repetirCadaSemana = it })
+                    Checkbox(checked = repetirCadaSemana, onCheckedChange = { marcado ->
+                        repetirCadaSemana = marcado
+                        if (!marcado) fechasExtra = emptySet()
+                    })
                     Text("Repetir cada semana")
                 }
                 if (perteneceAGrupo && repetirCadaSemana) {
@@ -520,10 +544,13 @@ private fun DialogoRepetirActividad(
                 }
                 if (repetirCadaSemana) {
                     SelectorDiasRepeticion(
+                        fechaBase = fechaInicial,
                         diasRepeticion = diasRepeticion,
                         onDiasChange = { diasRepeticion = it },
                         hastaRepeticion = hastaRepeticion,
                         onHastaChange = { hastaRepeticion = it },
+                        fechasExtra = fechasExtra,
+                        onFechasExtraChange = { fechasExtra = it },
                         fechasAGuardar = fechasAGuardar
                     )
                 }
@@ -543,10 +570,13 @@ private fun DialogoRepetirActividad(
  * repetición nueva. */
 @Composable
 private fun SelectorDiasRepeticion(
+    fechaBase: LocalDate,
     diasRepeticion: Set<DayOfWeek>,
     onDiasChange: (Set<DayOfWeek>) -> Unit,
     hastaRepeticion: LocalDate,
     onHastaChange: (LocalDate) -> Unit,
+    fechasExtra: Set<LocalDate>,
+    onFechasExtraChange: (Set<LocalDate>) -> Unit,
     fechasAGuardar: List<LocalDate>
 ) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -583,6 +613,100 @@ private fun SelectorDiasRepeticion(
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
+
+    Spacer(Modifier.height(12.dp))
+    HorizontalDivider()
+    Spacer(Modifier.height(8.dp))
+    Text("O añade días concretos con el calendario", style = MaterialTheme.typography.labelMedium)
+    Spacer(Modifier.height(8.dp))
+    CalendarioRepeticion(
+        mesInicial = YearMonth.from(fechaBase),
+        seleccionadas = fechasExtra,
+        onAlternar = { dia ->
+            onFechasExtraChange(if (dia in fechasExtra) fechasExtra - dia else fechasExtra + dia)
+        }
+    )
+}
+
+/**
+ * Calendario de un mes (con flechas para cambiar de mes) para añadir días sueltos, en
+ * cualquier combinación, además del patrón semanal de [SelectorDiasRepeticion] — mismo
+ * sistema que "Repetir en otros días" de Familia.
+ */
+@Composable
+private fun CalendarioRepeticion(mesInicial: YearMonth, seleccionadas: Set<LocalDate>, onAlternar: (LocalDate) -> Unit) {
+    var mes by remember { mutableStateOf(mesInicial) }
+    val hoy = LocalDate.now()
+
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        IconButton(onClick = { mes = mes.minusMonths(1) }) {
+            Icon(Icons.Default.ChevronLeft, contentDescription = "Mes anterior")
+        }
+        Text(
+            mes.month.getDisplayName(TextStyle.FULL, ES).replaceFirstChar { it.uppercase() } + " ${mes.year}",
+            style = MaterialTheme.typography.titleSmall,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.weight(1f)
+        )
+        IconButton(onClick = { mes = mes.plusMonths(1) }) {
+            Icon(Icons.Default.ChevronRight, contentDescription = "Mes siguiente")
+        }
+    }
+    Row(modifier = Modifier.fillMaxWidth()) {
+        DayOfWeek.values().forEach { dia ->
+            Text(
+                dia.getDisplayName(TextStyle.NARROW, ES).uppercase(),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+    Spacer(Modifier.height(4.dp))
+
+    val primerDia = mes.atDay(1)
+    val huecosInicio = primerDia.dayOfWeek.value - 1
+    val celdas: List<LocalDate?> = List(huecosInicio) { null } + (1..mes.lengthOfMonth()).map { mes.atDay(it) }
+    celdas.chunked(7).forEach { semana ->
+        Row(modifier = Modifier.fillMaxWidth()) {
+            semana.forEach { dia ->
+                Box(modifier = Modifier.weight(1f).padding(2.dp), contentAlignment = Alignment.Center) {
+                    if (dia != null) {
+                        val marcado = dia in seleccionadas
+                        Box(
+                            modifier = Modifier
+                                .size(34.dp)
+                                .clip(CircleShape)
+                                .background(if (marcado) MaterialTheme.colorScheme.primary else Color.Transparent)
+                                .border(
+                                    width = if (dia == hoy) 2.dp else 0.dp,
+                                    color = if (dia == hoy) MaterialTheme.colorScheme.primary else Color.Transparent,
+                                    shape = CircleShape
+                                )
+                                .clickable { onAlternar(dia) },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                dia.dayOfMonth.toString(),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (marcado) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                }
+            }
+            repeat(7 - semana.size) { Spacer(Modifier.weight(1f)) }
+        }
+    }
+    if (seleccionadas.isNotEmpty()) {
+        Spacer(Modifier.height(4.dp))
+        Text(
+            if (seleccionadas.size == 1) "1 día suelto añadido." else "${seleccionadas.size} días sueltos añadidos.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
 }
 
 /** Menú desplegable para elegir quién (persona o subgrupo familiar) lleva o recoge al niño. */

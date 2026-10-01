@@ -819,10 +819,17 @@ private fun TarjetaHueco(hueco: Hueco, nombreNino: String?, onClick: () -> Unit)
         MotivoHueco.FALTA_QUIEN_RECOGE -> "recoger"
         MotivoHueco.SIN_ASIGNACION -> "llevar ni recoger"
     }
+    // Llevar se hace a la hora de entrada, pero recoger se hace a la hora de
+    // salida — si no, el aviso de recogida muestra la hora equivocada.
+    val horaReferencia = if (hueco.motivo == MotivoHueco.FALTA_QUIEN_RECOGE) {
+        hueco.need.horaFin
+    } else {
+        hueco.need.horaInicio
+    }
     TarjetaAviso(
         titulo = tituloConNino(hueco.need.descripcion, nombreNino),
         chip = "Sin cubrir",
-        texto = "${formatearFechaHueco(hueco.need.fecha)} a las ${formatearHoraHueco(hueco.need.horaInicio)}: " +
+        texto = "${formatearFechaHueco(hueco.need.fecha)} a las ${formatearHoraHueco(horaReferencia)}: " +
             "todavía no hay nadie asignado para $queFalta$quien.",
         fondo = LocalEncajaExtraColors.current.rosaHueco,
         franja = MaterialTheme.colorScheme.error,

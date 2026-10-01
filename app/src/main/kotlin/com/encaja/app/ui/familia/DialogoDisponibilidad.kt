@@ -144,6 +144,21 @@ fun DialogoDisponibilidad(
     var horasTodoElDia by remember(seleccionId) { mutableStateOf(false) }
     var fechasRepetir by remember(seleccionId) { mutableStateOf(setOf(fecha)) }
     var repetirActivo by remember(seleccionId) { mutableStateOf(false) }
+    // Días de la semana (L-D) marcados para repetir la ocupación cada semana, además del
+    // calendario manual: al marcar uno se añaden a fechasRepetir sus próximas apariciones
+    // (ver HORIZONTE_SEMANAS_REPETIR); al desmarcarlo se quitan esas mismas fechas.
+    var diasSemanaRepetir by remember(seleccionId) { mutableStateOf(emptySet<DayOfWeek>()) }
+
+    fun alternarDiaSemana(dia: DayOfWeek) {
+        val activando = dia !in diasSemanaRepetir
+        diasSemanaRepetir = if (activando) diasSemanaRepetir + dia else diasSemanaRepetir - dia
+        val fechasDelDia = fechasParaDiaSemana(fecha, dia, HORIZONTE_SEMANAS_REPETIR).toSet()
+        fechasRepetir = if (activando) {
+            fechasRepetir + fechasDelDia
+        } else {
+            (fechasRepetir - fechasDelDia).ifEmpty { setOf(fecha) }
+        }
+    }
     var horasEtiqueta by remember(seleccionId) { mutableStateOf("") }
     var guardarComoHorario by remember(seleccionId) { mutableStateOf(false) }
     var nombreHorario by remember(seleccionId) { mutableStateOf("") }
@@ -191,6 +206,7 @@ fun DialogoDisponibilidad(
         horasEtiqueta = bloque.etiqueta.orEmpty()
         fechasRepetir = setOf(bloque.fecha)
         repetirActivo = false
+        diasSemanaRepetir = emptySet()
         rangoDesde = bloque.fecha
         rangoHasta = bloque.fecha
     }
@@ -392,7 +408,10 @@ fun DialogoDisponibilidad(
                                 checked = repetirActivo,
                                 onCheckedChange = { activo ->
                                     repetirActivo = activo
-                                    if (!activo) fechasRepetir = setOf(fecha)
+                                    if (!activo) {
+                                        fechasRepetir = setOf(fecha)
+                                        diasSemanaRepetir = emptySet()
+                                    }
                                 },
                                 colors = coloresInterruptorEncaja()
                             )
@@ -410,6 +429,19 @@ fun DialogoDisponibilidad(
                                             fechasRepetir + dia
                                         }
                                     }
+                                )
+                                Spacer(Modifier.height(14.dp))
+                                Separador()
+                                Spacer(Modifier.height(10.dp))
+                                Text(
+                                    "O cada semana en",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = TINTA_SUAVE
+                                )
+                                Spacer(Modifier.height(8.dp))
+                                SelectorDiasSemana(
+                                    seleccionados = diasSemanaRepetir,
+                                    onAlternar = { dia -> alternarDiaSemana(dia) }
                                 )
                             }
                             Spacer(Modifier.height(8.dp))
@@ -923,4 +955,45 @@ private fun letraDeDia(dia: DayOfWeek): String = when (dia) {
     DayOfWeek.FRIDAY -> "V"
     DayOfWeek.SATURDAY -> "S"
     DayOfWeek.SUNDAY -> "D"
+}
+
+/** Cuántas semanas hacia delante se generan fechas al marcar un día de la semana para
+ * repetir (unas 6 meses) — suficiente para que no haga falta volver a tocarlo. */
+private const val HORIZONTE_SEMANAS_REPETIR = 26
+
+/** [desde] y sus próximas [semanas] apariciones de [dia] (incluyendo [desde] si coincide). */
+private fun fechasParaDiaSemana(desde: LocalDate, dia: DayOfWeek, semanas: Int): List<LocalDate> {
+    val primera = desde.with(java.time.temporal.TemporalAdjusters.nextOrSame(dia))
+    return (0 until semanas).map { primera.plusWeeks(it.toLong()) }
+}
+
+/**
+ * Fila de siete círculos (L a D) para marcar en qué días de la semana se repite la
+ * ocupación cada semana — además de, no en vez de, las fechas sueltas del calendario.
+ */
+@Composable
+private fun SelectorDiasSemana(seleccionados: Set<DayOfWeek>, onAlternar: (DayOfWeek) -> Unit) {
+    Row(modifier = Modifier.fillMaxWidth()) {
+        DayOfWeek.values().forEach { dia ->
+            val marcado = dia in seleccionados
+            Box(modifier = Modifier.weight(1f).padding(2.dp), contentAlignment = Alignment.Center) {
+                Box(
+                    modifier = Modifier
+                        .size(34.dp)
+                        .clip(CircleShape)
+                        .background(if (marcado) ACENTO else Color.Transparent)
+                        .border(width = 1.dp, color = if (marcado) ACENTO else TINTA_SUAVE.copy(alpha = 0.35f), shape = CircleShape)
+                        .clickable { onAlternar(dia) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        letraDeDia(dia),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = if (marcado) FontWeight.ExtraBold else FontWeight.Medium,
+                        color = if (marcado) ON_ACENTO else TINTA
+                    )
+                }
+            }
+        }
+    }
 }
