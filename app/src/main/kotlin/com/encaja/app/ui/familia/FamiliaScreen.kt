@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
+@file:OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 
 package com.encaja.app.ui.familia
 
@@ -13,10 +13,14 @@ package com.encaja.app.ui.familia
 // Los colores del diseño están aquí como constantes para no tocar el tema
 // del resto de pantallas.
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -186,7 +190,7 @@ private fun ContenidoFamilia(estado: FamiliaUiState, viewModel: FamiliaViewModel
                 fecha = fecha,
                 lunes = estado.lunes,
                 bloquesDelDia = bloquesDelDia,
-                onEliminar = { viewModel.eliminarBloque(it) },
+                onEliminar = { viewModel.eliminarBloqueDe(caregiverIds, it) },
                 turnos = estado.turnos,
                 categorias = estado.categorias,
                 onGuardarHoras = { ids, categoria, fechas, inicio, fin, duplicar, etiqueta ->
@@ -215,8 +219,7 @@ private fun ContenidoFamilia(estado: FamiliaUiState, viewModel: FamiliaViewModel
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 2.dp, bottom = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 2.dp, bottom = 16.dp)
         ) {
             item {
                 Tarjeta {
@@ -236,10 +239,10 @@ private fun ContenidoFamilia(estado: FamiliaUiState, viewModel: FamiliaViewModel
                         Leyenda(estado.categorias)
                     }
                 }
+                Spacer(Modifier.height(12.dp))
             }
 
-            item {
-                TarjetaCuadricula(
+            cuadriculaDisponibilidad(
                     lunes = estado.lunes,
                     cuidadores = cuidadoresVisibles,
                     unidades = unidadesVisibles,
@@ -268,7 +271,6 @@ private fun ContenidoFamilia(estado: FamiliaUiState, viewModel: FamiliaViewModel
                         }
                     }
                 )
-            }
         }
     }
 }
@@ -406,13 +408,13 @@ private fun BotonCircular(icono: ImageVector, descripcion: String, onClick: () -
 }
 
 /**
- * Tarjeta con la cuadrícula de disponibilidad. Arriba, la cabecera con los 7 días;
- * debajo, un bloque por persona: su avatar y nombre en una línea y, justo debajo,
- * sus 7 casillas ocupando todo el ancho, alineadas con la cabecera. Así la semana
- * entera (lunes a domingo) se ve siempre sin desplazarse.
+ * La cuadrícula de disponibilidad, repartida en varios elementos de la lista para que
+ * la fila de los 7 días quede fija arriba al hacer scroll (stickyHeader) y se vea a la
+ * vez que las casillas de las personas de más abajo. Visualmente sigue siendo una
+ * tarjeta: la cabecera lleva las esquinas de arriba redondeadas, las filas el mismo
+ * fondo y el último elemento las esquinas de abajo.
  */
-@Composable
-private fun TarjetaCuadricula(
+private fun LazyListScope.cuadriculaDisponibilidad(
     lunes: LocalDate,
     cuidadores: List<CuidadorDisponibilidadSemana>,
     unidades: List<UnidadDisponibilidadSemana>,
@@ -423,60 +425,99 @@ private fun TarjetaCuadricula(
     cabecera: @Composable () -> Unit = {}
 ) {
     val fechas = (0..6).map { lunes.plusDays(it.toLong()) }
-    val hoy = LocalDate.now()
 
-    Tarjeta {
-        Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Box(modifier = Modifier.padding(start = 4.dp, end = 4.dp, top = 4.dp)) { cabecera() }
-            // Mismo padding lateral que el interior de cada bloque, para que los días cuadren.
-            Row(
-                modifier = Modifier.fillMaxWidth().height(ALTO_CABECERA).padding(horizontal = PADDING_BLOQUE),
-                horizontalArrangement = Arrangement.spacedBy(ESPACIO_CELDAS)
-            ) {
-                fechas.forEach { fecha ->
-                    CabeceraDia(fecha, esHoy = fecha == hoy, modifier = Modifier.weight(1f))
-                }
+    item(key = "cuadricula-cabecera") {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
+                .background(MaterialTheme.colorScheme.surface)
+                .padding(start = 14.dp, end = 14.dp, top = 14.dp, bottom = 4.dp)
+        ) { cabecera() }
+    }
+
+    stickyHeader(key = "cuadricula-dias") {
+        val hoy = LocalDate.now()
+        // Mismo padding lateral que el interior de cada bloque, para que los días cuadren.
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surface)
+                .padding(horizontal = 10.dp + PADDING_BLOQUE, vertical = 4.dp)
+                .height(ALTO_CABECERA),
+            horizontalArrangement = Arrangement.spacedBy(ESPACIO_CELDAS)
+        ) {
+            fechas.forEach { fecha ->
+                CabeceraDia(fecha, esHoy = fecha == hoy, modifier = Modifier.weight(1f))
             }
+        }
+    }
 
-            if (cuidadores.isEmpty() && unidades.isEmpty()) {
+    if (cuidadores.isEmpty() && unidades.isEmpty()) {
+        item(key = "cuadricula-vacia") {
+            Box(modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface).padding(horizontal = 18.dp, vertical = 8.dp)) {
                 Text(
                     if (hayOcultosPorFiltro) {
                         "Has ocultado a todo el mundo; usa el botón Cuidadores para volver a verlos."
                     } else {
                         "Añade personas en Ajustes para ver aquí su disponibilidad."
                     },
-                    modifier = Modifier.padding(8.dp),
                     style = MaterialTheme.typography.bodyMedium,
                     color = TINTA_SUAVE
                 )
             }
-
-            cuidadores.forEachIndexed { indice, cuidadorSemana ->
-                BloqueFila(
-                    nombre = cuidadorSemana.caregiver.nombreCompleto,
-                    iniciales = iniciales[cuidadorSemana.caregiver.id] ?: "",
-                    colores = COLORES_AVATAR[indice % COLORES_AVATAR.size],
-                    dias = cuidadorSemana.dias,
-                    categorias = categorias,
-                    onClickDia = { fecha -> onClickDia(cuidadorSemana.caregiver.id.value, fecha) }
-                )
-            }
-
-            // Unidades familiares: sus casillas juntan los bloqueos de todos sus miembros;
-            // al tocarlas se ve lo de cada uno y lo que se añade se aplica a todos.
-            unidades.forEach { unidadSemana ->
-                BloqueFila(
-                    nombre = unidadSemana.unidad.nombre,
-                    iniciales = unidadSemana.unidad.codigo.take(2).uppercase(),
-                    colores = COLOR_AVATAR_UNIDAD,
-                    dias = unidadSemana.dias,
-                    categorias = categorias,
-                    esUnidad = true,
-                    onClickDia = { fecha -> onClickDia(unidadSemana.unidad.id.value, fecha) }
-                )
-            }
         }
     }
+
+    itemsIndexed(cuidadores, key = { _, c -> "cuidador-" + c.caregiver.id.value }) { indice, cuidadorSemana ->
+        FilaDeCuadricula {
+            BloqueFila(
+                nombre = cuidadorSemana.caregiver.nombreCompleto,
+                iniciales = iniciales[cuidadorSemana.caregiver.id] ?: "",
+                colores = COLORES_AVATAR[indice % COLORES_AVATAR.size],
+                dias = cuidadorSemana.dias,
+                categorias = categorias,
+                onClickDia = { fecha -> onClickDia(cuidadorSemana.caregiver.id.value, fecha) }
+            )
+        }
+    }
+
+    // Unidades familiares: sus casillas juntan los bloqueos de todos sus miembros;
+    // al tocarlas se ve lo de cada uno y lo que se añade se aplica a todos.
+    items(unidades, key = { "unidad-" + it.unidad.id.value }) { unidadSemana ->
+        FilaDeCuadricula {
+            BloqueFila(
+                nombre = unidadSemana.unidad.nombre,
+                iniciales = unidadSemana.unidad.codigo.take(2).uppercase(),
+                colores = COLOR_AVATAR_UNIDAD,
+                dias = unidadSemana.dias,
+                categorias = categorias,
+                esUnidad = true,
+                onClickDia = { fecha -> onClickDia(unidadSemana.unidad.id.value, fecha) }
+            )
+        }
+    }
+
+    item(key = "cuadricula-pie") {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(12.dp)
+                .clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
+                .background(MaterialTheme.colorScheme.surface)
+        )
+    }
+}
+
+/** Una fila de la cuadrícula con el fondo de la tarjeta, para que la tarjeta parezca continua. */
+@Composable
+private fun FilaDeCuadricula(contenido: @Composable () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface)
+            .padding(horizontal = 10.dp, vertical = 4.dp)
+    ) { contenido() }
 }
 
 /** Letra y número del día; el de hoy va resaltado en lavanda. */

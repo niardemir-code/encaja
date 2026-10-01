@@ -99,3 +99,19 @@ fun fechasEntre(desde: LocalDate, hasta: LocalDate): List<LocalDate> {
 fun fechaAMillisUtc(fecha: LocalDate): Long = fecha.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
 
 fun millisUtcAFecha(millis: Long): LocalDate = Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate()
+
+/**
+ * Si dos bloques son "la misma ocupación" aunque sean de personas distintas: misma fecha,
+ * horas, categoría y detalle. Es lo que pasa cuando se apunta algo desde una unidad
+ * familiar, que se copia a cada miembro.
+ */
+fun AvailabilityBlock.mismaOcupacionQue(otro: AvailabilityBlock): Boolean =
+    fecha == otro.fecha && horaInicio == otro.horaInicio && horaFin == otro.horaFin &&
+        motivo == otro.motivo && categoriaId == otro.categoriaId && (etiqueta ?: "") == (otro.etiqueta ?: "")
+
+/** Una sola entrada por ocupación aunque la tengan varias personas (para la fila de una unidad). */
+fun List<AvailabilityBlock>.sinRepetirEntrePersonas(): List<AvailabilityBlock> {
+    val resultado = mutableListOf<AvailabilityBlock>()
+    for (bloque in this) if (resultado.none { it.mismaOcupacionQue(bloque) }) resultado += bloque
+    return resultado
+}

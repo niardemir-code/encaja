@@ -213,10 +213,19 @@ class FamiliaViewModel @Inject constructor(
         }
     }
 
-    fun eliminarBloque(bloque: AvailabilityBlock) {
+    fun eliminarBloque(bloque: AvailabilityBlock) = eliminarBloqueDe(listOf(bloque.caregiverId), bloque)
+
+    /**
+     * Borra la ocupación de [bloque] a cada persona de [caregiverIds] que la tenga igual
+     * (misma fecha, horas, categoría y detalle): desde una unidad familiar, borrar algo
+     * lo quita también de todos sus miembros.
+     */
+    fun eliminarBloqueDe(caregiverIds: List<CaregiverId>, bloque: AvailabilityBlock) {
         val familyId = familyIdActual ?: return
         viewModelScope.launch {
-            availabilityRepository.eliminarBloque(familyId, bloque.caregiverId, bloque.fecha, bloque.horaInicio)
+            val existentes = availabilityRepository.obtenerDisponibilidad(familyId, bloque.fecha, bloque.fecha)
+                .filter { it.caregiverId in caregiverIds && it.mismaOcupacionQue(bloque) }
+            existentes.forEach { availabilityRepository.eliminarBloque(familyId, it.caregiverId, it.fecha, it.horaInicio) }
             cargarDatos(mostrarCargando = false)
         }
     }

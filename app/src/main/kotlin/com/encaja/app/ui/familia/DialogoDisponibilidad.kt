@@ -123,7 +123,7 @@ fun DialogoDisponibilidad(
 ) {
     // Si el día tiene una sola ocupación, la hoja se abre directamente editándola (con
     // su categoría elegida y el formulario relleno); si tiene varias, se toca la que sea.
-    val bloqueInicial = remember { bloquesDelDia.singleOrNull() }
+    val bloqueInicial = remember { bloquesDelDia.sinRepetirEntrePersonas().singleOrNull() }
     // Se guarda el id (no la categoría) para ver siempre su versión más reciente tras editarla.
     var seleccionId by remember { mutableStateOf<CategoriaId?>(bloqueInicial?.categoriaEn(categorias)?.id) }
     val seleccionada = categorias.firstOrNull { it.id == seleccionId }
@@ -133,7 +133,9 @@ fun DialogoDisponibilidad(
     // guarda el nuevo en su lugar (solo para su persona, aunque estemos en una unidad).
     // Nada se toca hasta pulsar Guardar o Borrar: cancelar deja todo como estaba.
     var bloqueEnEdicion by remember { mutableStateOf<AvailabilityBlock?>(bloqueInicial) }
-    val destinatarios = bloqueEnEdicion?.let { listOf(it.caregiverId) } ?: caregiverIds
+    // En una unidad familiar, lo que se guarda (también al editar y al repetir en otros
+    // días) se aplica a todos sus miembros: la unidad "va junta". En una persona, solo a ella.
+    val destinatarios = caregiverIds
 
     // Estado del formulario, elevado aquí para que Guardar (abajo del todo) lo vea. Se
     // reinicia al cambiar de categoría con el primer horario guardado de esa categoría.
@@ -239,14 +241,19 @@ fun DialogoDisponibilidad(
                     )
                     Spacer(Modifier.height(8.dp))
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        bloquesDelDia.sortedWith(compareBy({ it.caregiverId.value }, { it.horaInicio })).forEach { bloque ->
+                        bloquesDelDia.sortedBy { it.horaInicio }.sinRepetirEntrePersonas().forEach { bloque ->
                             val categoria = bloque.categoriaEn(categorias)
                             val editando = bloqueEnEdicion == bloque
+                            // En una unidad: quién tiene esta ocupación (nada si la tienen todos).
+                            val quienes = bloquesDelDia.filter { it.mismaOcupacionQue(bloque) }.map { it.caregiverId }.toSet()
+                            val etiquetaQuienes = if (caregiverIds.size > 1 && !caregiverIds.all { it in quienes }) {
+                                quienes.mapNotNull { nombres[it] }.joinToString(", ")
+                            } else null
                             FilaBloqueDelDia(
                                 categoria = categoria,
                                 subtitulo = listOfNotNull(
                                     textoHorario(bloque),
-                                    nombres[bloque.caregiverId].takeIf { caregiverIds.size > 1 },
+                                    etiquetaQuienes,
                                     bloque.etiqueta?.takeIf { it.isNotBlank() },
                                     "no ocupa".takeIf { !categoria.bloquea }
                                 ).joinToString(" · "),

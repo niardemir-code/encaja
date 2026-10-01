@@ -130,4 +130,15 @@ class DisponibilidadEdicionTest {
         assertEquals(oficina, turnoConHoras(listOf(manana, oficina), LocalTime.of(7, 0), LocalTime.of(15, 0)))
         assertNull(turnoConHoras(listOf(manana, oficina), LocalTime.of(7, 0), LocalTime.of(16, 0)))
     }
+
+    @Test
+    fun `la misma ocupacion en varias personas se muestra una sola vez`() {
+        val deVictor = AvailabilityBlock(victor, lunes, LocalTime.of(8, 0), LocalTime.of(15, 0), MotivoNoDisponibilidad.TRABAJO)
+        val deSilvia = deVictor.copy(caregiverId = CaregiverId("silvia"))
+        val otra = deVictor.copy(horaFin = LocalTime.of(16, 0))
+        val unicas = listOf(deVictor, deSilvia, otra).sinRepetirEntrePersonas()
+        assertEquals(2, unicas.size)
+        assertTrue(deVictor.mismaOcupacionQue(deSilvia))
+        assertFalse(deVictor.mismaOcupacionQue(otra))
+    }
 }

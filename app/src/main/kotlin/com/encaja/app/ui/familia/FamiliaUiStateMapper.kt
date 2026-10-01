@@ -29,9 +29,12 @@ class FamiliaUiStateMapper(
         val unidadesSemana = unidades.map { unidad ->
             val miembros = unidad.miembros.toSet()
             val diasDeLaUnidad = dias.map { fecha ->
+                // Una ocupación apuntada desde la unidad está copiada en cada miembro: en la
+                // fila de la unidad se enseña una sola vez.
                 val bloqueos = disponibilidad
                     .filter { it.caregiverId in miembros && it.fecha == fecha }
                     .sortedBy { it.horaInicio }
+                    .sinRepetirEntrePersonas()
                 DiaDisponibilidadCuidador(fecha, bloqueos)
             }
             UnidadDisponibilidadSemana(unidad, diasDeLaUnidad)
