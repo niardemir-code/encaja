@@ -4,23 +4,21 @@ package com.encaja.app.ui.guia
 
 // NOTA: depende de Jetpack Compose (Material 3), no compilado en este entorno.
 // Diálogo para crear o editar una actividad (CoverageNeed) de un niño desde la
-// Guía del día: de quién es, qué es, a qué horas y si se repite en más días de
-// la semana hasta una fecha (p.ej. "fútbol todos los martes hasta final de
-// curso"). Si la actividad todavía no pertenece a ningún grupo de repetición,
-// la casilla "Repetir cada semana" la crea como serie nueva. Si ya pertenece a
-// una, "Esta y las siguientes" copia los demás cambios (niño, descripción,
-// horario, acompañamiento) a ella y a las ocurrencias posteriores del grupo,
-// sin tocar los días en que se repite la serie — para eso está el botón
-// "Repetir": abre un diálogo aparte donde se elige un día y hora (y,
-// opcionalmente, que se repita cada semana en cualquier combinación de días)
-// para dar de alta una actividad o serie independiente con los mismos datos,
-// sin partir de cero.
+// Guía del día: de quién es, qué es, a qué horas y si se repite en otros días.
 // Hoja inferior (ModalBottomSheet) con el mismo estilo que la de disponibilidad de
-// Familia (DialogoDisponibilidad): tarjetas suaves, iconos en círculo, interruptores
-// de acento... las piezas compartidas viven en ui/theme/ComponentesHoja.kt. La
-// pantalla de crear y la de editar son el mismo composable, así que su aspecto es
-// siempre idéntico; lo único que cambia es si aparece la papelera y el bloque de
-// "esta y las siguientes" de una serie.
+// Familia (DialogoDisponibilidad) — las piezas compartidas viven en
+// ui/theme/ComponentesHoja.kt. La pantalla de crear y la de editar son el mismo
+// composable, así que su aspecto es siempre idéntico; lo único que cambia es si
+// aparece la papelera.
+// "Repetir en otros días" usa exactamente el mismo sistema que en Familia: un
+// interruptor que despliega un calendario mensual (para marcar fechas sueltas a
+// mano) y, debajo, un selector de días de la semana (L-D) que, al marcarlos,
+// rellena automáticamente las próximas semanas de ese día en el propio
+// calendario — ambos alimentan el mismo conjunto de fechas. Al guardar, cada
+// fecha se convierte en una actividad independiente (la fecha original conserva
+// su id si se está editando; el resto son nuevas), sin ningún concepto de
+// "serie": no hay que elegir si el cambio o el borrado afecta solo a esta
+// ocurrencia o también a las siguientes.
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -31,17 +29,18 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.*
@@ -60,9 +59,6 @@ import com.encaja.app.domain.model.Child
 import com.encaja.app.domain.model.CoverageNeed
 import com.encaja.app.domain.model.CoverageNeedId
 import com.encaja.app.ui.familia.Responsable
-import com.encaja.app.ui.familia.fechaAMillisUtc
-import com.encaja.app.ui.familia.formatearHora
-import com.encaja.app.ui.familia.millisUtcAFecha
 import com.encaja.app.ui.theme.BotonCuadradoHoja
 import com.encaja.app.ui.theme.BotonRedondoSuaveHoja
 import com.encaja.app.ui.theme.CajaValorHoja
@@ -83,6 +79,7 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.YearMonth
 import java.time.format.TextStyle
+import java.time.temporal.TemporalAdjusters
 import java.util.Locale
 import java.util.UUID
 
@@ -90,14 +87,10 @@ private val ES = Locale("es")
 
 /**
  * [actividad] null = crear una nueva (con opción de repetición); si no, se edita esa
- * ocurrencia concreta. Si pertenece a un grupo de repetición (se creó con "Repetir
- * cada semana"), se puede elegir aplicar el cambio o el borrado solo a ella o
- * también a las siguientes ocurrencias del grupo — [onGuardar] y [onEliminar] llevan
- * ese booleano como segundo parámetro; "esta y las siguientes" copia los demás
- * cambios (niño, descripción, horario, acompañamiento) sin tocar los días en que se
- * repite la serie. El botón "Repetir" (solo al editar) abre un diálogo aparte para
- * dar de alta, con los datos actuales, una actividad o serie independiente en otro
- * día/hora y, si se quiere, cada semana en los días que se elijan.
+ * ocurrencia concreta. [diasSerieActual], [hastaSerieActual], [patronSerieCargando] y
+ * [onActualizarSerie] ya no los usa este diálogo (la repetición dejó de tener el
+ * concepto de "serie"), pero se mantienen en la firma porque Guía y Semana todavía
+ * los pasan; el día en que dejen de hacerlo, se pueden quitar de aquí también.
  */
 @Composable
 fun DialogoActividad(
@@ -105,23 +98,11 @@ fun DialogoActividad(
     ninos: List<Child>,
     actividad: CoverageNeed?,
     responsables: List<Responsable> = emptyList(),
-    // Patrón real (días de la semana y última fecha) con el que se repite hoy la serie
-    // de [actividad], si ya pertenece a un grupo; se usa para preseleccionar el
-    // selector de días al abrir "Repetir". Null mientras no se conoce todavía (se
-    // consulta de forma asíncrona) o si la actividad no pertenece a ningún grupo.
     diasSerieActual: Set<DayOfWeek>? = null,
     hastaSerieActual: LocalDate? = null,
-    // true mientras se está pidiendo el patrón real de la serie (patronDeSerie) y
-    // [actividad] pertenece a un grupo: mientras tanto se deshabilita "Repetir" para no
-    // dejar que el usuario elija días sobre el patrón provisional y que luego, al
-    // llegar el real, sus cambios queden pisados sin que se dé cuenta.
     patronSerieCargando: Boolean = false,
     onGuardar: (needs: List<CoverageNeed>, aplicarATodaLaSerie: Boolean) -> Unit,
     onEliminar: ((aplicarATodaLaSerie: Boolean) -> Unit)?,
-    // Cambia el patrón semanal de la serie a la que pertenece [actividad] (se llama
-    // desde "Repetir" al marcar "Repetir cada semana" sobre una ocurrencia que ya
-    // pertenece a un grupo): crea lo que no existía, conserva lo que coincide y borra
-    // lo que ya no encaje en el nuevo patrón, sin duplicar nada.
     onActualizarSerie: ((plantilla: CoverageNeed, nuevasFechas: List<LocalDate>) -> Unit)? = null,
     onCerrar: () -> Unit
 ) {
@@ -135,40 +116,36 @@ fun DialogoActividad(
     var avisoLlevarMin by remember { mutableStateOf(actividad?.avisoLlevarMin) }
     var avisoRecogerMin by remember { mutableStateOf(actividad?.avisoRecogerMin) }
     var confirmarBorrado by remember { mutableStateOf(false) }
-    var repitiendo by remember { mutableStateOf(false) }
 
     val fechaBase = actividad?.fecha ?: fecha
 
-    // Repetición: se puede marcar tanto al crear como al editar una actividad
-    // puntual (que todavía no pertenece a ningún grupo de repetición).
-    var repetir by remember { mutableStateOf(false) }
-    var diasRepeticion by remember { mutableStateOf(setOf(fechaBase.dayOfWeek)) }
-    var hastaRepeticion by remember { mutableStateOf(fechaBase.plusWeeks(4)) }
-    // Días sueltos añadidos a mano con el calendario, además del patrón semanal
-    // (mismo sistema que "Repetir en otros días" de Familia).
-    var fechasExtra by remember { mutableStateOf(emptySet<LocalDate>()) }
+    // Repetir en otros días: mismo sistema que en Familia (DialogoDisponibilidad) — un
+    // calendario mensual para marcar fechas sueltas a mano, más un selector de días de
+    // la semana que rellena automáticamente las próximas semanas de ese día.
+    var fechasRepetir by remember { mutableStateOf(setOf(fechaBase)) }
+    var repetirActivo by remember { mutableStateOf(false) }
+    var diasSemanaRepetir by remember { mutableStateOf(emptySet<DayOfWeek>()) }
 
-    // Al editar una ocurrencia de un grupo de repetición: si el cambio (o el
-    // borrado) se aplica solo a ella, o también a las siguientes del grupo.
-    val perteneceAGrupo = actividad?.grupoRepeticionId != null
-    var aplicarATodaLaSerie by remember { mutableStateOf(false) }
+    fun alternarDiaSemana(dia: DayOfWeek) {
+        val activando = dia !in diasSemanaRepetir
+        diasSemanaRepetir = if (activando) diasSemanaRepetir + dia else diasSemanaRepetir - dia
+        val fechasDelDia = fechasParaDiaSemana(fechaBase, dia, HORIZONTE_SEMANAS_REPETIR).toSet()
+        fechasRepetir = if (activando) {
+            fechasRepetir + fechasDelDia
+        } else {
+            (fechasRepetir - fechasDelDia).ifEmpty { setOf(fechaBase) }
+        }
+    }
 
     val horasValidas = fin.isAfter(inicio)
-    val fechasAGuardar = if (!perteneceAGrupo && repetir) {
-        // Al editar, fechaBase es la fecha de la actividad original: se incluye siempre,
-        // marque o no el usuario su día de la semana, para no dejarla huérfana (con un
-        // hueco sin cubrir de la actividad vieja) al pasar a repetirla.
-        (fechasRepetidas(fechaBase, hastaRepeticion, diasRepeticion) + fechaBase + fechasExtra).distinct().sorted()
-    } else {
-        listOf(fechaBase)
-    }
+    val fechasAGuardar = fechasRepetir.sorted()
     val puedeGuardar = childId != null && descripcion.isNotBlank() && horasValidas && fechasAGuardar.isNotEmpty()
 
     fun guardar() {
         val id = childId ?: return
-        // Si al editar una actividad puntual se marca "Repetir cada semana",
-        // fechasAGuardar pasa a tener varias fechas: la ocurrencia que coincide
-        // con la fecha original conserva su id, y el resto son nuevas.
+        // La fecha original (al editar) conserva su id; el resto de fechas del
+        // conjunto de repetición son actividades nuevas e independientes — no hay
+        // ningún grupo que las una.
         val idsPorFecha = fechasAGuardar.iterator()
         onGuardar(
             crearActividades(
@@ -185,11 +162,10 @@ fun DialogoActividad(
                 },
                 quienLlevaId = quienLlevaId.takeIf { requiereDesplazamiento },
                 quienRecogeId = quienRecogeId.takeIf { requiereDesplazamiento },
-                grupoRepeticionId = actividad?.grupoRepeticionId,
                 avisoLlevarMin = avisoLlevarMin.takeIf { requiereDesplazamiento },
                 avisoRecogerMin = avisoRecogerMin.takeIf { requiereDesplazamiento }
             ),
-            aplicarATodaLaSerie
+            false
         )
     }
 
@@ -338,82 +314,70 @@ fun DialogoActividad(
                 }
             }
 
-            if (perteneceAGrupo) {
-                Spacer(Modifier.height(14.dp))
-                TarjetaSeccionHoja {
+            // ── Repetir en otros días ─────────────────────────────────────────────
+            Spacer(Modifier.height(14.dp))
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                IconoEnCirculoHoja(Icons.Default.CalendarMonth, fondo = lavandaHoja, tinta = indigoHoja)
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Repetir en otros días", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = tintaHoja)
                     Text(
-                        "Esta actividad se repite cada semana. ¿A qué aplicar los cambios?",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = tintaHoja
+                        if (repetirActivo) "Toca los días del calendario" else "Solo este día",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = tintaSuaveHoja
                     )
-                    Spacer(Modifier.height(8.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        FilterChip(
-                            selected = !aplicarATodaLaSerie,
-                            onClick = { aplicarATodaLaSerie = false },
-                            label = { Text("Solo este día") },
-                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = acentoHoja, selectedLabelColor = onAcentoHoja)
-                        )
-                        FilterChip(
-                            selected = aplicarATodaLaSerie,
-                            onClick = { aplicarATodaLaSerie = true },
-                            label = { Text("Esta y las siguientes") },
-                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = acentoHoja, selectedLabelColor = onAcentoHoja)
-                        )
-                    }
-                    if (aplicarATodaLaSerie) {
-                        Spacer(Modifier.height(6.dp))
-                        Text(
-                            "Se aplicará a esta actividad y a todas las posteriores de la serie (sin cambiar los días en que se repite).",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = tintaSuaveHoja
-                        )
-                    }
                 }
-            } else if (actividad == null) {
-                // Solo al crear una actividad nueva: al editar una ya existente que no
-                // pertenece a ningún grupo, esto se hace con el botón "Repetir" de abajo.
-                Spacer(Modifier.height(14.dp))
-                TarjetaSeccionHoja(padding = 0.dp) {
-                    FilaConInterruptorHoja(
-                        icono = Icons.Default.Repeat,
-                        titulo = "Repetir cada semana",
-                        subtitulo = if (repetir) "Elige los días y, si quieres, fechas sueltas" else "Solo este día",
-                        activo = repetir,
-                        onCambiar = { activo ->
-                            repetir = activo
-                            if (!activo) fechasExtra = emptySet()
+                Switch(
+                    checked = repetirActivo,
+                    onCheckedChange = { activo ->
+                        repetirActivo = activo
+                        if (!activo) {
+                            fechasRepetir = setOf(fechaBase)
+                            diasSemanaRepetir = emptySet()
                         }
-                    )
-                    if (repetir) {
-                        SeparadorHoja()
-                        Column(modifier = Modifier.padding(14.dp)) {
-                            SelectorDiasRepeticion(
-                                fechaBase = fechaBase,
-                                diasRepeticion = diasRepeticion,
-                                onDiasChange = { diasRepeticion = it },
-                                hastaRepeticion = hastaRepeticion,
-                                onHastaChange = { hastaRepeticion = it },
-                                fechasExtra = fechasExtra,
-                                onFechasExtraChange = { fechasExtra = it },
-                                fechasAGuardar = fechasAGuardar
-                            )
-                        }
-                    }
-                }
+                    },
+                    colors = com.encaja.app.ui.theme.coloresInterruptorEncaja()
+                )
             }
-
-            if (actividad != null) {
-                Spacer(Modifier.height(10.dp))
-                TextButton(
-                    onClick = { repitiendo = true },
-                    enabled = !(perteneceAGrupo && patronSerieCargando)
-                ) { Text("Repetir en otro día", color = acentoHoja) }
+            if (repetirActivo) {
+                Spacer(Modifier.height(12.dp))
+                TarjetaSeccionHoja(padding = 10.dp) {
+                    CalendarioMultipleActividad(
+                        mesInicial = YearMonth.from(fechaBase),
+                        seleccionadas = fechasRepetir,
+                        onAlternar = { dia ->
+                            fechasRepetir = if (dia in fechasRepetir) {
+                                if (fechasRepetir.size > 1) fechasRepetir - dia else fechasRepetir
+                            } else {
+                                fechasRepetir + dia
+                            }
+                        }
+                    )
+                    Spacer(Modifier.height(14.dp))
+                    SeparadorHoja()
+                    Spacer(Modifier.height(10.dp))
+                    Text("O cada semana en", style = MaterialTheme.typography.bodyMedium, color = tintaSuaveHoja)
+                    Spacer(Modifier.height(8.dp))
+                    SelectorDiasSemanaActividad(
+                        seleccionados = diasSemanaRepetir,
+                        onAlternar = { dia -> alternarDiaSemana(dia) }
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Info, contentDescription = null, tint = tintaSuaveHoja, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        (if (fechasAGuardar.size == 1) "1 día" else "${fechasAGuardar.size} días") +
+                            ". Si alguno ya tenía ${descripcion.trim().ifBlank { "esta actividad" }}, se sustituye.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = tintaSuaveHoja
+                    )
+                }
             }
 
             // ── Botones: Cancelar (texto), papelera (solo editando) y disquete ───────
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(20.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedButton(
                     onClick = onCerrar,
@@ -448,81 +412,29 @@ fun DialogoActividad(
     if (confirmarBorrado && onEliminar != null) {
         AlertDialog(
             onDismissRequest = { confirmarBorrado = false },
-            title = { Text(if (aplicarATodaLaSerie) "¿Borrar esta y las siguientes?" else "¿Borrar esta actividad?") },
+            title = { Text("¿Borrar esta actividad?") },
             text = { Text("No se puede deshacer.") },
             confirmButton = {
-                TextButton(onClick = { confirmarBorrado = false; onEliminar(aplicarATodaLaSerie); onCerrar() }) {
+                TextButton(onClick = { confirmarBorrado = false; onEliminar(false); onCerrar() }) {
                     Text("Borrar", color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = { TextButton(onClick = { confirmarBorrado = false }) { Text("Cancelar") } }
         )
     }
-
-    if (repitiendo) {
-        val id = childId
-        if (id != null) {
-            DialogoRepetirActividad(
-                fechaInicial = fechaBase,
-                inicioInicial = inicio,
-                finInicial = fin,
-                perteneceAGrupo = perteneceAGrupo,
-                diasSerieActual = diasSerieActual,
-                hastaSerieActual = hastaSerieActual,
-                onConfirmar = { fechas, i, f, modoPatron ->
-                    if (modoPatron && actividad != null && onActualizarSerie != null) {
-                        // Cambio del patrón semanal de la serie: se compara con las
-                        // ocurrencias reales a partir de esta fecha (lo hace
-                        // actualizarSerie), así que aquí no hace falta generar ids a
-                        // mano ni preocuparse por duplicados.
-                        val plantilla = actividad.copy(
-                            descripcion = descripcion.trim(),
-                            horaInicio = i,
-                            horaFin = f,
-                            requiereDesplazamiento = requiereDesplazamiento,
-                            quienLlevaId = quienLlevaId.takeIf { requiereDesplazamiento },
-                            quienRecogeId = quienRecogeId.takeIf { requiereDesplazamiento },
-                            avisoLlevarMin = avisoLlevarMin.takeIf { requiereDesplazamiento },
-                            avisoRecogerMin = avisoRecogerMin.takeIf { requiereDesplazamiento }
-                        )
-                        onActualizarSerie(plantilla, fechas)
-                    } else {
-                        // Copia independiente a otro día/hora (no toca la serie original).
-                        // Si el patrón elegido incluye la propia fecha de la actividad que
-                        // se estaba editando, esa fecha no es una ocurrencia nueva: es la
-                        // misma actividad de siempre, así que se reutiliza su id (queda
-                        // absorbida) en vez de crear una duplicada ese día.
-                        val idsPorFecha = fechas.iterator()
-                        onGuardar(
-                            crearActividades(
-                                fechas = fechas,
-                                childId = id,
-                                inicio = i,
-                                fin = f,
-                                descripcion = descripcion,
-                                requiereDesplazamiento = requiereDesplazamiento,
-                                generarId = {
-                                    val fechaActual = idsPorFecha.next()
-                                    if (actividad != null && fechaActual == actividad.fecha) actividad.id
-                                    else CoverageNeedId(UUID.randomUUID().toString())
-                                },
-                                quienLlevaId = quienLlevaId.takeIf { requiereDesplazamiento },
-                                quienRecogeId = quienRecogeId.takeIf { requiereDesplazamiento },
-                                avisoLlevarMin = avisoLlevarMin.takeIf { requiereDesplazamiento },
-                                avisoRecogerMin = avisoRecogerMin.takeIf { requiereDesplazamiento }
-                            ),
-                            false
-                        )
-                    }
-                    repitiendo = false
-                },
-                onCerrar = { repitiendo = false }
-            )
-        }
-    }
 }
 
 /* ───────────────────────────── Piezas del diseño ───────────────────────────── */
+
+/** Cuántas semanas hacia delante se generan fechas al marcar un día de la semana para
+ * repetir (unas 6 meses) — igual que en Familia. */
+private const val HORIZONTE_SEMANAS_REPETIR = 26
+
+/** [desde] y sus próximas [semanas] apariciones de [dia] (incluyendo [desde] si coincide). */
+private fun fechasParaDiaSemana(desde: LocalDate, dia: DayOfWeek, semanas: Int): List<LocalDate> {
+    val primera = desde.with(TemporalAdjusters.nextOrSame(dia))
+    return (0 until semanas).map { primera.plusWeeks(it.toLong()) }
+}
 
 /** Paleta estable (siempre el mismo color para el mismo nombre) para los avatares de
  * los niños, ya que Child no guarda un color propio. */
@@ -652,235 +564,38 @@ private fun CajaHoraActividad(titulo: String, hora: LocalTime, modifier: Modifie
 }
 
 /**
- * Diálogo aparte que abre el botón "Repetir en otro día". Tiene dos usos distintos,
- * según si la actividad que se estaba editando ya pertenece a un grupo de repetición
- * ([perteneceAGrupo]):
- * - Copiar a otro día/hora: se elige un día y hora nuevos (por defecto, los de la
- *   actividad original) y, opcionalmente, que se repita cada semana en cualquier
- *   combinación de días hasta una fecha. Da de alta una actividad o serie
- *   independiente con esos datos; no toca la actividad original ni su serie.
- * - Si [perteneceAGrupo] es true y se marca "Repetir cada semana": en vez de elegir un
- *   día concreto, se cambia el propio patrón semanal de la serie a partir de la fecha
- *   de la actividad que se estaba editando (preseleccionado con [diasSerieActual] y
- *   [hastaSerieActual], el patrón real de la serie); los días que no coincidan se crean
- *   o se borran, y los que coincidan se conservan sin duplicarse.
- * [onConfirmar] recibe las fechas resultantes, la hora y si el modo elegido fue el de
- * cambiar el patrón de la serie (para que quien llama sepa si debe usar
- * onActualizarSerie o crear una copia independiente).
+ * Calendario de un mes (con flechas para cambiar de mes) en el que se marcan los días
+ * que se quieran; los marcados van en color de acento y el de hoy lleva borde. Igual
+ * que CalendarioMultiple de Familia (DialogoDisponibilidad), duplicado aquí para no
+ * acoplar los dos paquetes de UI.
  */
 @Composable
-private fun DialogoRepetirActividad(
-    fechaInicial: LocalDate,
-    inicioInicial: LocalTime,
-    finInicial: LocalTime,
-    perteneceAGrupo: Boolean,
-    diasSerieActual: Set<DayOfWeek>?,
-    hastaSerieActual: LocalDate?,
-    onConfirmar: (fechas: List<LocalDate>, inicio: LocalTime, fin: LocalTime, modoPatron: Boolean) -> Unit,
-    onCerrar: () -> Unit
-) {
-    var fecha by remember { mutableStateOf(fechaInicial) }
-    var inicio by remember { mutableStateOf(inicioInicial) }
-    var fin by remember { mutableStateOf(finInicial) }
-    var repetirCadaSemana by remember { mutableStateOf(false) }
-    var diasRepeticion by remember(diasSerieActual) {
-        mutableStateOf(diasSerieActual ?: setOf(fechaInicial.dayOfWeek))
-    }
-    var hastaRepeticion by remember(hastaSerieActual) {
-        mutableStateOf(hastaSerieActual ?: fechaInicial.plusWeeks(4))
-    }
-    // Días sueltos añadidos a mano con el calendario, además del patrón semanal.
-    var fechasExtra by remember { mutableStateOf(emptySet<LocalDate>()) }
-
-    // Cambiar el patrón de una serie que ya existe es distinto de copiar la actividad a
-    // otro día suelto: aquí no se elige un día de destino, se compara el nuevo patrón
-    // (desde la fecha de la actividad que se estaba editando) con lo que ya hay.
-    val modoPatron = perteneceAGrupo && repetirCadaSemana
-
-    val horasValidas = fin.isAfter(inicio)
-    val fechasAGuardar = when {
-        modoPatron -> (fechasRepetidas(fechaInicial, hastaRepeticion, diasRepeticion) + fechasExtra).distinct().sorted()
-        repetirCadaSemana -> (fechasRepetidas(fecha, hastaRepeticion, diasRepeticion) + fecha + fechasExtra).distinct().sorted()
-        else -> listOf(fecha)
-    }
-    val puedeConfirmar = horasValidas && fechasAGuardar.isNotEmpty()
-
-    AlertDialog(
-        onDismissRequest = onCerrar,
-        title = { Text("Repetir actividad") },
-        text = {
-            Column(
-                modifier = Modifier
-                    .heightIn(max = 480.dp)
-                    .verticalScroll(rememberScrollState())
-            ) {
-                Text("Día y hora", style = MaterialTheme.typography.labelMedium)
-                Spacer(Modifier.height(4.dp))
-                if (modoPatron) {
-                    Text(
-                        "Se aplicará a partir del ${fechaInicial.dayOfMonth} " +
-                            "${fechaInicial.month.getDisplayName(TextStyle.SHORT, ES)} ${fechaInicial.year}.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(Modifier.height(8.dp))
-                } else {
-                    BotonFechaActividad("Día", fecha, Modifier.fillMaxWidth()) { fecha = it }
-                    Spacer(Modifier.height(8.dp))
-                }
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    BotonHoraActividad("Desde", inicio, Modifier.weight(1f)) { inicio = it }
-                    BotonHoraActividad("Hasta", fin, Modifier.weight(1f)) { fin = it }
-                }
-                if (!horasValidas) {
-                    Text(
-                        "La hora de fin debe ser posterior a la de inicio.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-
-                Spacer(Modifier.height(12.dp))
-                HorizontalDivider()
-                Spacer(Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth().clickable {
-                        repetirCadaSemana = !repetirCadaSemana
-                        if (!repetirCadaSemana) fechasExtra = emptySet()
-                    },
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Checkbox(checked = repetirCadaSemana, onCheckedChange = { marcado ->
-                        repetirCadaSemana = marcado
-                        if (!marcado) fechasExtra = emptySet()
-                    })
-                    Text("Repetir cada semana")
-                }
-                if (perteneceAGrupo && repetirCadaSemana) {
-                    Text(
-                        "Cambia los días en que se repite esta serie a partir de esa fecha: se " +
-                            "crean los días marcados que no existían y se borran los que se " +
-                            "desmarquen, sin duplicar los que ya coincidían.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                if (repetirCadaSemana) {
-                    SelectorDiasRepeticion(
-                        fechaBase = fechaInicial,
-                        diasRepeticion = diasRepeticion,
-                        onDiasChange = { diasRepeticion = it },
-                        hastaRepeticion = hastaRepeticion,
-                        onHastaChange = { hastaRepeticion = it },
-                        fechasExtra = fechasExtra,
-                        onFechasExtraChange = { fechasExtra = it },
-                        fechasAGuardar = fechasAGuardar
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = { onConfirmar(fechasAGuardar, inicio, fin, modoPatron) },
-                enabled = puedeConfirmar
-            ) { Text("Guardar") }
-        },
-        dismissButton = { TextButton(onClick = onCerrar) { Text("Cancelar") } }
-    )
-}
-
-/** Círculos de día de la semana (los 7) + fecha de fin, para elegir el patrón de una
- * repetición nueva; debajo, el calendario mensual para añadir fechas sueltas. */
-@Composable
-private fun SelectorDiasRepeticion(
-    fechaBase: LocalDate,
-    diasRepeticion: Set<DayOfWeek>,
-    onDiasChange: (Set<DayOfWeek>) -> Unit,
-    hastaRepeticion: LocalDate,
-    onHastaChange: (LocalDate) -> Unit,
-    fechasExtra: Set<LocalDate>,
-    onFechasExtraChange: (Set<LocalDate>) -> Unit,
-    fechasAGuardar: List<LocalDate>
-) {
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        DayOfWeek.values().forEach { dia ->
-            val marcado = dia in diasRepeticion
-            Box(
-                modifier = Modifier
-                    .size(34.dp)
-                    .clip(CircleShape)
-                    .background(if (marcado) MaterialTheme.colorScheme.primary else Color.Transparent)
-                    .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
-                    .clickable {
-                        onDiasChange(if (marcado) diasRepeticion - dia else diasRepeticion + dia)
-                    },
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    dia.getDisplayName(TextStyle.NARROW, ES).uppercase(),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = if (marcado) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
-                )
-            }
-        }
-    }
-    Spacer(Modifier.height(8.dp))
-    BotonFechaActividad("Hasta", hastaRepeticion, Modifier.fillMaxWidth()) { onHastaChange(it) }
-    Spacer(Modifier.height(4.dp))
-    Text(
-        when {
-            fechasAGuardar.isEmpty() -> "Ningún día de la semana elegida cae en ese rango."
-            fechasAGuardar.size == 1 -> "1 actividad en total."
-            else -> "${fechasAGuardar.size} actividades en total."
-        },
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant
-    )
-
-    Spacer(Modifier.height(12.dp))
-    HorizontalDivider()
-    Spacer(Modifier.height(8.dp))
-    Text("O añade días concretos con el calendario", style = MaterialTheme.typography.labelMedium)
-    Spacer(Modifier.height(8.dp))
-    CalendarioRepeticion(
-        mesInicial = YearMonth.from(fechaBase),
-        seleccionadas = fechasExtra,
-        onAlternar = { dia ->
-            onFechasExtraChange(if (dia in fechasExtra) fechasExtra - dia else fechasExtra + dia)
-        }
-    )
-}
-
-/**
- * Calendario de un mes (con flechas para cambiar de mes) para añadir días sueltos, en
- * cualquier combinación, además del patrón semanal de [SelectorDiasRepeticion] — mismo
- * sistema que "Repetir en otros días" de Familia.
- */
-@Composable
-private fun CalendarioRepeticion(mesInicial: YearMonth, seleccionadas: Set<LocalDate>, onAlternar: (LocalDate) -> Unit) {
+private fun CalendarioMultipleActividad(mesInicial: YearMonth, seleccionadas: Set<LocalDate>, onAlternar: (LocalDate) -> Unit) {
     var mes by remember { mutableStateOf(mesInicial) }
     val hoy = LocalDate.now()
 
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         IconButton(onClick = { mes = mes.minusMonths(1) }) {
-            Icon(Icons.Default.ChevronLeft, contentDescription = "Mes anterior")
+            Icon(Icons.Default.ChevronLeft, contentDescription = "Mes anterior", tint = indigoHoja)
         }
         Text(
             mes.month.getDisplayName(TextStyle.FULL, ES).replaceFirstChar { it.uppercase() } + " ${mes.year}",
-            style = MaterialTheme.typography.titleSmall,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.ExtraBold,
+            color = tintaHoja,
             textAlign = TextAlign.Center,
             modifier = Modifier.weight(1f)
         )
         IconButton(onClick = { mes = mes.plusMonths(1) }) {
-            Icon(Icons.Default.ChevronRight, contentDescription = "Mes siguiente")
+            Icon(Icons.Default.ChevronRight, contentDescription = "Mes siguiente", tint = indigoHoja)
         }
     }
     Row(modifier = Modifier.fillMaxWidth()) {
         DayOfWeek.values().forEach { dia ->
             Text(
-                dia.getDisplayName(TextStyle.NARROW, ES).uppercase(),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                letraDeDiaActividad(dia),
+                style = MaterialTheme.typography.labelMedium,
+                color = tintaSuaveHoja,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.weight(1f)
             )
@@ -899,12 +614,12 @@ private fun CalendarioRepeticion(mesInicial: YearMonth, seleccionadas: Set<Local
                         val marcado = dia in seleccionadas
                         Box(
                             modifier = Modifier
-                                .size(34.dp)
+                                .size(38.dp)
                                 .clip(CircleShape)
-                                .background(if (marcado) MaterialTheme.colorScheme.primary else Color.Transparent)
+                                .background(if (marcado) acentoHoja else Color.Transparent)
                                 .border(
                                     width = if (dia == hoy) 2.dp else 0.dp,
-                                    color = if (dia == hoy) MaterialTheme.colorScheme.primary else Color.Transparent,
+                                    color = if (dia == hoy) acentoHoja else Color.Transparent,
                                     shape = CircleShape
                                 )
                                 .clickable { onAlternar(dia) },
@@ -912,8 +627,9 @@ private fun CalendarioRepeticion(mesInicial: YearMonth, seleccionadas: Set<Local
                         ) {
                             Text(
                                 dia.dayOfMonth.toString(),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = if (marcado) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = if (marcado) FontWeight.ExtraBold else FontWeight.Medium,
+                                color = if (marcado) onAcentoHoja else tintaHoja
                             )
                         }
                     }
@@ -922,61 +638,47 @@ private fun CalendarioRepeticion(mesInicial: YearMonth, seleccionadas: Set<Local
             repeat(7 - semana.size) { Spacer(Modifier.weight(1f)) }
         }
     }
-    if (seleccionadas.isNotEmpty()) {
-        Spacer(Modifier.height(4.dp))
-        Text(
-            if (seleccionadas.size == 1) "1 día suelto añadido." else "${seleccionadas.size} días sueltos añadidos.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
 }
 
-/** Botón que muestra una hora y, al tocarlo, abre el reloj de Material 3 (usado dentro
- * de "Repetir en otro día", que mantiene un estilo de diálogo más simple). */
-@Composable
-private fun BotonHoraActividad(titulo: String, hora: LocalTime, modifier: Modifier = Modifier, onCambiar: (LocalTime) -> Unit) {
-    var abierto by remember { mutableStateOf(false) }
-    OutlinedButton(onClick = { abierto = true }, modifier = modifier) {
-        Text("$titulo ${formatearHora(hora)}")
-    }
-    if (abierto) {
-        val estado = rememberTimePickerState(initialHour = hora.hour, initialMinute = hora.minute, is24Hour = true)
-        AlertDialog(
-            onDismissRequest = { abierto = false },
-            title = { Text(titulo) },
-            text = { TimePicker(state = estado) },
-            confirmButton = {
-                TextButton(onClick = {
-                    onCambiar(LocalTime.of(estado.hour, estado.minute))
-                    abierto = false
-                }) { Text("Aceptar") }
-            },
-            dismissButton = { TextButton(onClick = { abierto = false }) { Text("Cancelar") } }
-        )
-    }
+/** L M X J V S D (con X para el miércoles, para no repetir la M). */
+private fun letraDeDiaActividad(dia: DayOfWeek): String = when (dia) {
+    DayOfWeek.MONDAY -> "L"
+    DayOfWeek.TUESDAY -> "M"
+    DayOfWeek.WEDNESDAY -> "X"
+    DayOfWeek.THURSDAY -> "J"
+    DayOfWeek.FRIDAY -> "V"
+    DayOfWeek.SATURDAY -> "S"
+    DayOfWeek.SUNDAY -> "D"
 }
 
-/** Botón que muestra una fecha y, al tocarlo, abre el calendario de Material 3. */
+/**
+ * Fila de siete círculos (L a D) para marcar en qué días de la semana se repite la
+ * actividad cada semana — además de, no en vez de, las fechas sueltas del calendario.
+ * Igual que SelectorDiasSemana de Familia.
+ */
 @Composable
-private fun BotonFechaActividad(titulo: String, fecha: LocalDate, modifier: Modifier = Modifier, onCambiar: (LocalDate) -> Unit) {
-    var abierto by remember { mutableStateOf(false) }
-    OutlinedButton(onClick = { abierto = true }, modifier = modifier) {
-        Text("$titulo ${fecha.dayOfMonth} ${fecha.month.getDisplayName(TextStyle.SHORT, ES)} ${fecha.year}")
-    }
-    if (abierto) {
-        val estado = rememberDatePickerState(initialSelectedDateMillis = fechaAMillisUtc(fecha))
-        DatePickerDialog(
-            onDismissRequest = { abierto = false },
-            confirmButton = {
-                TextButton(onClick = {
-                    estado.selectedDateMillis?.let { onCambiar(millisUtcAFecha(it)) }
-                    abierto = false
-                }) { Text("Aceptar") }
-            },
-            dismissButton = { TextButton(onClick = { abierto = false }) { Text("Cancelar") } }
-        ) {
-            DatePicker(state = estado)
+private fun SelectorDiasSemanaActividad(seleccionados: Set<DayOfWeek>, onAlternar: (DayOfWeek) -> Unit) {
+    Row(modifier = Modifier.fillMaxWidth()) {
+        DayOfWeek.values().forEach { dia ->
+            val marcado = dia in seleccionados
+            Box(modifier = Modifier.weight(1f).padding(2.dp), contentAlignment = Alignment.Center) {
+                Box(
+                    modifier = Modifier
+                        .size(34.dp)
+                        .clip(CircleShape)
+                        .background(if (marcado) acentoHoja else Color.Transparent)
+                        .border(width = 1.dp, color = if (marcado) acentoHoja else tintaSuaveHoja.copy(alpha = 0.35f), shape = CircleShape)
+                        .clickable { onAlternar(dia) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        letraDeDiaActividad(dia),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = if (marcado) FontWeight.ExtraBold else FontWeight.Medium,
+                        color = if (marcado) onAcentoHoja else tintaHoja
+                    )
+                }
+            }
         }
     }
 }
