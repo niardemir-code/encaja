@@ -145,19 +145,33 @@ fun DialogoDisponibilidad(
     var fechasRepetir by remember(seleccionId) { mutableStateOf(setOf(fecha)) }
     var repetirActivo by remember(seleccionId) { mutableStateOf(false) }
     // Días de la semana (L-D) marcados para repetir la ocupación cada semana, además del
-    // calendario manual: al marcar uno se añaden a fechasRepetir sus próximas apariciones
-    // (ver HORIZONTE_SEMANAS_REPETIR); al desmarcarlo se quitan esas mismas fechas.
+    // calendario manual: al marcar uno se añaden a fechasRepetir sus apariciones hasta
+    // hastaRepetir; al desmarcarlo se quitan esas mismas fechas.
     var diasSemanaRepetir by remember(seleccionId) { mutableStateOf(emptySet<DayOfWeek>()) }
+    // Hasta qué día llega el patrón semanal; por defecto, 3 meses.
+    var hastaRepetir by remember(seleccionId) { mutableStateOf(fecha.plusMonths(3)) }
 
     fun alternarDiaSemana(dia: DayOfWeek) {
         val activando = dia !in diasSemanaRepetir
         diasSemanaRepetir = if (activando) diasSemanaRepetir + dia else diasSemanaRepetir - dia
-        val fechasDelDia = fechasParaDiaSemana(fecha, dia, HORIZONTE_SEMANAS_REPETIR).toSet()
+        val fechasDelDia = fechasParaDiaSemana(fecha, dia, hastaRepetir).toSet()
         fechasRepetir = if (activando) {
             fechasRepetir + fechasDelDia
         } else {
             (fechasRepetir - fechasDelDia).ifEmpty { setOf(fecha) }
         }
+    }
+
+    // Al cambiar "Hasta": se recalculan las fechas que venían del patrón semanal (con el
+    // rango antiguo) y se sustituyen por las del rango nuevo, sin tocar las que el
+    // usuario haya marcado a mano en el calendario.
+    fun cambiarHastaRepetir(nuevaHasta: LocalDate) {
+        val hastaAnterior = hastaRepetir
+        hastaRepetir = nuevaHasta
+        if (diasSemanaRepetir.isEmpty()) return
+        val antiguas = diasSemanaRepetir.flatMap { dia -> fechasParaDiaSemana(fecha, dia, hastaAnterior) }.toSet()
+        val nuevas = diasSemanaRepetir.flatMap { dia -> fechasParaDiaSemana(fecha, dia, nuevaHasta) }.toSet()
+        fechasRepetir = (fechasRepetir - antiguas) + nuevas
     }
     var horasEtiqueta by remember(seleccionId) { mutableStateOf("") }
     var guardarComoHorario by remember(seleccionId) { mutableStateOf(false) }
@@ -207,6 +221,7 @@ fun DialogoDisponibilidad(
         fechasRepetir = setOf(bloque.fecha)
         repetirActivo = false
         diasSemanaRepetir = emptySet()
+        hastaRepetir = bloque.fecha.plusMonths(3)
         rangoDesde = bloque.fecha
         rangoHasta = bloque.fecha
     }
@@ -216,6 +231,11 @@ fun DialogoDisponibilidad(
     ModalBottomSheet(
         onDismissRequest = onCerrar,
         sheetState = sheetState,
+        // La propia hoja se corta justo debajo de la barra de estado (hora, batería,
+        // conexiones...) en vez de extenderse por detrás: si no, su fondo tapa lo que
+        // hubiera ahí antes y los iconos del sistema (su color lo decide el tema
+        // general del teléfono, no esta pantalla) pueden quedar ilegibles sobre él.
+        modifier = Modifier.statusBarsPadding(),
         containerColor = MaterialTheme.colorScheme.background,
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
     ) {
@@ -411,6 +431,7 @@ fun DialogoDisponibilidad(
                                     if (!activo) {
                                         fechasRepetir = setOf(fecha)
                                         diasSemanaRepetir = emptySet()
+                                        hastaRepetir = fecha.plusMonths(3)
                                     }
                                 },
                                 colors = coloresInterruptorEncaja()
@@ -443,6 +464,10 @@ fun DialogoDisponibilidad(
                                     seleccionados = diasSemanaRepetir,
                                     onAlternar = { dia -> alternarDiaSemana(dia) }
                                 )
+                                if (diasSemanaRepetir.isNotEmpty()) {
+                                    Spacer(Modifier.height(10.dp))
+                                    CajaFecha("Hasta", hastaRepetir, Modifier.fillMaxWidth()) { cambiarHastaRepetir(it) }
+                                }
                             }
                             Spacer(Modifier.height(8.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -957,14 +982,12 @@ private fun letraDeDia(dia: DayOfWeek): String = when (dia) {
     DayOfWeek.SUNDAY -> "D"
 }
 
-/** Cuántas semanas hacia delante se generan fechas al marcar un día de la semana para
- * repetir (unas 6 meses) — suficiente para que no haga falta volver a tocarlo. */
-private const val HORIZONTE_SEMANAS_REPETIR = 26
-
-/** [desde] y sus próximas [semanas] apariciones de [dia] (incluyendo [desde] si coincide). */
-private fun fechasParaDiaSemana(desde: LocalDate, dia: DayOfWeek, semanas: Int): List<LocalDate> {
+/** [desde] y sus apariciones de [dia] hasta [hasta] (ambas incluidas; incluye [desde]
+ * mismo si coincide con [dia]). */
+private fun fechasParaDiaSemana(desde: LocalDate, dia: DayOfWeek, hasta: LocalDate): List<LocalDate> {
     val primera = desde.with(java.time.temporal.TemporalAdjusters.nextOrSame(dia))
-    return (0 until semanas).map { primera.plusWeeks(it.toLong()) }
+    if (hasta.isBefore(primera)) return emptyList()
+    return generateSequence(primera) { it.plusWeeks(1) }.takeWhile { !it.isAfter(hasta) }.toList()
 }
 
 /**

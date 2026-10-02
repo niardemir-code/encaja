@@ -30,7 +30,6 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.School
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -845,7 +844,7 @@ private fun FilaActividadEnLista(bloque: BloqueGuia, onClick: () -> Unit) {
                     modifier = Modifier.size(36.dp).clip(CircleShape).background(fondoIcono),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.School, contentDescription = null, tint = tintaIcono, modifier = Modifier.size(19.dp))
+                    Icon(iconoParaActividad(bloque.need.icono), contentDescription = null, tint = tintaIcono, modifier = Modifier.size(19.dp))
                 }
                 Spacer(Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {

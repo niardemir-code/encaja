@@ -62,20 +62,22 @@ data class CoverageNeedEntity(
     val quienRecogeId: String? = null,
     val grupoRepeticionId: String? = null,
     val avisoLlevarMin: Int? = null,
-    val avisoRecogerMin: Int? = null
+    val avisoRecogerMin: Int? = null,
+    val icono: String? = null
 ) {
     fun aDominio() = CoverageNeed(
         CoverageNeedId(id), ChildId(childId), java.time.LocalDate.parse(fecha),
         java.time.LocalTime.parse(horaInicio), java.time.LocalTime.parse(horaFin),
         descripcion, requiereDesplazamiento, quienLlevaId, quienRecogeId, grupoRepeticionId,
-        avisoLlevarMin, avisoRecogerMin
+        avisoLlevarMin, avisoRecogerMin, icono
     )
 
     companion object {
         fun desdeDominio(familyId: String, need: CoverageNeed) = CoverageNeedEntity(
             familyId, need.id.value, need.childId.value, need.fecha.toString(),
             need.horaInicio.toString(), need.horaFin.toString(), need.descripcion, need.requiereDesplazamiento,
-            need.quienLlevaId, need.quienRecogeId, need.grupoRepeticionId, need.avisoLlevarMin, need.avisoRecogerMin
+            need.quienLlevaId, need.quienRecogeId, need.grupoRepeticionId, need.avisoLlevarMin, need.avisoRecogerMin,
+            need.icono
         )
     }
 }

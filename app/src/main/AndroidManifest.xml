@@ -4,6 +4,10 @@
     <!-- Avisos de actividades: notificaciones (Android 13+) y alarmas exactas (Android 12+). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <!-- Para poder pedir que no se restrinja en segundo plano (ver Ajustes): si no, el
+         sistema puede matar la app y los avisos de actividades no suenan cuando no
+         está abierta en pantalla. -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <application
         android:name=".EncajaApplication"

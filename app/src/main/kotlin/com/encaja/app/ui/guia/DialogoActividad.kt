@@ -24,6 +24,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -108,6 +110,7 @@ fun DialogoActividad(
 ) {
     var childId by remember { mutableStateOf(actividad?.childId ?: ninos.firstOrNull()?.id) }
     var descripcion by remember { mutableStateOf(actividad?.descripcion ?: "") }
+    var iconoId by remember { mutableStateOf(actividad?.icono) }
     var inicio by remember { mutableStateOf(actividad?.horaInicio ?: LocalTime.of(17, 0)) }
     var fin by remember { mutableStateOf(actividad?.horaFin ?: LocalTime.of(18, 0)) }
     var requiereDesplazamiento by remember { mutableStateOf(actividad?.requiereDesplazamiento ?: true) }
@@ -125,16 +128,30 @@ fun DialogoActividad(
     var fechasRepetir by remember { mutableStateOf(setOf(fechaBase)) }
     var repetirActivo by remember { mutableStateOf(false) }
     var diasSemanaRepetir by remember { mutableStateOf(emptySet<DayOfWeek>()) }
+    // Hasta qué día llega el patrón semanal; por defecto, 3 meses.
+    var hastaRepetir by remember { mutableStateOf(fechaBase.plusMonths(3)) }
 
     fun alternarDiaSemana(dia: DayOfWeek) {
         val activando = dia !in diasSemanaRepetir
         diasSemanaRepetir = if (activando) diasSemanaRepetir + dia else diasSemanaRepetir - dia
-        val fechasDelDia = fechasParaDiaSemana(fechaBase, dia, HORIZONTE_SEMANAS_REPETIR).toSet()
+        val fechasDelDia = fechasParaDiaSemana(fechaBase, dia, hastaRepetir).toSet()
         fechasRepetir = if (activando) {
             fechasRepetir + fechasDelDia
         } else {
             (fechasRepetir - fechasDelDia).ifEmpty { setOf(fechaBase) }
         }
+    }
+
+    // Al cambiar "Hasta": se recalculan las fechas que venían del patrón semanal (con el
+    // rango antiguo) y se sustituyen por las del rango nuevo, sin tocar las que el
+    // usuario haya marcado a mano en el calendario.
+    fun cambiarHastaRepetir(nuevaHasta: LocalDate) {
+        val hastaAnterior = hastaRepetir
+        hastaRepetir = nuevaHasta
+        if (diasSemanaRepetir.isEmpty()) return
+        val antiguas = diasSemanaRepetir.flatMap { dia -> fechasParaDiaSemana(fechaBase, dia, hastaAnterior) }.toSet()
+        val nuevas = diasSemanaRepetir.flatMap { dia -> fechasParaDiaSemana(fechaBase, dia, nuevaHasta) }.toSet()
+        fechasRepetir = (fechasRepetir - antiguas) + nuevas
     }
 
     val horasValidas = fin.isAfter(inicio)
@@ -162,8 +179,12 @@ fun DialogoActividad(
                 },
                 quienLlevaId = quienLlevaId.takeIf { requiereDesplazamiento },
                 quienRecogeId = quienRecogeId.takeIf { requiereDesplazamiento },
-                avisoLlevarMin = avisoLlevarMin.takeIf { requiereDesplazamiento },
-                avisoRecogerMin = avisoRecogerMin.takeIf { requiereDesplazamiento }
+                // Los avisos son independientes de "Requiere acompañamiento": se pueden
+                // usar como recordatorio aunque la actividad no necesite que nadie
+                // lleve o recoja al niño.
+                avisoLlevarMin = avisoLlevarMin,
+                avisoRecogerMin = avisoRecogerMin,
+                icono = iconoId
             ),
             false
         )
@@ -174,6 +195,11 @@ fun DialogoActividad(
     ModalBottomSheet(
         onDismissRequest = onCerrar,
         sheetState = sheetState,
+        // La propia hoja se corta justo debajo de la barra de estado (hora, batería,
+        // conexiones...) en vez de extenderse por detrás: si no, su fondo tapa lo que
+        // hubiera ahí antes y los iconos del sistema (su color lo decide el tema
+        // general del teléfono, no esta pantalla) pueden quedar ilegibles sobre él.
+        modifier = Modifier.statusBarsPadding(),
         containerColor = MaterialTheme.colorScheme.background,
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
     ) {
@@ -239,6 +265,20 @@ fun DialogoActividad(
             )
             Spacer(Modifier.height(14.dp))
 
+            // ── Icono ─────────────────────────────────────────────────────────────
+            Text("Icono", style = MaterialTheme.typography.labelLarge, color = tintaSuaveHoja)
+            Spacer(Modifier.height(8.dp))
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(IconoActividad.entries.toList()) { opcion ->
+                    CasillaIconoActividad(
+                        opcion = opcion,
+                        elegido = iconoId == opcion.id,
+                        onClick = { iconoId = if (iconoId == opcion.id) null else opcion.id }
+                    )
+                }
+            }
+            Spacer(Modifier.height(14.dp))
+
             // ── Desde / Hasta ─────────────────────────────────────────────────────
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 CajaHoraActividad("Desde", inicio, Modifier.weight(1f)) { inicio = it }
@@ -289,29 +329,30 @@ fun DialogoActividad(
                 )
             }
 
-            if (requiereDesplazamiento) {
-                Spacer(Modifier.height(14.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconoEnCirculoHoja(Icons.Default.Notifications, fondo = MaterialTheme.colorScheme.tertiaryContainer, tinta = MaterialTheme.colorScheme.onTertiaryContainer, tamano = 34.dp)
-                    Spacer(Modifier.width(10.dp))
-                    Text("Avisos en el móvil", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = tintaHoja)
-                }
-                Spacer(Modifier.height(10.dp))
-                TarjetaSeccionHoja(padding = 0.dp) {
-                    SelectorAviso(
-                        titulo = "Antes de llevar",
-                        detalle = "empieza a las ${formatearHoraActividad(inicio)}",
-                        minutos = avisoLlevarMin,
-                        onElegir = { avisoLlevarMin = it }
-                    )
-                    SeparadorHoja()
-                    SelectorAviso(
-                        titulo = "Antes de recoger",
-                        detalle = "termina a las ${formatearHoraActividad(fin)}",
-                        minutos = avisoRecogerMin,
-                        onElegir = { avisoRecogerMin = it }
-                    )
-                }
+            // Los avisos son independientes de "Requiere acompañamiento": sirven como
+            // recordatorio del inicio/fin de la actividad aunque no haga falta que
+            // nadie la lleve o la recoja.
+            Spacer(Modifier.height(14.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconoEnCirculoHoja(Icons.Default.Notifications, fondo = MaterialTheme.colorScheme.tertiaryContainer, tinta = MaterialTheme.colorScheme.onTertiaryContainer, tamano = 34.dp)
+                Spacer(Modifier.width(10.dp))
+                Text("Avisos en el móvil", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = tintaHoja)
+            }
+            Spacer(Modifier.height(10.dp))
+            TarjetaSeccionHoja(padding = 0.dp) {
+                SelectorAviso(
+                    titulo = "Antes de empezar",
+                    detalle = "empieza a las ${formatearHoraActividad(inicio)}",
+                    minutos = avisoLlevarMin,
+                    onElegir = { avisoLlevarMin = it }
+                )
+                SeparadorHoja()
+                SelectorAviso(
+                    titulo = "Antes de terminar",
+                    detalle = "termina a las ${formatearHoraActividad(fin)}",
+                    minutos = avisoRecogerMin,
+                    onElegir = { avisoRecogerMin = it }
+                )
             }
 
             // ── Repetir en otros días ─────────────────────────────────────────────
@@ -334,6 +375,7 @@ fun DialogoActividad(
                         if (!activo) {
                             fechasRepetir = setOf(fechaBase)
                             diasSemanaRepetir = emptySet()
+                            hastaRepetir = fechaBase.plusMonths(3)
                         }
                     },
                     colors = com.encaja.app.ui.theme.coloresInterruptorEncaja()
@@ -362,6 +404,10 @@ fun DialogoActividad(
                         seleccionados = diasSemanaRepetir,
                         onAlternar = { dia -> alternarDiaSemana(dia) }
                     )
+                    if (diasSemanaRepetir.isNotEmpty()) {
+                        Spacer(Modifier.height(10.dp))
+                        CajaFechaActividad("Hasta", hastaRepetir, Modifier.fillMaxWidth()) { cambiarHastaRepetir(it) }
+                    }
                 }
                 Spacer(Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -426,14 +472,12 @@ fun DialogoActividad(
 
 /* ───────────────────────────── Piezas del diseño ───────────────────────────── */
 
-/** Cuántas semanas hacia delante se generan fechas al marcar un día de la semana para
- * repetir (unas 6 meses) — igual que en Familia. */
-private const val HORIZONTE_SEMANAS_REPETIR = 26
-
-/** [desde] y sus próximas [semanas] apariciones de [dia] (incluyendo [desde] si coincide). */
-private fun fechasParaDiaSemana(desde: LocalDate, dia: DayOfWeek, semanas: Int): List<LocalDate> {
+/** [desde] y sus apariciones de [dia] hasta [hasta] (ambas incluidas; incluye [desde]
+ * mismo si coincide con [dia]) — igual que en Familia. */
+private fun fechasParaDiaSemana(desde: LocalDate, dia: DayOfWeek, hasta: LocalDate): List<LocalDate> {
     val primera = desde.with(TemporalAdjusters.nextOrSame(dia))
-    return (0 until semanas).map { primera.plusWeeks(it.toLong()) }
+    if (hasta.isBefore(primera)) return emptyList()
+    return generateSequence(primera) { it.plusWeeks(1) }.takeWhile { !it.isAfter(hasta) }.toList()
 }
 
 /** Paleta estable (siempre el mismo color para el mismo nombre) para los avatares de
@@ -474,6 +518,28 @@ private fun CasillaNino(nino: Child, elegido: Boolean, onClick: () -> Unit) {
             style = MaterialTheme.typography.titleMedium,
             fontWeight = if (elegido) FontWeight.ExtraBold else FontWeight.Medium,
             color = if (elegido) color else tintaHoja
+        )
+    }
+}
+
+/** Casilla redonda de una opción del catálogo de iconos; la elegida queda resaltada
+ * en el color de acento. Tocar la ya elegida la deselecciona (vuelve al genérico). */
+@Composable
+private fun CasillaIconoActividad(opcion: IconoActividad, elegido: Boolean, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .size(48.dp)
+            .clip(CircleShape)
+            .background(if (elegido) acentoHoja else casillaHoja)
+            .border(1.dp, if (elegido) acentoHoja else bordeHoja.copy(alpha = 0.6f), CircleShape)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            opcion.icono,
+            contentDescription = opcion.etiqueta,
+            tint = if (elegido) onAcentoHoja else tintaSuaveHoja,
+            modifier = Modifier.size(24.dp)
         )
     }
 }
@@ -562,6 +628,38 @@ private fun CajaHoraActividad(titulo: String, hora: LocalTime, modifier: Modifie
         )
     }
 }
+
+/** Caja "Hasta / 2 ene" con calendario a la derecha; al tocarla se abre el calendario
+ * de Material 3. Usada para el límite del patrón semanal de "Repetir en otros días". */
+@Composable
+private fun CajaFechaActividad(titulo: String, fecha: LocalDate, modifier: Modifier = Modifier, onCambiar: (LocalDate) -> Unit) {
+    var abierto by remember { mutableStateOf(false) }
+    CajaValorHoja(titulo, fechaCortaActividad(fecha), Icons.Default.CalendarMonth, modifier) { abierto = true }
+    if (abierto) {
+        val estado = rememberDatePickerState(initialSelectedDateMillis = fechaAMillisUtcActividad(fecha))
+        DatePickerDialog(
+            onDismissRequest = { abierto = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    estado.selectedDateMillis?.let { onCambiar(millisUtcAFechaActividad(it)) }
+                    abierto = false
+                }) { Text("Aceptar") }
+            },
+            dismissButton = { TextButton(onClick = { abierto = false }) { Text("Cancelar") } }
+        ) {
+            DatePicker(state = estado)
+        }
+    }
+}
+
+private fun fechaCortaActividad(fecha: LocalDate): String =
+    "${fecha.dayOfMonth} ${fecha.month.getDisplayName(TextStyle.SHORT, ES).removeSuffix(".")}"
+
+private fun fechaAMillisUtcActividad(fecha: LocalDate): Long =
+    fecha.atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli()
+
+private fun millisUtcAFechaActividad(millis: Long): LocalDate =
+    java.time.Instant.ofEpochMilli(millis).atZone(java.time.ZoneOffset.UTC).toLocalDate()
 
 /**
  * Calendario de un mes (con flechas para cambiar de mes) en el que se marcan los días

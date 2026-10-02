@@ -30,5 +30,9 @@ data class CoverageNeed(
      * que llevar al niño (antes de [horaInicio]); null = sin aviso. */
     val avisoLlevarMin: Int? = null,
     /** Igual que [avisoLlevarMin] pero para recoger (antes de [horaFin]). */
-    val avisoRecogerMin: Int? = null
+    val avisoRecogerMin: Int? = null,
+    /** Id del icono elegido (ver IconoActividad, en la capa de UI de Guía) para
+     * distinguir el tipo de actividad en las listas: deportiva, educativa,
+     * recreativa... null = sin elegir (se muestra un icono genérico). */
+    val icono: String? = null
 )

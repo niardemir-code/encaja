@@ -30,10 +30,12 @@ class ProgramadorDeAvisos @Inject constructor(@ApplicationContext private val co
 
     enum class Tipo { LLEVAR, RECOGER }
 
-    /** Programa los avisos de [need] (quitando antes los que tuviera), si aún están en el futuro. */
+    /** Programa los avisos de [need] (quitando antes los que tuviera), si aún están en el
+     * futuro. Independiente de [CoverageNeed.requiereDesplazamiento]: un aviso es un
+     * recordatorio del inicio/fin de la actividad, haga falta o no que alguien la
+     * acompañe. */
     fun programar(need: CoverageNeed, nombreNino: String?) {
         cancelar(need.id)
-        if (!need.requiereDesplazamiento) return
         need.avisoLlevarMin?.let { programarUno(need, nombreNino, Tipo.LLEVAR, it) }
         need.avisoRecogerMin?.let { programarUno(need, nombreNino, Tipo.RECOGER, it) }
     }
@@ -50,8 +52,15 @@ class ProgramadorDeAvisos @Inject constructor(@ApplicationContext private val co
         val instante = need.fecha.atTime(hora).minusMinutes(minutosAntes.toLong())
         if (instante.isBefore(LocalDateTime.now())) return
 
+        // Si la actividad requiere que alguien la acompañe, el título lo deja claro
+        // ("Llevar a…"/"Recoger a…"); si no, es solo un recordatorio genérico de que
+        // empieza o termina.
         val quien = nombreNino?.let { " a $it" } ?: ""
-        val titulo = if (tipo == Tipo.LLEVAR) "Llevar$quien · ${need.descripcion}" else "Recoger$quien · ${need.descripcion}"
+        val titulo = if (need.requiereDesplazamiento) {
+            if (tipo == Tipo.LLEVAR) "Llevar$quien · ${need.descripcion}" else "Recoger$quien · ${need.descripcion}"
+        } else {
+            if (tipo == Tipo.LLEVAR) "Empieza · ${need.descripcion}" else "Termina · ${need.descripcion}"
+        }
         val texto = if (tipo == Tipo.LLEVAR) {
             "Empieza a las ${hora.formatoCorto()} (dentro de ${textoMinutos(minutosAntes)})."
         } else {

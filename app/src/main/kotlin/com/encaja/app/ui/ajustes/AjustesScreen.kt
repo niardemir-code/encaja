@@ -2,6 +2,12 @@ package com.encaja.app.ui.ajustes
 
 // NOTA: depende de Jetpack Compose y Hilt, no compilado en este entorno.
 
+import android.app.AlarmManager
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.os.PowerManager
+import android.provider.Settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,11 +18,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Alarm
+import androidx.compose.material.icons.filled.BatteryAlert
 import androidx.compose.material.icons.filled.CalendarViewWeek
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ChildCare
 import androidx.compose.material.icons.filled.EventBusy
 import androidx.compose.material.icons.filled.Group
+import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -29,8 +38,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.encaja.app.ui.theme.PreferenciaTema
 import com.encaja.app.ui.theme.TemaPreferido
 
@@ -89,11 +101,144 @@ fun AjustesScreen(
         )
 
         Spacer(Modifier.height(24.dp))
+        SeccionAlarmasExactas()
+
+        Spacer(Modifier.height(12.dp))
+        SeccionAhorroDeBateria()
+
+        Spacer(Modifier.height(24.dp))
         SeccionTema()
 
         Spacer(Modifier.height(32.dp))
         OutlinedButton(onClick = onCerrarSesion, modifier = Modifier.fillMaxWidth()) {
             Text("Cerrar sesión")
+        }
+    }
+}
+
+/**
+ * A partir de Android 13, el permiso "Alarmas y recordatorios" (alarma exacta) no se
+ * concede solo con declararlo en el manifest: hay que activarlo a mano en los ajustes
+ * del sistema. Si no está activo, los avisos de las actividades se programan como
+ * alarmas "aproximadas", que Android puede retrasar bastantes minutos (sobre todo con
+ * ahorro de batería), en vez de saltar justo a la hora elegida. Esta sección deja
+ * verlo y, si falta, abrir directamente esos ajustes.
+ */
+@Composable
+private fun SeccionAlarmasExactas() {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
+    val contexto = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    fun estaConcedido(): Boolean =
+        contexto.getSystemService(AlarmManager::class.java)?.canScheduleExactAlarms() ?: true
+
+    var concedido by remember { mutableStateOf(estaConcedido()) }
+
+    // Al volver de los ajustes del sistema (donde el usuario puede haberlo activado o
+    // desactivado) se vuelve a comprobar, porque la pantalla no se recrea.
+    DisposableEffect(lifecycleOwner) {
+        val observador = LifecycleEventObserver { _, evento ->
+            if (evento == Lifecycle.Event.ON_RESUME) concedido = estaConcedido()
+        }
+        lifecycleOwner.lifecycle.addObserver(observador)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observador) }
+    }
+
+    if (concedido) return
+
+    OutlinedCard(shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Alarm, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                Text(
+                    "Avisos sin alarma exacta",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(start = 12.dp)
+                )
+            }
+            Spacer(Modifier.height(6.dp))
+            Text(
+                "El móvil puede retrasar los avisos de las actividades varios minutos. " +
+                    "Para que salten justo a la hora elegida, activa \"Alarmas y recordatorios\" para Encaja.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(12.dp))
+            Button(onClick = {
+                val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                    data = Uri.fromParts("package", contexto.packageName, null)
+                }
+                contexto.startActivity(intent)
+            }) {
+                Text("Activar")
+            }
+        }
+    }
+}
+
+/**
+ * Si el sistema (sobre todo en Xiaomi, Huawei, Samsung... con su propio ahorro de
+ * batería además del de Android) aplica restricciones de fondo a la app, puede matarla
+ * mientras no esté en pantalla, y entonces el aviso de una actividad no llega aunque la
+ * alarma esté bien programada. Pedir que no se le aplique ahorro de batería reduce (que
+ * no elimina del todo, según el fabricante) ese riesgo. Esta sección deja verlo y, si
+ * falta, pedirlo directamente.
+ */
+@Composable
+private fun SeccionAhorroDeBateria() {
+    val contexto = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    fun estaExenta(): Boolean =
+        contexto.getSystemService(PowerManager::class.java)?.isIgnoringBatteryOptimizations(contexto.packageName) ?: true
+
+    var exenta by remember { mutableStateOf(estaExenta()) }
+
+    DisposableEffect(lifecycleOwner) {
+        val observador = LifecycleEventObserver { _, evento ->
+            if (evento == Lifecycle.Event.ON_RESUME) exenta = estaExenta()
+        }
+        lifecycleOwner.lifecycle.addObserver(observador)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observador) }
+    }
+
+    if (exenta) return
+
+    OutlinedCard(shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.BatteryAlert, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                Text(
+                    "Avisos con la app cerrada",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(start = 12.dp)
+                )
+            }
+            Spacer(Modifier.height(6.dp))
+            Text(
+                "El ahorro de batería del móvil puede impedir que lleguen los avisos cuando " +
+                    "Encaja no está abierta en pantalla. Para evitarlo, quita las restricciones de batería.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(12.dp))
+            Button(onClick = {
+                val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                    data = Uri.fromParts("package", contexto.packageName, null)
+                }
+                contexto.startActivity(intent)
+            }) {
+                Text("Quitar restricciones")
+            }
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "En algunos móviles (Xiaomi, Huawei, Samsung...) hay además un ajuste propio del " +
+                    "fabricante (\"Inicio automático\", \"Apps protegidas\"...) que conviene activar " +
+                    "también para Encaja, desde los ajustes de batería del propio teléfono.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
