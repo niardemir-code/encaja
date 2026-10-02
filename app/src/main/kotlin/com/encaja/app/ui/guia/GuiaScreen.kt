@@ -664,17 +664,18 @@ private fun BloqueActividad(
     val fondo = if (bloque.cubierto) VERDE else ROJO
     val tinta = if (bloque.cubierto) ON_VERDE else ON_ROJO
 
-    // Reserva de espacio para que el contenido nunca quede debajo de los iconos. El
-    // padding de inicio no mueve el punto de partida del cálculo de scroll (offset no
-    // consume espacio de layout), así que hay que restar los dos lados al margen máximo.
-    val paddingInicio = if (bloque.quienLleva != null) ANCHO_ICONO_RESPONSABLE + 8.dp else 8.dp
-    val paddingFin = if (bloque.quienRecoge != null) ANCHO_ICONO_RESPONSABLE + 8.dp else 8.dp
-    val paddingInicioPx = with(density) { paddingInicio.toPx() }
-    val paddingFinPx = with(density) { paddingFin.toPx() }
+    // Hueco a cada lado para los iconos de quién lleva/recoge, que ahora se dibujan
+    // fuera de la tarjeta de color (en el margen del propio bloque) en vez de
+    // superpuestos sobre ella.
+    val gutterInicio = if (bloque.quienLleva != null) ANCHO_ICONO_RESPONSABLE + 4.dp else 0.dp
+    val gutterFin = if (bloque.quienRecoge != null) ANCHO_ICONO_RESPONSABLE + 4.dp else 0.dp
+    val gutterInicioPx = with(density) { gutterInicio.toPx() }
+    val gutterFinPx = with(density) { gutterFin.toPx() }
 
     var anchoContenidoPx by remember { mutableStateOf(0f) }
-    val margenMaximoPx = (anchoBloquePx - anchoContenidoPx - paddingInicioPx - paddingFinPx).coerceAtLeast(0f)
-    val offsetContenidoPx = (scrollState.value - inicioPx).coerceIn(0f, margenMaximoPx)
+    val anchoTarjetaPx = (anchoBloquePx - gutterInicioPx - gutterFinPx).coerceAtLeast(0f)
+    val margenMaximoPx = (anchoTarjetaPx - anchoContenidoPx).coerceAtLeast(0f)
+    val offsetContenidoPx = (scrollState.value - inicioPx - gutterInicioPx).coerceIn(0f, margenMaximoPx)
     val offsetContenidoDp = with(density) { offsetContenidoPx.toDp() }
 
     Box(
@@ -682,52 +683,50 @@ private fun BloqueActividad(
             .offset(x = xDeMinutos(inicioMin))
             .width(ANCHO_MINUTO * (finMin - inicioMin))
             .fillMaxHeight()
-            .padding(horizontal = 1.dp, vertical = 2.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(fondo)
-            .border(1.dp, tinta.copy(alpha = 0.35f), RoundedCornerShape(16.dp))
             .clickable { onEditar(bloque.need) }
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
+        Box(
             modifier = Modifier
-                .fillMaxHeight()
-                .padding(start = paddingInicio, end = paddingFin)
-                .offset(x = offsetContenidoDp)
-                .onGloballyPositioned { coordenadas -> anchoContenidoPx = coordenadas.size.width.toFloat() }
+                .padding(start = gutterInicio, end = gutterFin, top = 2.dp, bottom = 2.dp)
+                .padding(horizontal = 1.dp)
+                .fillMaxSize()
+                .clip(RoundedCornerShape(16.dp))
+                .background(fondo)
+                .border(1.dp, tinta.copy(alpha = 0.35f), RoundedCornerShape(16.dp))
         ) {
-            Box(
-                modifier = Modifier.size(30.dp).clip(CircleShape).background(tinta.copy(alpha = 0.22f)),
-                contentAlignment = Alignment.Center
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .padding(horizontal = 10.dp)
+                    .offset(x = offsetContenidoDp)
+                    .onGloballyPositioned { coordenadas -> anchoContenidoPx = coordenadas.size.width.toFloat() }
             ) {
-                Icon(Icons.Default.School, contentDescription = null, tint = tinta, modifier = Modifier.size(17.dp))
-            }
-            Spacer(Modifier.width(8.dp))
-            Column {
-                Text(
-                    bloque.need.descripcion,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = tinta,
-                    maxLines = 1,
-                    softWrap = false
-                )
-                Text(
-                    "${formatearHora(bloque.need.horaInicio)} – ${formatearHora(bloque.need.horaFin)}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = tinta,
-                    maxLines = 1,
-                    softWrap = false
-                )
+                Column {
+                    Text(
+                        bloque.need.descripcion,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = tinta,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        "${formatearHora(bloque.need.horaInicio)} – ${formatearHora(bloque.need.horaFin)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = tinta,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
         }
-        // Se dibujan después del contenido para quedar siempre por encima, aunque el
-        // contenido se desplace al hacer scroll.
+        // Fuera de la tarjeta de color, en el hueco reservado a cada lado del bloque.
         bloque.quienLleva?.let { responsable ->
-            IconoResponsable(responsable, iniciales, modifier = Modifier.align(Alignment.CenterStart).padding(start = 4.dp))
+            IconoResponsable(responsable, iniciales, modifier = Modifier.align(Alignment.CenterStart))
         }
         bloque.quienRecoge?.let { responsable ->
-            IconoResponsable(responsable, iniciales, modifier = Modifier.align(Alignment.CenterEnd).padding(end = 4.dp))
+            IconoResponsable(responsable, iniciales, modifier = Modifier.align(Alignment.CenterEnd))
         }
     }
 }
