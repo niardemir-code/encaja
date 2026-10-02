@@ -15,6 +15,12 @@ package com.encaja.app.ui.guia
 // opcionalmente, que se repita cada semana en cualquier combinación de días)
 // para dar de alta una actividad o serie independiente con los mismos datos,
 // sin partir de cero.
+// Hoja inferior (ModalBottomSheet) con el mismo estilo que la de disponibilidad de
+// Familia (DialogoDisponibilidad): tarjetas suaves, iconos en círculo, interruptores
+// de acento... las piezas compartidas viven en ui/theme/ComponentesHoja.kt. La
+// pantalla de crear y la de editar son el mismo composable, así que su aspecto es
+// siempre idéntico; lo único que cambia es si aparece la papelera y el bloque de
+// "esta y las siguientes" de una serie.
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -22,19 +28,33 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.*
-import com.encaja.app.ui.theme.coloresInterruptorEncaja
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.encaja.app.domain.model.Child
 import com.encaja.app.domain.model.CoverageNeed
@@ -43,6 +63,21 @@ import com.encaja.app.ui.familia.Responsable
 import com.encaja.app.ui.familia.fechaAMillisUtc
 import com.encaja.app.ui.familia.formatearHora
 import com.encaja.app.ui.familia.millisUtcAFecha
+import com.encaja.app.ui.theme.BotonCuadradoHoja
+import com.encaja.app.ui.theme.BotonRedondoSuaveHoja
+import com.encaja.app.ui.theme.CajaValorHoja
+import com.encaja.app.ui.theme.FilaConInterruptorHoja
+import com.encaja.app.ui.theme.IconoEnCirculoHoja
+import com.encaja.app.ui.theme.TarjetaSeccionHoja
+import com.encaja.app.ui.theme.SeparadorHoja
+import com.encaja.app.ui.theme.acentoHoja
+import com.encaja.app.ui.theme.bordeHoja
+import com.encaja.app.ui.theme.casillaHoja
+import com.encaja.app.ui.theme.indigoHoja
+import com.encaja.app.ui.theme.lavandaHoja
+import com.encaja.app.ui.theme.onAcentoHoja
+import com.encaja.app.ui.theme.tintaHoja
+import com.encaja.app.ui.theme.tintaSuaveHoja
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
@@ -129,102 +164,171 @@ fun DialogoActividad(
     }
     val puedeGuardar = childId != null && descripcion.isNotBlank() && horasValidas && fechasAGuardar.isNotEmpty()
 
-    AlertDialog(
+    fun guardar() {
+        val id = childId ?: return
+        // Si al editar una actividad puntual se marca "Repetir cada semana",
+        // fechasAGuardar pasa a tener varias fechas: la ocurrencia que coincide
+        // con la fecha original conserva su id, y el resto son nuevas.
+        val idsPorFecha = fechasAGuardar.iterator()
+        onGuardar(
+            crearActividades(
+                fechas = fechasAGuardar,
+                childId = id,
+                inicio = inicio,
+                fin = fin,
+                descripcion = descripcion,
+                requiereDesplazamiento = requiereDesplazamiento,
+                generarId = {
+                    val fechaActual = idsPorFecha.next()
+                    if (actividad != null && fechaActual == actividad.fecha) actividad.id
+                    else CoverageNeedId(UUID.randomUUID().toString())
+                },
+                quienLlevaId = quienLlevaId.takeIf { requiereDesplazamiento },
+                quienRecogeId = quienRecogeId.takeIf { requiereDesplazamiento },
+                grupoRepeticionId = actividad?.grupoRepeticionId,
+                avisoLlevarMin = avisoLlevarMin.takeIf { requiereDesplazamiento },
+                avisoRecogerMin = avisoRecogerMin.takeIf { requiereDesplazamiento }
+            ),
+            aplicarATodaLaSerie
+        )
+    }
+
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
         onDismissRequest = onCerrar,
-        title = { Text(if (actividad == null) "Nueva actividad" else "Editar actividad") },
-        text = {
-            Column(
-                modifier = Modifier
-                    .heightIn(max = 520.dp)
-                    .verticalScroll(rememberScrollState())
-            ) {
-                if (ninos.isEmpty()) {
-                    Text(
-                        "Antes hay que dar de alta a algún niño desde Ajustes.",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    return@Column
-                }
-
-                Text("Niño/a", style = MaterialTheme.typography.labelMedium)
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    ninos.forEach { nino ->
-                        FilterChip(
-                            selected = childId == nino.id,
-                            onClick = { childId = nino.id },
-                            label = { Text(nino.nombre) }
-                        )
-                    }
-                }
-                Spacer(Modifier.height(8.dp))
-
-                OutlinedTextField(
-                    value = descripcion,
-                    onValueChange = { descripcion = it.take(40) },
-                    label = { Text("¿Qué es? (p.ej. Fútbol, Recoger del cole)") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.background,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 18.dp)
+                .padding(bottom = 20.dp)
+                .navigationBarsPadding()
+                .imePadding()
+        ) {
+            // ── Título ────────────────────────────────────────────────────────────
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    buildAnnotatedString {
+                        append(if (actividad == null) "Nueva " else "Editar ")
+                        withStyle(SpanStyle(color = acentoHoja)) { append("actividad") }
+                    },
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = tintaHoja,
+                    modifier = Modifier.weight(1f)
                 )
-                Spacer(Modifier.height(8.dp))
+                BotonRedondoSuaveHoja(Icons.Default.Close, "Cerrar", onCerrar)
+            }
+            Spacer(Modifier.height(14.dp))
 
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    BotonHoraActividad("Desde", inicio, Modifier.weight(1f)) { inicio = it }
-                    BotonHoraActividad("Hasta", fin, Modifier.weight(1f)) { fin = it }
-                }
-                if (!horasValidas) {
-                    Text(
-                        "La hora de fin debe ser posterior a la de inicio.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-                Spacer(Modifier.height(8.dp))
+            if (ninos.isEmpty()) {
+                Text(
+                    "Antes hay que dar de alta a algún niño desde Ajustes.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = tintaSuaveHoja
+                )
+                return@Column
+            }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth().clickable { requiereDesplazamiento = !requiereDesplazamiento },
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Requiere acompañamiento")
-                        Text(
-                            if (requiereDesplazamiento) "Alguien tiene que llevarla o recogerla."
-                            else "Solo informativa: no hace falta que nadie la acompañe.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Switch(checked = requiereDesplazamiento, onCheckedChange = { requiereDesplazamiento = it }, colors = coloresInterruptorEncaja())
+            // ── Niño/a ────────────────────────────────────────────────────────────
+            Text("Niño/a", style = MaterialTheme.typography.labelLarge, color = tintaSuaveHoja)
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ninos.forEach { nino ->
+                    CasillaNino(nino = nino, elegido = childId == nino.id, onClick = { childId = nino.id })
                 }
+            }
+            Spacer(Modifier.height(14.dp))
 
-                if (requiereDesplazamiento && responsables.isNotEmpty()) {
-                    Spacer(Modifier.height(8.dp))
-                    SelectorResponsable(
-                        titulo = "Quién la lleva",
-                        responsables = responsables,
-                        elegidoId = quienLlevaId,
-                        onElegir = { quienLlevaId = it }
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    SelectorResponsable(
-                        titulo = "Quién la recoge",
-                        responsables = responsables,
-                        elegidoId = quienRecogeId,
-                        onElegir = { quienRecogeId = it }
-                    )
+            // ── ¿Qué es? ──────────────────────────────────────────────────────────
+            OutlinedTextField(
+                value = descripcion,
+                onValueChange = { descripcion = it.take(40) },
+                placeholder = { Text("¿Qué es? (p.ej. Fútbol, Recoger del cole)", color = tintaSuaveHoja) },
+                leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null, tint = tintaSuaveHoja) },
+                singleLine = true,
+                shape = RoundedCornerShape(14.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = casillaHoja,
+                    unfocusedContainerColor = casillaHoja,
+                    focusedBorderColor = acentoHoja,
+                    unfocusedBorderColor = bordeHoja.copy(alpha = 0.6f)
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(14.dp))
+
+            // ── Desde / Hasta ─────────────────────────────────────────────────────
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                CajaHoraActividad("Desde", inicio, Modifier.weight(1f)) { inicio = it }
+                CajaHoraActividad("Hasta", fin, Modifier.weight(1f)) { fin = it }
+            }
+            if (!horasValidas) {
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "La hora de fin debe ser posterior a la de inicio.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+            Spacer(Modifier.height(14.dp))
+
+            // ── Requiere acompañamiento ───────────────────────────────────────────
+            TarjetaSeccionHoja(padding = 0.dp) {
+                FilaConInterruptorHoja(
+                    icono = Icons.AutoMirrored.Filled.DirectionsWalk,
+                    titulo = "Requiere acompañamiento",
+                    subtitulo = if (requiereDesplazamiento) "Alguien tiene que llevarla o recogerla."
+                        else "Solo informativa: no hace falta que nadie la acompañe.",
+                    activo = requiereDesplazamiento,
+                    onCambiar = { requiereDesplazamiento = it }
+                )
+            }
+
+            if (requiereDesplazamiento && responsables.isNotEmpty()) {
+                Spacer(Modifier.height(10.dp))
+                FilaResponsable(
+                    titulo = "Quién la lleva",
+                    icono = Icons.Default.Person,
+                    fondoIcono = MaterialTheme.colorScheme.tertiaryContainer,
+                    tintaIcono = MaterialTheme.colorScheme.onTertiaryContainer,
+                    responsables = responsables,
+                    elegidoId = quienLlevaId,
+                    onElegir = { quienLlevaId = it }
+                )
+                Spacer(Modifier.height(10.dp))
+                FilaResponsable(
+                    titulo = "Quién la recoge",
+                    icono = Icons.Default.Home,
+                    fondoIcono = lavandaHoja,
+                    tintaIcono = indigoHoja,
+                    responsables = responsables,
+                    elegidoId = quienRecogeId,
+                    onElegir = { quienRecogeId = it }
+                )
+            }
+
+            if (requiereDesplazamiento) {
+                Spacer(Modifier.height(14.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconoEnCirculoHoja(Icons.Default.Notifications, fondo = MaterialTheme.colorScheme.tertiaryContainer, tinta = MaterialTheme.colorScheme.onTertiaryContainer, tamano = 34.dp)
+                    Spacer(Modifier.width(10.dp))
+                    Text("Avisos en el móvil", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = tintaHoja)
                 }
-
-                if (requiereDesplazamiento) {
-                    Spacer(Modifier.height(12.dp))
-                    HorizontalDivider()
-                    Spacer(Modifier.height(8.dp))
-                    Text("Avisos en el móvil", style = MaterialTheme.typography.labelMedium)
-                    Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(10.dp))
+                TarjetaSeccionHoja(padding = 0.dp) {
                     SelectorAviso(
                         titulo = "Antes de llevar",
                         detalle = "empieza a las ${formatearHoraActividad(inicio)}",
                         minutos = avisoLlevarMin,
                         onElegir = { avisoLlevarMin = it }
                     )
+                    SeparadorHoja()
                     SelectorAviso(
                         titulo = "Antes de recoger",
                         detalle = "termina a las ${formatearHoraActividad(fin)}",
@@ -232,124 +336,114 @@ fun DialogoActividad(
                         onElegir = { avisoRecogerMin = it }
                     )
                 }
+            }
 
-                if (perteneceAGrupo) {
-                    Spacer(Modifier.height(12.dp))
-                    HorizontalDivider()
+            if (perteneceAGrupo) {
+                Spacer(Modifier.height(14.dp))
+                TarjetaSeccionHoja {
+                    Text(
+                        "Esta actividad se repite cada semana. ¿A qué aplicar los cambios?",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = tintaHoja
+                    )
                     Spacer(Modifier.height(8.dp))
-                    Text("Esta actividad se repite cada semana. ¿A qué aplicar los cambios?", style = MaterialTheme.typography.labelMedium)
-                    Spacer(Modifier.height(4.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         FilterChip(
                             selected = !aplicarATodaLaSerie,
                             onClick = { aplicarATodaLaSerie = false },
-                            label = { Text("Solo este día") }
+                            label = { Text("Solo este día") },
+                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = acentoHoja, selectedLabelColor = onAcentoHoja)
                         )
                         FilterChip(
                             selected = aplicarATodaLaSerie,
                             onClick = { aplicarATodaLaSerie = true },
-                            label = { Text("Esta y las siguientes") }
+                            label = { Text("Esta y las siguientes") },
+                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = acentoHoja, selectedLabelColor = onAcentoHoja)
                         )
                     }
                     if (aplicarATodaLaSerie) {
-                        Spacer(Modifier.height(4.dp))
+                        Spacer(Modifier.height(6.dp))
                         Text(
                             "Se aplicará a esta actividad y a todas las posteriores de la serie (sin cambiar los días en que se repite).",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                } else if (actividad == null) {
-                    // Solo al crear una actividad nueva: al editar una ya existente que no
-                    // pertenece a ningún grupo, esto se hace con el botón "Repetir" de abajo.
-                    Spacer(Modifier.height(12.dp))
-                    HorizontalDivider()
-                    Spacer(Modifier.height(8.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth().clickable {
-                            repetir = !repetir
-                            if (!repetir) fechasExtra = emptySet()
-                        },
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Checkbox(checked = repetir, onCheckedChange = { marcado ->
-                            repetir = marcado
-                            if (!marcado) fechasExtra = emptySet()
-                        })
-                        Text("Repetir cada semana")
-                    }
-                    if (repetir) {
-                        SelectorDiasRepeticion(
-                            fechaBase = fechaBase,
-                            diasRepeticion = diasRepeticion,
-                            onDiasChange = { diasRepeticion = it },
-                            hastaRepeticion = hastaRepeticion,
-                            onHastaChange = { hastaRepeticion = it },
-                            fechasExtra = fechasExtra,
-                            onFechasExtraChange = { fechasExtra = it },
-                            fechasAGuardar = fechasAGuardar
+                            color = tintaSuaveHoja
                         )
                     }
                 }
-
-                if (onEliminar != null || actividad != null) {
-                    Spacer(Modifier.height(12.dp))
-                    HorizontalDivider()
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (actividad != null) {
-                            TextButton(
-                                onClick = { repitiendo = true },
-                                enabled = !(perteneceAGrupo && patronSerieCargando)
-                            ) { Text("Repetir") }
+            } else if (actividad == null) {
+                // Solo al crear una actividad nueva: al editar una ya existente que no
+                // pertenece a ningún grupo, esto se hace con el botón "Repetir" de abajo.
+                Spacer(Modifier.height(14.dp))
+                TarjetaSeccionHoja(padding = 0.dp) {
+                    FilaConInterruptorHoja(
+                        icono = Icons.Default.Repeat,
+                        titulo = "Repetir cada semana",
+                        subtitulo = if (repetir) "Elige los días y, si quieres, fechas sueltas" else "Solo este día",
+                        activo = repetir,
+                        onCambiar = { activo ->
+                            repetir = activo
+                            if (!activo) fechasExtra = emptySet()
                         }
-                        if (onEliminar != null) {
-                            TextButton(onClick = { confirmarBorrado = true }) {
-                                Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
-                                Spacer(Modifier.width(6.dp))
-                                Text("Borrar actividad", color = MaterialTheme.colorScheme.error)
-                            }
+                    )
+                    if (repetir) {
+                        SeparadorHoja()
+                        Column(modifier = Modifier.padding(14.dp)) {
+                            SelectorDiasRepeticion(
+                                fechaBase = fechaBase,
+                                diasRepeticion = diasRepeticion,
+                                onDiasChange = { diasRepeticion = it },
+                                hastaRepeticion = hastaRepeticion,
+                                onHastaChange = { hastaRepeticion = it },
+                                fechasExtra = fechasExtra,
+                                onFechasExtraChange = { fechasExtra = it },
+                                fechasAGuardar = fechasAGuardar
+                            )
                         }
                     }
                 }
             }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    val id = childId
-                    if (id != null) {
-                        // Si al editar una actividad puntual se marca "Repetir cada semana",
-                        // fechasAGuardar pasa a tener varias fechas: la ocurrencia que coincide
-                        // con la fecha original conserva su id, y el resto son nuevas.
-                        val idsPorFecha = fechasAGuardar.iterator()
-                        onGuardar(
-                            crearActividades(
-                                fechas = fechasAGuardar,
-                                childId = id,
-                                inicio = inicio,
-                                fin = fin,
-                                descripcion = descripcion,
-                                requiereDesplazamiento = requiereDesplazamiento,
-                                generarId = {
-                                    val fechaActual = idsPorFecha.next()
-                                    if (actividad != null && fechaActual == actividad.fecha) actividad.id
-                                    else CoverageNeedId(UUID.randomUUID().toString())
-                                },
-                                quienLlevaId = quienLlevaId.takeIf { requiereDesplazamiento },
-                                quienRecogeId = quienRecogeId.takeIf { requiereDesplazamiento },
-                                grupoRepeticionId = actividad?.grupoRepeticionId,
-                                avisoLlevarMin = avisoLlevarMin.takeIf { requiereDesplazamiento },
-                                avisoRecogerMin = avisoRecogerMin.takeIf { requiereDesplazamiento }
-                            ),
-                            aplicarATodaLaSerie
-                        )
-                    }
-                },
-                enabled = puedeGuardar
-            ) { Text("Guardar") }
-        },
-        dismissButton = { TextButton(onClick = onCerrar) { Text("Cancelar") } }
-    )
+
+            if (actividad != null) {
+                Spacer(Modifier.height(10.dp))
+                TextButton(
+                    onClick = { repitiendo = true },
+                    enabled = !(perteneceAGrupo && patronSerieCargando)
+                ) { Text("Repetir en otro día", color = acentoHoja) }
+            }
+
+            // ── Botones: Cancelar (texto), papelera (solo editando) y disquete ───────
+            Spacer(Modifier.height(10.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                OutlinedButton(
+                    onClick = onCerrar,
+                    modifier = Modifier.weight(1f).height(56.dp),
+                    shape = RoundedCornerShape(18.dp),
+                    border = null,
+                    colors = ButtonDefaults.outlinedButtonColors(containerColor = casillaHoja, contentColor = tintaHoja)
+                ) {
+                    Text("Cancelar", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                }
+                if (onEliminar != null) {
+                    BotonCuadradoHoja(
+                        icono = Icons.Default.Delete,
+                        descripcion = "Borrar",
+                        fondo = MaterialTheme.colorScheme.errorContainer,
+                        tinta = MaterialTheme.colorScheme.onErrorContainer,
+                        onClick = { confirmarBorrado = true }
+                    )
+                }
+                BotonCuadradoHoja(
+                    icono = Icons.Default.Save,
+                    descripcion = "Guardar",
+                    fondo = if (puedeGuardar) acentoHoja else acentoHoja.copy(alpha = 0.35f),
+                    tinta = onAcentoHoja,
+                    habilitado = puedeGuardar,
+                    onClick = { guardar(); onCerrar() }
+                )
+            }
+        }
+    }
 
     if (confirmarBorrado && onEliminar != null) {
         AlertDialog(
@@ -357,7 +451,7 @@ fun DialogoActividad(
             title = { Text(if (aplicarATodaLaSerie) "¿Borrar esta y las siguientes?" else "¿Borrar esta actividad?") },
             text = { Text("No se puede deshacer.") },
             confirmButton = {
-                TextButton(onClick = { confirmarBorrado = false; onEliminar(aplicarATodaLaSerie) }) {
+                TextButton(onClick = { confirmarBorrado = false; onEliminar(aplicarATodaLaSerie); onCerrar() }) {
                     Text("Borrar", color = MaterialTheme.colorScheme.error)
                 }
             },
@@ -428,9 +522,138 @@ fun DialogoActividad(
     }
 }
 
+/* ───────────────────────────── Piezas del diseño ───────────────────────────── */
+
+/** Paleta estable (siempre el mismo color para el mismo nombre) para los avatares de
+ * los niños, ya que Child no guarda un color propio. */
+private val PALETA_NINOS = listOf(
+    Color(0xFF34D399), Color(0xFFA78BFA), Color(0xFFF59E0B),
+    Color(0xFF60A5FA), Color(0xFFF472B6), Color(0xFF38BDF8)
+)
+
+private fun colorParaNino(nombre: String): Color {
+    val indice = nombre.hashCode().let { if (it < 0) -it else it } % PALETA_NINOS.size
+    return PALETA_NINOS[indice]
+}
+
+/** Casilla "Niño/a": avatar con su inicial (coloreado de forma estable por nombre) y su
+ * nombre; la elegida lleva el borde y el texto en su color. */
+@Composable
+private fun CasillaNino(nino: Child, elegido: Boolean, onClick: () -> Unit) {
+    val color = colorParaNino(nino.nombre)
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(if (elegido) color.copy(alpha = 0.18f) else casillaHoja)
+            .border(1.dp, if (elegido) color else bordeHoja.copy(alpha = 0.6f), RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier.size(28.dp).clip(CircleShape).background(color.copy(alpha = 0.35f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(nino.nombre.take(1).uppercase(), color = color, fontWeight = FontWeight.ExtraBold, style = MaterialTheme.typography.labelLarge)
+        }
+        Spacer(Modifier.width(8.dp))
+        Text(
+            nino.nombre,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = if (elegido) FontWeight.ExtraBold else FontWeight.Medium,
+            color = if (elegido) color else tintaHoja
+        )
+    }
+}
+
+/** Fila "Quién la lleva / recoge": icono en círculo, el nombre elegido (o "Nadie") y una
+ * flecha; al tocarla se elige en una lista (mismo patrón que SelectorAviso). */
+@Composable
+private fun FilaResponsable(
+    titulo: String,
+    icono: androidx.compose.ui.graphics.vector.ImageVector,
+    fondoIcono: Color,
+    tintaIcono: Color,
+    responsables: List<Responsable>,
+    elegidoId: String?,
+    onElegir: (String?) -> Unit
+) {
+    var abierto by remember { mutableStateOf(false) }
+    val etiquetaElegida = responsables.firstOrNull { it.idTexto == elegidoId }?.etiqueta ?: "Nadie"
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(casillaHoja)
+            .border(1.dp, bordeHoja.copy(alpha = 0.6f), RoundedCornerShape(16.dp))
+            .clickable { abierto = true }
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconoEnCirculoHoja(icono, fondo = fondoIcono, tinta = tintaIcono, tamano = 36.dp)
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(titulo, style = MaterialTheme.typography.bodySmall, color = tintaSuaveHoja)
+            Text(etiquetaElegida, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = tintaHoja)
+        }
+        Icon(Icons.Default.ExpandMore, contentDescription = null, tint = tintaSuaveHoja)
+    }
+
+    if (abierto) {
+        AlertDialog(
+            onDismissRequest = { abierto = false },
+            title = { Text(titulo) },
+            text = {
+                Column {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clickable { onElegir(null); abierto = false }.padding(vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(selected = elegidoId == null, onClick = { onElegir(null); abierto = false })
+                        Text("Nadie")
+                    }
+                    responsables.forEach { responsable ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth().clickable { onElegir(responsable.idTexto); abierto = false }.padding(vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(selected = responsable.idTexto == elegidoId, onClick = { onElegir(responsable.idTexto); abierto = false })
+                            Text(responsable.etiqueta)
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { abierto = false }) { Text("Cerrar") } }
+        )
+    }
+}
+
+/** Caja "Desde / 09:00" con reloj a la derecha; al tocarla se abre el reloj de Material 3. */
+@Composable
+private fun CajaHoraActividad(titulo: String, hora: LocalTime, modifier: Modifier = Modifier, onCambiar: (LocalTime) -> Unit) {
+    var abierto by remember { mutableStateOf(false) }
+    CajaValorHoja(titulo, formatearHoraActividad(hora), Icons.Default.Schedule, modifier) { abierto = true }
+    if (abierto) {
+        val estado = rememberTimePickerState(initialHour = hora.hour, initialMinute = hora.minute, is24Hour = true)
+        AlertDialog(
+            onDismissRequest = { abierto = false },
+            title = { Text(titulo) },
+            text = { TimePicker(state = estado) },
+            confirmButton = {
+                TextButton(onClick = {
+                    onCambiar(LocalTime.of(estado.hour, estado.minute))
+                    abierto = false
+                }) { Text("Aceptar") }
+            },
+            dismissButton = { TextButton(onClick = { abierto = false }) { Text("Cancelar") } }
+        )
+    }
+}
+
 /**
- * Diálogo aparte que abre el botón "Repetir". Tiene dos usos distintos, según si la
- * actividad que se estaba editando ya pertenece a un grupo de repetición
+ * Diálogo aparte que abre el botón "Repetir en otro día". Tiene dos usos distintos,
+ * según si la actividad que se estaba editando ya pertenece a un grupo de repetición
  * ([perteneceAGrupo]):
  * - Copiar a otro día/hora: se elige un día y hora nuevos (por defecto, los de la
  *   actividad original) y, opcionalmente, que se repita cada semana en cualquier
@@ -567,7 +790,7 @@ private fun DialogoRepetirActividad(
 }
 
 /** Círculos de día de la semana (los 7) + fecha de fin, para elegir el patrón de una
- * repetición nueva. */
+ * repetición nueva; debajo, el calendario mensual para añadir fechas sueltas. */
 @Composable
 private fun SelectorDiasRepeticion(
     fechaBase: LocalDate,
@@ -709,45 +932,8 @@ private fun CalendarioRepeticion(mesInicial: YearMonth, seleccionadas: Set<Local
     }
 }
 
-/** Menú desplegable para elegir quién (persona o subgrupo familiar) lleva o recoge al niño. */
-@Composable
-private fun SelectorResponsable(
-    titulo: String,
-    responsables: List<Responsable>,
-    elegidoId: String?,
-    onElegir: (String?) -> Unit
-) {
-    var expandido by remember { mutableStateOf(false) }
-    val etiquetaElegida = responsables.firstOrNull { it.idTexto == elegidoId }?.etiqueta ?: "Nadie"
-
-    Text(titulo, style = MaterialTheme.typography.labelMedium)
-    ExposedDropdownMenuBox(
-        expanded = expandido,
-        onExpandedChange = { expandido = it }
-    ) {
-        OutlinedTextField(
-            value = etiquetaElegida,
-            onValueChange = {},
-            readOnly = true,
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandido) },
-            modifier = Modifier.menuAnchor().fillMaxWidth()
-        )
-        ExposedDropdownMenu(expanded = expandido, onDismissRequest = { expandido = false }) {
-            DropdownMenuItem(
-                text = { Text("Nadie") },
-                onClick = { onElegir(null); expandido = false }
-            )
-            responsables.forEach { responsable ->
-                DropdownMenuItem(
-                    text = { Text(responsable.etiqueta) },
-                    onClick = { onElegir(responsable.idTexto); expandido = false }
-                )
-            }
-        }
-    }
-}
-
-/** Botón que muestra una hora y, al tocarlo, abre el reloj de Material 3 para cambiarla. */
+/** Botón que muestra una hora y, al tocarlo, abre el reloj de Material 3 (usado dentro
+ * de "Repetir en otro día", que mantiene un estilo de diálogo más simple). */
 @Composable
 private fun BotonHoraActividad(titulo: String, hora: LocalTime, modifier: Modifier = Modifier, onCambiar: (LocalTime) -> Unit) {
     var abierto by remember { mutableStateOf(false) }
@@ -809,7 +995,7 @@ private fun formatearHoraActividad(hora: LocalTime): String =
     "${hora.hour.toString().padStart(2, '0')}:${hora.minute.toString().padStart(2, '0')}"
 
 /**
- * Fila "Antes de llevar · empieza a las 17:00 — 15 min antes"; al tocarla se elige la
+ * Fila "Antes de llevar · empieza a las 17:00 — Sin aviso"; al tocarla se elige la
  * antelación en una lista. El aviso llega como notificación al móvil (ver
  * ProgramadorDeAvisos).
  */
@@ -817,17 +1003,18 @@ private fun formatearHoraActividad(hora: LocalTime): String =
 private fun SelectorAviso(titulo: String, detalle: String, minutos: Int?, onElegir: (Int?) -> Unit) {
     var abierto by remember { mutableStateOf(false) }
     Row(
-        modifier = Modifier.fillMaxWidth().clickable { abierto = true }.padding(vertical = 6.dp),
+        modifier = Modifier.fillMaxWidth().clickable { abierto = true }.padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(titulo)
-            Text(detalle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(titulo, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = tintaHoja)
+            Text(detalle, style = MaterialTheme.typography.bodySmall, color = tintaSuaveHoja)
         }
         Text(
             textoAviso(minutos),
             style = MaterialTheme.typography.labelLarge,
-            color = if (minutos == null) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary
+            fontWeight = FontWeight.Bold,
+            color = if (minutos == null) tintaSuaveHoja else acentoHoja
         )
     }
     if (abierto) {
