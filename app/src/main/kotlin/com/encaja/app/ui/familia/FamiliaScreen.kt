@@ -15,6 +15,7 @@ package com.encaja.app.ui.familia
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -606,11 +607,16 @@ private fun CeldaDisponibilidad(
     onClick: (() -> Unit)?
 ) {
     val primero = dia.bloqueos.minByOrNull { it.horaInicio }
+    val fondoCelda = if (primero == null) VERDE else Color(primero.categoriaEn(categorias).color)
+    // Reborde fino: el mismo color de la casilla, bastante más oscuro, para que destaque
+    // sobre el gris violáceo de la fila tanto en Cálido como en Nocturno.
+    val bordeCelda = androidx.compose.ui.graphics.lerp(fondoCelda, Color(0xFF26224A), 0.45f)
     Box(
         modifier = modifier
             .height(ALTO_CELDA)
             .clip(RoundedCornerShape(10.dp))
-            .background(if (primero == null) VERDE else Color(primero.categoriaEn(categorias).color))
+            .background(fondoCelda)
+            .border(1.dp, bordeCelda, RoundedCornerShape(10.dp))
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
         contentAlignment = Alignment.Center
     ) {
