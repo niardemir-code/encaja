@@ -1,9 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Avisos de actividades: notificaciones (Android 13+) y alarmas exactas (Android 12+). -->
+    <!-- Avisos de actividades: notificaciones (Android 13+) y alarmas exactas.
+         USE_EXACT_ALARM (Android 13+) se concede solo al instalar, sin que el usuario tenga
+         que activar nada: es el permiso pensado para apps de recordatorios y calendario, que
+         es justo lo que son los avisos de Encaja. SCHEDULE_EXACT_ALARM se deja solo para
+         Android 12 (donde USE_EXACT_ALARM aún no existe y este otro viene concedido de
+         serie); en Android 13+ viene denegado por defecto y obligaba a activarlo a mano. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />
     <!-- Para poder pedir que no se restrinja en segundo plano (ver Ajustes): si no, el
          sistema puede matar la app y los avisos de actividades no suenan cuando no
          está abierta en pantalla. -->

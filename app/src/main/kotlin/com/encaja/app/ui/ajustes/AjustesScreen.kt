@@ -16,7 +16,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.BatteryAlert
@@ -60,7 +62,14 @@ fun AjustesScreen(
     onAbrirOcupaciones: () -> Unit = {},
     viewModel: AjustesViewModel = hiltViewModel()
 ) {
-    Column(modifier = Modifier.fillMaxSize().padding(24.dp)) {
+    // Con scroll: con las tarjetas de avisos (alarma exacta, batería) ya no cabe todo en
+    // una pantalla y, si no, el tema y "Cerrar sesión" quedaban cortados por abajo.
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(24.dp)
+    ) {
         Text("Ajustes", style = MaterialTheme.typography.headlineSmall)
         viewModel.emailUsuarioActual?.let { email ->
             Spacer(Modifier.height(4.dp))
@@ -152,15 +161,16 @@ private fun SeccionAlarmasExactas() {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Alarm, contentDescription = null, tint = MaterialTheme.colorScheme.error)
                 Text(
-                    "Avisos sin alarma exacta",
+                    "Los avisos pueden llegar tarde",
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(start = 12.dp)
                 )
             }
             Spacer(Modifier.height(6.dp))
             Text(
-                "El móvil puede retrasar los avisos de las actividades varios minutos. " +
-                    "Para que salten justo a la hora elegida, activa \"Alarmas y recordatorios\" para Encaja.",
+                "Encaja no tiene permiso para programar alarmas a una hora exacta, así que el móvil " +
+                    "puede retrasar los avisos de las actividades bastantes minutos. Para que salten justo " +
+                    "a la hora elegida, activa \"Alarmas y recordatorios\" para Encaja.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
