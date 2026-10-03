@@ -46,6 +46,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -67,6 +68,7 @@ import com.encaja.app.ui.familia.etiquetaMotivo
 import com.encaja.app.ui.familia.fechaAMillisUtc
 import com.encaja.app.ui.familia.millisUtcAFecha
 import com.encaja.app.ui.guia.DialogoActividad
+import com.encaja.app.ui.intro.PreferenciaIntro
 import com.encaja.app.ui.theme.LocalEncajaExtraColors
 import kotlinx.coroutines.launch
 import java.time.DayOfWeek
@@ -120,6 +122,17 @@ fun SemanaScreen(
         is SemaforoPantallaEstado.SinFamilia -> {
             var codigo by remember { mutableStateOf("") }
             var error by remember { mutableStateOf<String?>(null) }
+
+            // Si se escribió un código en la intro, se canjea solo al entrar con la cuenta.
+            val contexto = LocalContext.current
+            LaunchedEffect(Unit) {
+                val pendiente = PreferenciaIntro.codigoPendiente(contexto)
+                if (pendiente != null) {
+                    codigo = pendiente
+                    PreferenciaIntro.borrarCodigo(contexto)
+                    viewModel.canjearCodigo(pendiente) { mensaje -> error = mensaje }
+                }
+            }
 
             Column(
                 modifier = Modifier.fillMaxSize().padding(24.dp),

@@ -13,10 +13,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.encaja.app.ui.EncajaApp
 import com.encaja.app.ui.auth.AuthViewModel
 import com.encaja.app.ui.auth.LoginScreen
+import com.encaja.app.ui.intro.IntroScreen
+import com.encaja.app.ui.intro.PreferenciaIntro
 import com.encaja.app.ui.theme.EncajaTheme
 import com.encaja.app.ui.theme.PreferenciaTema
 import com.encaja.app.ui.theme.TemaPreferido
@@ -51,10 +56,24 @@ class MainActivity : ComponentActivity() {
                     val authViewModel: AuthViewModel = hiltViewModel()
                     val autenticado by authViewModel.autenticado.collectAsState()
 
+                    // La intro se ve una sola vez, antes del login, en la primera apertura.
+                    var introVista by remember { mutableStateOf(PreferenciaIntro.vista(this@MainActivity)) }
+                    var registroInicial by remember { mutableStateOf(false) }
+
                     if (autenticado) {
                         EncajaApp(onCerrarSesion = { authViewModel.cerrarSesion() })
+                    } else if (!introVista) {
+                        IntroScreen(alTerminar = { registrarse, codigo ->
+                            if (codigo != null) PreferenciaIntro.guardarCodigo(this@MainActivity, codigo)
+                            PreferenciaIntro.marcarVista(this@MainActivity)
+                            registroInicial = registrarse
+                            introVista = true
+                        })
                     } else {
-                        LoginScreen(onLoginExitoso = { authViewModel.marcarAutenticado() })
+                        LoginScreen(
+                            onLoginExitoso = { authViewModel.marcarAutenticado() },
+                            modoRegistroInicial = registroInicial
+                        )
                     }
                 }
             }
