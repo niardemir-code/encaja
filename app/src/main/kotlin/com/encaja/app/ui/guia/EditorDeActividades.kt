@@ -37,20 +37,21 @@ class EditorDeActividades @Inject constructor(
      * Guarda una o varias actividades (varias si se crearon con "Repetir cada semana").
      * Si [aplicarATodaLaSerie] es true, [needs] trae una única ocurrencia editada que ya
      * pertenece a un grupo: sus cambios (todo menos la fecha) se copian a ella y a todas
-     * las ocurrencias posteriores del grupo, conservando el id y la fecha de cada una.
+     * las ocurrencias del grupo (anteriores y posteriores), conservando el id y la fecha
+     * de cada una.
      */
     suspend fun guardar(familyId: FamilyId, needs: List<CoverageNeed>, aplicarATodaLaSerie: Boolean) {
         if (needs.isEmpty()) return
         if (aplicarATodaLaSerie) {
             val plantilla = needs.first()
             val grupoId = plantilla.grupoRepeticionId
-            val posteriores = if (grupoId != null) {
+            val deLaSerie = if (grupoId != null) {
                 coverageNeedRepository.obtenerNeedsDelGrupo(familyId, grupoId)
-                    .filter { !it.fecha.isBefore(plantilla.fecha) }
+                    .ifEmpty { listOf(plantilla) }
             } else {
                 listOf(plantilla)
             }
-            val actualizadas = posteriores.map { existente -> plantilla.copy(id = existente.id, fecha = existente.fecha) }
+            val actualizadas = deLaSerie.map { existente -> plantilla.copy(id = existente.id, fecha = existente.fecha) }
             coverageNeedRepository.guardarNeeds(familyId, actualizadas)
             programarAvisos(familyId, actualizadas)
         } else {

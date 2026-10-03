@@ -18,7 +18,7 @@ import androidx.room.RoomDatabase
         TurnoTrabajoEntity::class,
         CategoriaEntity::class
     ],
-    version = 16,
+    version = 17,
     exportSchema = false
 )
 abstract class EncajaDatabase : RoomDatabase() {

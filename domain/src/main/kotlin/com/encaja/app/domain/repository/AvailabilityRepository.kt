@@ -7,6 +7,8 @@ import java.time.LocalDate
 
 interface AvailabilityRepository {
     suspend fun obtenerDisponibilidad(familyId: FamilyId, desde: LocalDate, hasta: LocalDate): List<AvailabilityBlock>
+    /** Todos los bloques (de cualquier fecha) que comparten [grupoRepeticionId]: una serie. */
+    suspend fun obtenerBloquesDelGrupo(familyId: FamilyId, grupoRepeticionId: String): List<AvailabilityBlock>
     suspend fun guardarBloque(familyId: FamilyId, bloque: AvailabilityBlock)
     suspend fun eliminarBloque(familyId: FamilyId, caregiverId: CaregiverId, fecha: LocalDate, horaInicio: java.time.LocalTime)
 }

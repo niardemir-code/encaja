@@ -40,7 +40,8 @@ fun bloqueDeCategoria(
     fecha: LocalDate,
     inicio: LocalTime,
     fin: LocalTime,
-    etiqueta: String?
+    etiqueta: String?,
+    grupoRepeticionId: String? = null
 ): AvailabilityBlock = AvailabilityBlock(
     caregiverId = caregiverId,
     fecha = fecha,
@@ -48,7 +49,8 @@ fun bloqueDeCategoria(
     horaFin = fin,
     motivo = categoria.base ?: MotivoNoDisponibilidad.OTRO,
     etiqueta = etiqueta,
-    categoriaId = if (categoria.base == null) categoria.id else null
+    categoriaId = if (categoria.base == null) categoria.id else null,
+    grupoRepeticionId = grupoRepeticionId
 )
 
 /**

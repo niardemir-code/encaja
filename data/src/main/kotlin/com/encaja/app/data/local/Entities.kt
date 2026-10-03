@@ -91,19 +91,21 @@ data class AvailabilityBlockEntity(
     val horaFin: String,
     val motivo: String,
     val etiqueta: String?,
-    val categoriaId: String? = null
+    val categoriaId: String? = null,
+    val grupoRepeticionId: String? = null
 ) {
     fun aDominio() = AvailabilityBlock(
         CaregiverId(caregiverId), java.time.LocalDate.parse(fecha),
         java.time.LocalTime.parse(horaInicio), java.time.LocalTime.parse(horaFin),
-        MotivoNoDisponibilidad.valueOf(motivo), etiqueta, categoriaId?.let { CategoriaId(it) }
+        MotivoNoDisponibilidad.valueOf(motivo), etiqueta, categoriaId?.let { CategoriaId(it) },
+        grupoRepeticionId = grupoRepeticionId
     )
 
     companion object {
         fun desdeDominio(familyId: String, bloque: AvailabilityBlock) = AvailabilityBlockEntity(
             familyId, bloque.caregiverId.value, bloque.fecha.toString(),
             bloque.horaInicio.toString(), bloque.horaFin.toString(), bloque.motivo.name, bloque.etiqueta,
-            bloque.categoriaId?.value
+            bloque.categoriaId?.value, bloque.grupoRepeticionId
         )
     }
 }

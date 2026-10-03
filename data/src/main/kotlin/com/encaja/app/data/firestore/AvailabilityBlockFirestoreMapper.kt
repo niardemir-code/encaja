@@ -16,7 +16,8 @@ object AvailabilityBlockFirestoreMapper {
         "horaFin" to bloque.horaFin.toString(),
         "motivo" to bloque.motivo.name,
         "etiqueta" to bloque.etiqueta,
-        "categoriaId" to bloque.categoriaId?.value
+        "categoriaId" to bloque.categoriaId?.value,
+        "grupoRepeticionId" to bloque.grupoRepeticionId
     )
 
     fun desdeDocumento(datos: Map<String, Any?>): AvailabilityBlock? {
@@ -29,6 +30,11 @@ object AvailabilityBlockFirestoreMapper {
         val etiqueta = datos["etiqueta"] as? String
         val categoriaId = (datos["categoriaId"] as? String)?.let { CategoriaId(it) }
 
-        return AvailabilityBlock(caregiverId, fecha, horaInicio, horaFin, motivo, etiqueta, categoriaId)
+        val grupoRepeticionId = datos["grupoRepeticionId"] as? String
+
+        return AvailabilityBlock(
+            caregiverId, fecha, horaInicio, horaFin, motivo, etiqueta, categoriaId,
+            grupoRepeticionId = grupoRepeticionId
+        )
     }
 }

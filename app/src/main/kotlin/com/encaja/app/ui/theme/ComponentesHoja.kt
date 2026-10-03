@@ -16,11 +16,15 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Save
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -28,12 +32,15 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -119,6 +126,64 @@ fun BotonCuadradoHoja(
     ) {
         Icon(icono, contentDescription = descripcion, tint = tinta, modifier = Modifier.size(24.dp))
     }
+}
+
+/**
+ * Varios disquetes apilados: el icono de "Guardar toda la serie" (el de un solo disquete
+ * es "Guardar solo esta").
+ */
+@Composable
+fun IconoVariosDisquetes(tinta: Color, modifier: Modifier = Modifier) {
+    Box(modifier = modifier.size(30.dp)) {
+        Icon(Icons.Default.Save, contentDescription = null, tint = tinta.copy(alpha = 0.40f),
+            modifier = Modifier.align(Alignment.TopStart).size(19.dp))
+        Icon(Icons.Default.Save, contentDescription = null, tint = tinta.copy(alpha = 0.70f),
+            modifier = Modifier.align(Alignment.TopStart).offset(x = 5.dp, y = 5.dp).size(19.dp))
+        Icon(Icons.Default.Save, contentDescription = null, tint = tinta,
+            modifier = Modifier.align(Alignment.TopStart).offset(x = 10.dp, y = 10.dp).size(19.dp))
+    }
+}
+
+/** Botón cuadrado igual que [BotonCuadradoHoja] pero con el icono de varios disquetes. */
+@Composable
+fun BotonVariosDisquetesHoja(
+    descripcion: String,
+    fondo: Color,
+    tinta: Color,
+    habilitado: Boolean = true,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .size(56.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(fondo)
+            .semantics { contentDescription = descripcion }
+            .clickable(enabled = habilitado, onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        IconoVariosDisquetes(tinta)
+    }
+}
+
+/**
+ * Confirmación al guardar cuando hay una serie: [titulo] dice qué se va a guardar
+ * ("Guardar solo esta actividad" o "Guardar la serie completa de la actividad").
+ */
+@Composable
+fun ConfirmarGuardadoHoja(
+    titulo: String,
+    detalle: String,
+    onConfirmar: () -> Unit,
+    onCancelar: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onCancelar,
+        title = { Text(titulo) },
+        text = { Text(detalle) },
+        confirmButton = { TextButton(onClick = onConfirmar) { Text("Guardar", fontWeight = FontWeight.Bold) } },
+        dismissButton = { TextButton(onClick = onCancelar) { Text("Cancelar") } }
+    )
 }
 
 @Composable

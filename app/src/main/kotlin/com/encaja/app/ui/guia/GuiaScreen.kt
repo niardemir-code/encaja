@@ -29,6 +29,8 @@ import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material.icons.filled.ZoomIn
+import androidx.compose.material.icons.filled.ZoomOut
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -44,6 +46,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -77,13 +80,30 @@ private val INICIO_FRANJA: LocalTime = LocalTime.of(7, 0)
 private val FIN_FRANJA: LocalTime = LocalTime.of(22, 0)
 private val MINUTOS_FRANJA = java.time.Duration.between(INICIO_FRANJA, FIN_FRANJA).toMinutes().toInt()
 
-// Escala de la línea de tiempo: cada minuto ocupa este ancho real (no se comprime
-// para caber en pantalla), por eso hace falta scroll horizontal para ver todo el día.
-private val ANCHO_MINUTO: Dp = 2.dp
+// Escala de la línea de tiempo: cada minuto ocupa un ancho real (no se comprime para caber
+// en pantalla), por eso hace falta scroll horizontal para ver todo el día. El ancho por
+// minuto se puede cambiar con los botones de zoom: más ancho = más separación entre horas
+// (más detalle); menos = una visión más global del día.
+private val ESCALAS_DP_POR_MINUTO = listOf(0.8f, 1.1f, 1.5f, 2f, 3f, 4.5f, 6f)
+private const val NIVEL_ESCALA_NORMAL = 3
+private const val PREFS_GUIA = "encaja_prefs"
+private const val CLAVE_NIVEL_ESCALA = "guia_nivel_escala"
+
+private fun anchoMinutoDeNivel(nivel: Int): Dp = ESCALAS_DP_POR_MINUTO[nivel.coerceIn(0, ESCALAS_DP_POR_MINUTO.lastIndex)].dp
+
+/** "100 %" para el nivel normal (2 dp por minuto), "50 %" la mitad, etc. */
+private fun textoNivelEscala(nivel: Int): String =
+    "${(ESCALAS_DP_POR_MINUTO[nivel.coerceIn(0, ESCALAS_DP_POR_MINUTO.lastIndex)] / 2f * 100).roundToInt()} %"
+
+private fun margenDeAncho(anchoMinuto: Dp): Dp = anchoMinuto * 30
+
+/** Ancho por minuto vigente para la línea de tiempo (lo fija GuiaScreen con el zoom). */
+private val LocalAnchoMinuto = compositionLocalOf { anchoMinutoDeNivel(NIVEL_ESCALA_NORMAL) }
+
 // Media hora de margen a cada lado del lienzo, para que la etiqueta de la primera y la
 // última hora (centradas en su marca) no queden cortadas.
-private val MARGEN_LIENZO: Dp = ANCHO_MINUTO * 30
-private val ANCHO_LIENZO: Dp = ANCHO_MINUTO * MINUTOS_FRANJA + MARGEN_LIENZO * 2
+private val MARGEN_LIENZO: Dp @Composable get() = margenDeAncho(LocalAnchoMinuto.current)
+private val ANCHO_LIENZO: Dp @Composable get() = LocalAnchoMinuto.current * MINUTOS_FRANJA + MARGEN_LIENZO * 2
 private val MARGEN_AHORA: Dp = 96.dp
 
 // Alturas fijas de la regla, del nombre sobre cada carril y de los carriles.
@@ -110,7 +130,8 @@ private val ROJO: Color @Composable get() = MaterialTheme.colorScheme.errorConta
 private val ON_ROJO: Color @Composable get() = MaterialTheme.colorScheme.onErrorContainer
 
 /** Posición horizontal (dentro del lienzo) de un instante, contando el margen izquierdo. */
-private fun xDeMinutos(minutos: Int): Dp = MARGEN_LIENZO + ANCHO_MINUTO * minutos
+@Composable
+private fun xDeMinutos(minutos: Int): Dp = MARGEN_LIENZO + LocalAnchoMinuto.current * minutos
 
 @Composable
 fun GuiaScreen(
@@ -207,10 +228,50 @@ fun GuiaScreen(
                     val scrollState = rememberScrollState()
                     val coroutineScope = rememberCoroutineScope()
                     val density = LocalDensity.current
+                    val contextoGuia = LocalContext.current
+
+                    // Zoom de la línea de tiempo (se recuerda entre sesiones).
+                    var nivelEscala by remember {
+                        mutableIntStateOf(
+                            contextoGuia.getSharedPreferences(PREFS_GUIA, android.content.Context.MODE_PRIVATE)
+                                .getInt(CLAVE_NIVEL_ESCALA, NIVEL_ESCALA_NORMAL)
+                                .coerceIn(0, ESCALAS_DP_POR_MINUTO.lastIndex)
+                        )
+                    }
+                    val anchoMinutoActual = anchoMinutoDeNivel(nivelEscala)
+                    var anchoVisibleTimelinePx by remember { mutableIntStateOf(0) }
+                    // Minuto que estaba en el centro de la pantalla al pulsar el zoom, para
+                    // que tras el cambio de escala siga en el centro (en vez de saltar).
+                    var minutoCentroAncla by remember { mutableStateOf<Float?>(null) }
+
+                    fun cambiarEscala(nuevoNivel: Int) {
+                        val nivel = nuevoNivel.coerceIn(0, ESCALAS_DP_POR_MINUTO.lastIndex)
+                        if (nivel == nivelEscala) return
+                        val anchoAntiguoDp = anchoMinutoActual.value
+                        val centroDp = (scrollState.value + anchoVisibleTimelinePx / 2f) / density.density
+                        minutoCentroAncla = (centroDp - margenDeAncho(anchoMinutoActual).value) / anchoAntiguoDp
+                        nivelEscala = nivel
+                        contextoGuia.getSharedPreferences(PREFS_GUIA, android.content.Context.MODE_PRIVATE)
+                            .edit().putInt(CLAVE_NIVEL_ESCALA, nivel).apply()
+                    }
+
+                    LaunchedEffect(nivelEscala) {
+                        val minuto = minutoCentroAncla ?: return@LaunchedEffect
+                        minutoCentroAncla = null
+                        // Espera a que el lienzo se vuelva a medir con el ancho nuevo.
+                        withFrameNanos { }
+                        withFrameNanos { }
+                        val ancho = anchoMinutoDeNivel(nivelEscala)
+                        val centroPx = (margenDeAncho(ancho) + ancho * minuto).value * density.density
+                        val destino = (centroPx - anchoVisibleTimelinePx / 2f)
+                            .coerceIn(0f, scrollState.maxValue.toFloat())
+                        scrollState.scrollTo(destino.roundToInt())
+                    }
 
                     fun destinoAhoraPx(): Int {
                         val minutosAhora = minutosDesdeInicioFranja(LocalTime.now())
-                        val px = with(density) { (xDeMinutos(minutosAhora) - MARGEN_AHORA).toPx() }
+                        val xDp = margenDeAncho(anchoMinutoActual) + anchoMinutoActual * minutosAhora
+                        val px = with(density) { (xDp - MARGEN_AHORA).toPx() }
                         return px.coerceIn(0f, scrollState.maxValue.toFloat()).roundToInt()
                     }
 
@@ -254,14 +315,23 @@ fun GuiaScreen(
                                 modifier = Modifier.padding(16.dp)
                             )
                         } else {
-                            Spacer(Modifier.height(10.dp))
-                            LineaDeTiempo(
-                                filas = estadoActual.estado.filas,
-                                scrollState = scrollState,
-                                mostrarAhora = esHoy,
-                                iniciales = estadoActual.estado.iniciales,
-                                onEditar = { actividadEnEdicion = it }
+                            ControlDeEscala(
+                                nivel = nivelEscala,
+                                onMenos = { cambiarEscala(nivelEscala - 1) },
+                                onMas = { cambiarEscala(nivelEscala + 1) },
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                             )
+                            Box(modifier = Modifier.fillMaxWidth().onSizeChanged { anchoVisibleTimelinePx = it.width }) {
+                                CompositionLocalProvider(LocalAnchoMinuto provides anchoMinutoActual) {
+                                    LineaDeTiempo(
+                                        filas = estadoActual.estado.filas,
+                                        scrollState = scrollState,
+                                        mostrarAhora = esHoy,
+                                        iniciales = estadoActual.estado.iniciales,
+                                        onEditar = { actividadEnEdicion = it }
+                                    )
+                                }
+                            }
 
                             Spacer(Modifier.height(20.dp))
                             Column(
@@ -429,6 +499,32 @@ private fun BotonRedondo(icono: ImageVector, descripcion: String, onClick: () ->
 
 /* ───────────────────────────── Línea de tiempo ───────────────────────────── */
 
+/** Botones para acercar (más detalle, más separación entre horas) o alejar la escala. */
+@Composable
+private fun ControlDeEscala(nivel: Int, onMenos: () -> Unit, onMas: () -> Unit, modifier: Modifier = Modifier) {
+    Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text("Escala del día", style = MaterialTheme.typography.labelLarge, color = TINTA_SUAVE)
+        Spacer(Modifier.weight(1f))
+        IconButton(onClick = onMenos, enabled = nivel > 0) {
+            Icon(Icons.Default.ZoomOut, contentDescription = "Menos detalle (ver más horas)", tint = if (nivel > 0) INDIGO else TINTA_SUAVE.copy(alpha = 0.4f))
+        }
+        Text(
+            textoNivelEscala(nivel),
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.ExtraBold,
+            color = TINTA,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.width(52.dp)
+        )
+        IconButton(onClick = onMas, enabled = nivel < ESCALAS_DP_POR_MINUTO.lastIndex) {
+            Icon(
+                Icons.Default.ZoomIn, contentDescription = "Más detalle (separar las horas)",
+                tint = if (nivel < ESCALAS_DP_POR_MINUTO.lastIndex) INDIGO else TINTA_SUAVE.copy(alpha = 0.4f)
+            )
+        }
+    }
+}
+
 /**
  * La línea de tiempo entera, de borde a borde de la pantalla y con scroll horizontal:
  * la regla de horas, la cuadrícula, un carril por niño (con su nombre justo encima,
@@ -448,6 +544,7 @@ private fun LineaDeTiempo(
     val colorLinea = TINTA_SUAVE
     val colorAhora = MaterialTheme.colorScheme.error
     val alturaReglaPx = with(density) { ALTO_REGLA.toPx() }
+    val anchoMinutoDp = LocalAnchoMinuto.current
 
     Box(
         modifier = Modifier
@@ -465,7 +562,7 @@ private fun LineaDeTiempo(
                     // desde debajo de la regla hasta el final del último carril.
                     var minuto = 0
                     while (minuto <= MINUTOS_FRANJA) {
-                        val x = xDeMinutos(minuto).toPx()
+                        val x = (margenDeAncho(anchoMinutoDp) + anchoMinutoDp * minuto).toPx()
                         val esHora = minuto % 60 == 0
                         drawLine(
                             color = colorLinea.copy(alpha = if (esHora) 0.28f else 0.10f),
@@ -550,7 +647,7 @@ private fun NombreDeCarril(nombre: String, scrollState: ScrollState) {
  * (arriba queda el hueco para la pastilla de "ahora"). */
 @Composable
 private fun ReglaHoras() {
-    val anchoHora = ANCHO_MINUTO * 60
+    val anchoHora = LocalAnchoMinuto.current * 60
     Box(modifier = Modifier.width(ANCHO_LIENZO).height(ALTO_REGLA)) {
         var hora = INICIO_FRANJA
         while (!hora.isAfter(FIN_FRANJA)) {
@@ -658,7 +755,8 @@ private fun BloqueActividad(
     val inicioMin = minutosDesdeInicioFranja(bloque.need.horaInicio)
     val finMin = minutosDesdeInicioFranja(bloque.need.horaFin).coerceAtLeast(inicioMin + 20)
     val inicioPx = with(density) { xDeMinutos(inicioMin).toPx() }
-    val anchoBloquePx = with(density) { (ANCHO_MINUTO * (finMin - inicioMin)).toPx() }
+    val anchoMinutoBloque = LocalAnchoMinuto.current
+    val anchoBloquePx = with(density) { (anchoMinutoBloque * (finMin - inicioMin)).toPx() }
 
     val fondo = if (bloque.cubierto) VERDE else ROJO
     val tinta = if (bloque.cubierto) ON_VERDE else ON_ROJO
@@ -680,7 +778,7 @@ private fun BloqueActividad(
     Box(
         modifier = Modifier
             .offset(x = xDeMinutos(inicioMin))
-            .width(ANCHO_MINUTO * (finMin - inicioMin))
+            .width(anchoMinutoBloque * (finMin - inicioMin))
             .fillMaxHeight()
             .clickable { onEditar(bloque.need) }
     ) {

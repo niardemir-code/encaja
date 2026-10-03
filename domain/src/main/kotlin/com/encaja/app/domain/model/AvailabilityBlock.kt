@@ -34,7 +34,13 @@ data class AvailabilityBlock(
      * false si su categoría es solo informativa (no ocupa a la persona). No se guarda:
      * se calcula al leer, a partir de la categoría (ver conBloqueoDeCategorias).
      */
-    val bloquea: Boolean = true
+    val bloquea: Boolean = true,
+    /**
+     * Si se creó junto a otros días de golpe (repetición, rango de días de un viaje...),
+     * todos comparten este id: así se pueden guardar o editar juntos como una serie. Null
+     * en una ocupación suelta o de antes de existir las series.
+     */
+    val grupoRepeticionId: String? = null
 ) {
     val cruzaMedianoche: Boolean
         get() = !horaFin.isAfter(horaInicio)

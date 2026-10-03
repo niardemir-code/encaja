@@ -63,7 +63,9 @@ import com.encaja.app.domain.model.CoverageNeedId
 import com.encaja.app.ui.familia.Responsable
 import com.encaja.app.ui.theme.BotonCuadradoHoja
 import com.encaja.app.ui.theme.BotonRedondoSuaveHoja
+import com.encaja.app.ui.theme.BotonVariosDisquetesHoja
 import com.encaja.app.ui.theme.CajaValorHoja
+import com.encaja.app.ui.theme.ConfirmarGuardadoHoja
 import com.encaja.app.ui.theme.FilaConInterruptorHoja
 import com.encaja.app.ui.theme.IconoEnCirculoHoja
 import com.encaja.app.ui.theme.TarjetaSeccionHoja
@@ -120,6 +122,10 @@ fun DialogoActividad(
     var avisoLlevarMin by remember { mutableStateOf(actividad?.avisoLlevarMin) }
     var avisoRecogerMin by remember { mutableStateOf(actividad?.avisoRecogerMin) }
     var confirmarBorrado by remember { mutableStateOf(false) }
+    // Qué se está pidiendo confirmar al guardar una actividad que pertenece a una serie:
+    // false = solo esta actividad, true = la serie completa, null = nada pendiente.
+    var confirmarGuardadoSerie by remember { mutableStateOf<Boolean?>(null) }
+    val tieneSerie = actividad?.grupoRepeticionId != null
 
     val fechaBase = actividad?.fecha ?: fecha
 
@@ -159,15 +165,17 @@ fun DialogoActividad(
     val fechasAGuardar = fechasRepetir.sorted()
     val puedeGuardar = childId != null && descripcion.isNotBlank() && horasValidas && fechasAGuardar.isNotEmpty()
 
-    fun guardar() {
+    fun guardar(aplicarATodaLaSerie: Boolean = false) {
         val id = childId ?: return
-        // La fecha original (al editar) conserva su id; el resto de fechas del
-        // conjunto de repetición son actividades nuevas e independientes — no hay
-        // ningún grupo que las una.
-        val idsPorFecha = fechasAGuardar.iterator()
+        // Solo esta: se guarda esta actividad (y las fechas extra que se hayan marcado en
+        // "Repetir"), manteniendo el grupo de la serie a la que ya pertenecía. Toda la
+        // serie: se envía únicamente esta ocurrencia editada como plantilla, y el editor
+        // copia sus cambios (todo menos la fecha) a todas las de la serie.
+        val fechas = if (aplicarATodaLaSerie && actividad != null) listOf(actividad.fecha) else fechasAGuardar
+        val idsPorFecha = fechas.iterator()
         onGuardar(
             crearActividades(
-                fechas = fechasAGuardar,
+                fechas = fechas,
                 childId = id,
                 inicio = inicio,
                 fin = fin,
@@ -180,6 +188,7 @@ fun DialogoActividad(
                 },
                 quienLlevaId = quienLlevaId.takeIf { requiereDesplazamiento },
                 quienRecogeId = quienRecogeId.takeIf { requiereDesplazamiento },
+                grupoRepeticionId = actividad?.grupoRepeticionId,
                 // Los avisos son independientes de "Requiere acompañamiento": se pueden
                 // usar como recordatorio aunque la actividad no necesite que nadie
                 // lleve o recoja al niño.
@@ -187,7 +196,7 @@ fun DialogoActividad(
                 avisoRecogerMin = avisoRecogerMin,
                 icono = iconoId
             ),
-            false
+            aplicarATodaLaSerie
         )
     }
 
@@ -444,16 +453,37 @@ fun DialogoActividad(
                         onClick = { confirmarBorrado = true }
                     )
                 }
+                val fondoGuardar = if (puedeGuardar) acentoHoja else acentoHoja.copy(alpha = 0.35f)
                 BotonCuadradoHoja(
                     icono = Icons.Default.Save,
-                    descripcion = "Guardar",
-                    fondo = if (puedeGuardar) acentoHoja else acentoHoja.copy(alpha = 0.35f),
+                    descripcion = if (tieneSerie) "Guardar solo esta" else "Guardar",
+                    fondo = fondoGuardar,
                     tinta = onAcentoHoja,
                     habilitado = puedeGuardar,
-                    onClick = { guardar(); onCerrar() }
+                    // Con serie, primero se pide confirmación de qué se guarda.
+                    onClick = { if (tieneSerie) confirmarGuardadoSerie = false else { guardar(); onCerrar() } }
                 )
+                if (tieneSerie) {
+                    BotonVariosDisquetesHoja(
+                        descripcion = "Guardar toda la serie",
+                        fondo = fondoGuardar,
+                        tinta = onAcentoHoja,
+                        habilitado = puedeGuardar,
+                        onClick = { confirmarGuardadoSerie = true }
+                    )
+                }
             }
         }
+    }
+
+    confirmarGuardadoSerie?.let { serieCompleta ->
+        ConfirmarGuardadoHoja(
+            titulo = if (serieCompleta) "Guardar la serie completa de la actividad" else "Guardar sólo esta actividad",
+            detalle = if (serieCompleta) "Los cambios se aplicarán a todas las veces que se repite esta actividad."
+            else "Los cambios solo afectarán a esta actividad; el resto de la serie no se toca.",
+            onConfirmar = { confirmarGuardadoSerie = null; guardar(serieCompleta); onCerrar() },
+            onCancelar = { confirmarGuardadoSerie = null }
+        )
     }
 
     if (confirmarBorrado && onEliminar != null) {

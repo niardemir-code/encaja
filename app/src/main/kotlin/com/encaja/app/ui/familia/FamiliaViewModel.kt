@@ -179,11 +179,15 @@ class FamiliaViewModel @Inject constructor(
         inicio: LocalTime,
         fin: LocalTime,
         duplicarSemanaSiguiente: Boolean,
-        etiqueta: String? = null
+        etiqueta: String? = null,
+        grupoRepeticionId: String? = null
     ) {
         val familyId = familyIdActual ?: return
         val todas = fechasTrabajo(fechas, duplicarSemanaSiguiente)
         if (todas.isEmpty() || caregiverIds.isEmpty()) return
+        // Varios días guardados de golpe forman una serie (comparten grupo); si se está
+        // editando una ocupación que ya era de una serie, sigue en ella.
+        val grupo = grupoRepeticionId ?: if (todas.size > 1) java.util.UUID.randomUUID().toString() else null
 
         viewModelScope.launch {
             val existentes = availabilityRepository.obtenerDisponibilidad(familyId, todas.first(), todas.last())
@@ -191,7 +195,41 @@ class FamiliaViewModel @Inject constructor(
             existentes.forEach { availabilityRepository.eliminarBloque(familyId, it.caregiverId, it.fecha, it.horaInicio) }
             caregiverIds.forEach { caregiverId ->
                 todas.forEach { fecha ->
-                    availabilityRepository.guardarBloque(familyId, bloqueDeCategoria(categoria, caregiverId, fecha, inicio, fin, etiqueta))
+                    availabilityRepository.guardarBloque(familyId, bloqueDeCategoria(categoria, caregiverId, fecha, inicio, fin, etiqueta, grupo))
+                }
+            }
+            cargarDatos(mostrarCargando = false)
+        }
+    }
+
+    /**
+     * "Guardar toda la serie": aplica [categoria], el horario ([inicio]-[fin]) y la
+     * [etiqueta] a todas las ocupaciones de la serie de [bloqueOriginal] (las que
+     * comparten su grupo) de las personas de [caregiverIds], respetando el día de cada
+     * una. Se borran y se vuelven a guardar porque la hora de inicio forma parte de la
+     * clave de cada bloque.
+     */
+    fun guardarSerie(
+        bloqueOriginal: AvailabilityBlock,
+        caregiverIds: List<CaregiverId>,
+        categoria: CategoriaDisponibilidad,
+        inicio: java.time.LocalTime,
+        fin: java.time.LocalTime,
+        etiqueta: String?
+    ) {
+        val familyId = familyIdActual ?: return
+        val grupoId = bloqueOriginal.grupoRepeticionId ?: return
+        if (caregiverIds.isEmpty()) return
+        viewModelScope.launch {
+            val deLaSerie = availabilityRepository.obtenerBloquesDelGrupo(familyId, grupoId)
+                .filter { it.caregiverId in caregiverIds }
+            val fechas = deLaSerie.map { it.fecha }.distinct().ifEmpty { listOf(bloqueOriginal.fecha) }
+            deLaSerie.forEach { availabilityRepository.eliminarBloque(familyId, it.caregiverId, it.fecha, it.horaInicio) }
+            caregiverIds.forEach { caregiverId ->
+                fechas.forEach { fecha ->
+                    availabilityRepository.guardarBloque(
+                        familyId, bloqueDeCategoria(categoria, caregiverId, fecha, inicio, fin, etiqueta, grupoId)
+                    )
                 }
             }
             cargarDatos(mostrarCargando = false)

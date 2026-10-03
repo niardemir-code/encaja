@@ -57,6 +57,24 @@ class AvailabilityRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun obtenerBloquesDelGrupo(familyId: FamilyId, grupoRepeticionId: String): List<AvailabilityBlock> {
+        val bloques = try {
+            val snapshot = coleccion(familyId)
+                .whereEqualTo("grupoRepeticionId", grupoRepeticionId)
+                .get()
+                .await()
+            val remotos = snapshot.documents.mapNotNull { doc ->
+                AvailabilityBlockFirestoreMapper.desdeDocumento(doc.data ?: emptyMap())
+            }
+            dao.guardarTodos(remotos.map { AvailabilityBlockEntity.desdeDominio(familyId.value, it) })
+            remotos
+        } catch (e: Exception) {
+            dao.obtenerPorGrupo(familyId.value, grupoRepeticionId).map { it.aDominio() }
+        }
+        if (bloques.none { it.categoriaId != null }) return bloques
+        return bloques.conBloqueoDeCategorias(categoriaRepository.obtenerCategorias(familyId))
+    }
+
     override suspend fun guardarBloque(familyId: FamilyId, bloque: AvailabilityBlock) {
         val id = idDocumento(bloque.caregiverId, bloque.fecha, bloque.horaInicio)
         coleccion(familyId).document(id).set(AvailabilityBlockFirestoreMapper.aDocumento(bloque)).await()

@@ -67,6 +67,8 @@ import com.encaja.app.domain.model.ModoCategoria
 import com.encaja.app.domain.model.categoriaEn
 import com.encaja.app.domain.model.TurnoId
 import com.encaja.app.domain.model.TurnoTrabajo
+import com.encaja.app.ui.theme.BotonVariosDisquetesHoja
+import com.encaja.app.ui.theme.ConfirmarGuardadoHoja
 import com.encaja.app.ui.theme.LocalEncajaExtraColors
 import com.encaja.app.ui.theme.coloresInterruptorEncaja
 import java.time.DayOfWeek
@@ -113,7 +115,10 @@ fun DialogoDisponibilidad(
     onEliminar: (AvailabilityBlock) -> Unit,
     // Guarda un tramo por horas de una categoría en varias fechas (sustituyendo lo que
     // ya hubiera de esa categoría esos días) y, si se pide, también la semana siguiente.
-    onGuardarHoras: (caregiverIds: List<CaregiverId>, categoria: CategoriaDisponibilidad, fechas: List<LocalDate>, inicio: LocalTime, fin: LocalTime, duplicarSemanaSiguiente: Boolean, etiqueta: String?) -> Unit,
+    onGuardarHoras: (caregiverIds: List<CaregiverId>, categoria: CategoriaDisponibilidad, fechas: List<LocalDate>, inicio: LocalTime, fin: LocalTime, duplicarSemanaSiguiente: Boolean, etiqueta: String?, grupoRepeticionId: String?) -> Unit,
+    // "Guardar toda la serie": aplica los cambios a todas las ocupaciones de la serie del
+    // bloque que se está editando (las que comparten su grupo).
+    onGuardarSerie: (bloqueOriginal: AvailabilityBlock, caregiverIds: List<CaregiverId>, categoria: CategoriaDisponibilidad, inicio: LocalTime, fin: LocalTime, etiqueta: String?) -> Unit,
     onCrearTurno: (nombre: String, inicio: LocalTime, fin: LocalTime, categoriaId: CategoriaId) -> Unit,
     onEliminarTurno: (TurnoId) -> Unit,
     onGuardarBloques: (List<AvailabilityBlock>) -> Unit,
@@ -188,26 +193,49 @@ fun DialogoDisponibilidad(
         (!guardarComoHorario || horasTodoElDia || nombreHorario.isNotBlank())
     val puedeGuardarRango = seleccionada != null && !porHoras && rangoFechas.size <= MAX_DIAS_RANGO
 
-    fun guardarHoras() {
+    // Si la ocupación que se edita pertenece a una serie (se creó junto a otros días), se
+    // ofrecen dos formas de guardar: solo esta, o toda la serie.
+    val tieneSerie = bloqueEnEdicion?.grupoRepeticionId != null
+    // Qué se pide confirmar: false = solo esta ocupación, true = la serie completa.
+    var confirmarGuardadoSerie by remember { mutableStateOf<Boolean?>(null) }
+
+    fun guardarHoras(serieCompleta: Boolean = false) {
         val cat = seleccionada ?: return
         if (guardarComoHorario && !horasTodoElDia && nombreHorario.isNotBlank() &&
             turnoConHoras(turnosDeLaCategoria, horasInicio, horasFin) == null
         ) {
             onCrearTurno(nombreHorario.trim(), horasInicio, horasFin, cat.id)
         }
-        bloqueEnEdicion?.let { onEliminar(it) }
-        onGuardarHoras(destinatarios, cat, horasFechas, inicioAGuardar, finAGuardar, false, horasEtiqueta.trim().ifBlank { null })
+        val original = bloqueEnEdicion
+        if (serieCompleta && original != null) {
+            onGuardarSerie(original, destinatarios, cat, inicioAGuardar, finAGuardar, horasEtiqueta.trim().ifBlank { null })
+        } else {
+            original?.let { onEliminar(it) }
+            onGuardarHoras(
+                destinatarios, cat, horasFechas, inicioAGuardar, finAGuardar, false,
+                horasEtiqueta.trim().ifBlank { null }, original?.grupoRepeticionId
+            )
+        }
         bloqueEnEdicion = null
     }
 
-    fun guardarRango() {
+    fun guardarRango(serieCompleta: Boolean = false) {
         val cat = seleccionada ?: return
-        bloqueEnEdicion?.let { onEliminar(it) }
-        onGuardarBloques(destinatarios.flatMap { caregiverId ->
-            rangoFechas.map { dia ->
-                bloqueDeCategoria(cat, caregiverId, dia, AvailabilityBlock.INICIO_DIA, AvailabilityBlock.FIN_DIA, horasEtiqueta.trim().ifBlank { null })
-            }
-        })
+        val original = bloqueEnEdicion
+        val etiquetaRango = horasEtiqueta.trim().ifBlank { null }
+        if (serieCompleta && original != null) {
+            onGuardarSerie(original, destinatarios, cat, AvailabilityBlock.INICIO_DIA, AvailabilityBlock.FIN_DIA, etiquetaRango)
+        } else {
+            original?.let { onEliminar(it) }
+            // Varios días de golpe forman una serie; si ya era de una, sigue en ella.
+            val grupo = original?.grupoRepeticionId
+                ?: if (rangoFechas.size > 1) java.util.UUID.randomUUID().toString() else null
+            onGuardarBloques(destinatarios.flatMap { caregiverId ->
+                rangoFechas.map { dia ->
+                    bloqueDeCategoria(cat, caregiverId, dia, AvailabilityBlock.INICIO_DIA, AvailabilityBlock.FIN_DIA, etiquetaRango, grupo)
+                }
+            })
+        }
         bloqueEnEdicion = null
     }
 
@@ -525,19 +553,48 @@ fun DialogoDisponibilidad(
                     )
                 }
                 val puedeGuardar = puedeGuardarHoras || puedeGuardarRango
+                val fondoGuardar = if (puedeGuardar) ACENTO else ACENTO.copy(alpha = 0.35f)
                 BotonCuadrado(
                     icono = Icons.Default.Save,
-                    descripcion = "Guardar",
-                    fondo = if (puedeGuardar) ACENTO else ACENTO.copy(alpha = 0.35f),
+                    descripcion = if (tieneSerie) "Guardar solo esta" else "Guardar",
+                    fondo = fondoGuardar,
                     tinta = ON_ACENTO,
                     habilitado = puedeGuardar,
+                    // Con serie, primero se pide confirmación de qué se guarda.
                     onClick = {
-                        if (porHoras) guardarHoras() else guardarRango()
-                        onCerrar()
+                        if (tieneSerie) {
+                            confirmarGuardadoSerie = false
+                        } else {
+                            if (porHoras) guardarHoras() else guardarRango()
+                            onCerrar()
+                        }
                     }
                 )
+                if (tieneSerie) {
+                    BotonVariosDisquetesHoja(
+                        descripcion = "Guardar toda la serie",
+                        fondo = fondoGuardar,
+                        tinta = ON_ACENTO,
+                        habilitado = puedeGuardar,
+                        onClick = { confirmarGuardadoSerie = true }
+                    )
+                }
             }
         }
+    }
+
+    confirmarGuardadoSerie?.let { serieCompleta ->
+        ConfirmarGuardadoHoja(
+            titulo = if (serieCompleta) "Guardar la serie completa de la ocupación" else "Guardar sólo esta ocupación",
+            detalle = if (serieCompleta) "Los cambios se aplicarán a todas las veces que se repite esta ocupación."
+            else "Los cambios solo afectarán a esta ocupación; el resto de la serie no se toca.",
+            onConfirmar = {
+                confirmarGuardadoSerie = null
+                if (porHoras) guardarHoras(serieCompleta) else guardarRango(serieCompleta)
+                onCerrar()
+            },
+            onCancelar = { confirmarGuardadoSerie = null }
+        )
     }
 
     if (creandoCategoria) {

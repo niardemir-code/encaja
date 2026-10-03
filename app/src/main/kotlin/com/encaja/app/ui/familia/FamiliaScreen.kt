@@ -192,8 +192,11 @@ private fun ContenidoFamilia(estado: FamiliaUiState, viewModel: FamiliaViewModel
                 onEliminar = { viewModel.eliminarBloqueDe(caregiverIds, it) },
                 turnos = estado.turnos,
                 categorias = estado.categorias,
-                onGuardarHoras = { ids, categoria, fechas, inicio, fin, duplicar, etiqueta ->
-                    viewModel.guardarHoras(ids, categoria, fechas, inicio, fin, duplicar, etiqueta)
+                onGuardarHoras = { ids, categoria, fechas, inicio, fin, duplicar, etiqueta, grupo ->
+                    viewModel.guardarHoras(ids, categoria, fechas, inicio, fin, duplicar, etiqueta, grupo)
+                },
+                onGuardarSerie = { bloque, ids, categoria, inicio, fin, etiqueta ->
+                    viewModel.guardarSerie(bloque, ids, categoria, inicio, fin, etiqueta)
                 },
                 onCrearTurno = { nombre, inicio, fin, categoriaId -> viewModel.crearTurno(nombre, inicio, fin, categoriaId) },
                 onEliminarTurno = { viewModel.eliminarTurno(it) },

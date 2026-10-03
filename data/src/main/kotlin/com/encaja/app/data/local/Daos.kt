@@ -64,6 +64,9 @@ interface AvailabilityDao {
     @Query("SELECT * FROM availability_blocks WHERE familyId = :familyId AND fecha BETWEEN :desde AND :hasta")
     suspend fun obtener(familyId: String, desde: String, hasta: String): List<AvailabilityBlockEntity>
 
+    @Query("SELECT * FROM availability_blocks WHERE familyId = :familyId AND grupoRepeticionId = :grupoRepeticionId")
+    suspend fun obtenerPorGrupo(familyId: String, grupoRepeticionId: String): List<AvailabilityBlockEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun guardar(bloque: AvailabilityBlockEntity)
 
