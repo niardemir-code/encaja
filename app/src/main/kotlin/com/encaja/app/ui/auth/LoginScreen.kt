@@ -16,7 +16,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -74,9 +73,9 @@ fun LoginScreen(
 
             // Logo + nombre
             Image(
-                painter = painterResource(R.drawable.ic_logo),
+                painter = painterResource(R.drawable.logo_encaja),
                 contentDescription = "Encaja",
-                modifier = Modifier.size(92.dp).clip(RoundedCornerShape(24.dp))
+                modifier = Modifier.height(110.dp).aspectRatio(640f / 576f)
             )
             Spacer(Modifier.height(12.dp))
             Text(

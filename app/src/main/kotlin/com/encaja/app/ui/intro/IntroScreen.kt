@@ -236,7 +236,7 @@ private fun Titulo(texto: String, subtitulo: String) {
 @Composable
 private fun PaginaBienvenida() {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Image(painterResource(R.drawable.ic_logo), null, modifier = Modifier.size(44.dp))
+        Image(painterResource(R.drawable.logo_encaja), null, modifier = Modifier.height(48.dp).aspectRatio(640f / 576f))
         Spacer(Modifier.width(8.dp))
         Text("encaja", color = Violeta, fontSize = 32.sp, fontWeight = FontWeight.ExtraBold)
     }

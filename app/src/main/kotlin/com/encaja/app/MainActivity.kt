@@ -7,6 +7,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -34,6 +35,8 @@ class MainActivity : ComponentActivity() {
     private val pedirNotificaciones = registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Debe ir antes de super.onCreate: aplica el splash con el logo de Encaja.
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         PreferenciaTema.cargar(this)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&

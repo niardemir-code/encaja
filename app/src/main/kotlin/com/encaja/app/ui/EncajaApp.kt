@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -119,9 +121,9 @@ fun EncajaApp(onCerrarSesion: () -> Unit, viewModel: EncajaAppViewModel = hiltVi
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Image(
-                            painter = painterResource(R.drawable.ic_logo),
+                            painter = painterResource(R.drawable.logo_encaja),
                             contentDescription = null,
-                            modifier = Modifier.size(36.dp)
+                            modifier = Modifier.height(34.dp).aspectRatio(640f / 576f)
                         )
                         Text(
                             "encaja",

@@ -43,6 +43,8 @@ dependencies {
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
     // Notificaciones (NotificationCompat) y permiso en tiempo de ejecución para los avisos.
     implementation("androidx.core:core-ktx:1.13.1")
+    // Pantalla de arranque (splash) con el logo, igual en todas las versiones de Android.
+    implementation("androidx.core:core-splashscreen:1.0.1")
     implementation("androidx.activity:activity-compose:1.9.0")
 
     implementation("androidx.credentials:credentials:1.3.0")

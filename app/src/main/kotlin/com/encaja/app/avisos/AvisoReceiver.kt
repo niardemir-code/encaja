@@ -32,7 +32,7 @@ class AvisoReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         val notificacion = NotificationCompat.Builder(context, CANAL)
-            .setSmallIcon(R.drawable.ic_logo)
+            .setSmallIcon(R.drawable.ic_notificacion)
             .setContentTitle(titulo)
             .setContentText(texto)
             .setStyle(NotificationCompat.BigTextStyle().bigText(texto))
