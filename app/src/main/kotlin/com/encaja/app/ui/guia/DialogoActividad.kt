@@ -94,6 +94,7 @@ private val ES = Locale("es")
  * concepto de "serie"), pero se mantienen en la firma porque Guía y Semana todavía
  * los pasan; el día en que dejen de hacerlo, se pueden quitar de aquí también.
  */
+@Suppress("UNUSED_PARAMETER")
 @Composable
 fun DialogoActividad(
     fecha: LocalDate,

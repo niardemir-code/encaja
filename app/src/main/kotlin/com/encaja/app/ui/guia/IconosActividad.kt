@@ -9,16 +9,16 @@ package com.encaja.app.ui.guia
 // en el icono por defecto (ver [iconoParaActividad]).
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.DirectionsBike
+import androidx.compose.material.icons.automirrored.filled.DirectionsRun
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.Celebration
 import androidx.compose.material.icons.filled.Computer
-import androidx.compose.material.icons.filled.DirectionsBike
-import androidx.compose.material.icons.filled.DirectionsRun
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.LocalLibrary
 import androidx.compose.material.icons.filled.MedicalServices
-import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Park
 import androidx.compose.material.icons.filled.Pets
@@ -39,7 +39,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 
 enum class IconoActividad(val id: String, val etiqueta: String, val icono: ImageVector) {
     COLEGIO("colegio", "Colegio", Icons.Default.School),
-    DEBERES("deberes", "Deberes", Icons.Default.MenuBook),
+    DEBERES("deberes", "Deberes", Icons.AutoMirrored.Filled.MenuBook),
     IDIOMAS("idiomas", "Idiomas", Icons.Default.Translate),
     INFORMATICA("informatica", "Informática", Icons.Default.Computer),
     CIENCIAS("ciencias", "Ciencias", Icons.Default.Science),
@@ -51,8 +51,8 @@ enum class IconoActividad(val id: String, val etiqueta: String, val icono: Image
     VOLEIBOL("voleibol", "Voleibol", Icons.Default.SportsVolleyball),
     BALONMANO("balonmano", "Balonmano", Icons.Default.SportsHandball),
     NATACION("natacion", "Natación/piscina", Icons.Default.Pool),
-    ATLETISMO("atletismo", "Atletismo/correr", Icons.Default.DirectionsRun),
-    CICLISMO("ciclismo", "Ciclismo", Icons.Default.DirectionsBike),
+    ATLETISMO("atletismo", "Atletismo/correr", Icons.AutoMirrored.Filled.DirectionsRun),
+    CICLISMO("ciclismo", "Ciclismo", Icons.AutoMirrored.Filled.DirectionsBike),
     GIMNASIO("gimnasio", "Gimnasia/fitness", Icons.Default.FitnessCenter),
     MUSICA("musica", "Música", Icons.Default.MusicNote),
     ARTE("arte", "Arte/manualidades", Icons.Default.Brush),
