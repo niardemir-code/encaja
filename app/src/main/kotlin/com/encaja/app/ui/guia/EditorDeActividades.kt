@@ -61,6 +61,29 @@ class EditorDeActividades @Inject constructor(
     }
 
     /**
+     * Todas las veces que se repite [need] (ella incluida): las de su grupo si lo tiene y
+     * hay más de una; si no (actividades creadas antes de existir las series, o cuyo grupo
+     * quedó con una sola), las que son idénticas — mismo niño, nombre y horario — en el año
+     * anterior y posterior a su fecha. Si solo sale ella misma, no hay serie.
+     */
+    suspend fun ocurrenciasDeSerie(familyId: FamilyId, need: CoverageNeed): List<CoverageNeed> {
+        val grupoId = need.grupoRepeticionId
+        if (grupoId != null) {
+            val delGrupo = coverageNeedRepository.obtenerNeedsDelGrupo(familyId, grupoId)
+            if (delGrupo.size > 1) return delGrupo.sortedBy { it.fecha }
+        }
+        val nombre = need.descripcion.trim()
+        val iguales = coverageNeedRepository.obtenerNeeds(familyId, need.fecha.minusYears(1), need.fecha.plusYears(1))
+            .filter {
+                it.childId == need.childId &&
+                    it.descripcion.trim().equals(nombre, ignoreCase = true) &&
+                    it.horaInicio == need.horaInicio && it.horaFin == need.horaFin &&
+                    (it.grupoRepeticionId == null || it.grupoRepeticionId == grupoId)
+            }
+        return (if (iguales.any { it.id == need.id }) iguales else iguales + need).sortedBy { it.fecha }
+    }
+
+    /**
      * Borra una actividad. Si [aplicarATodaLaSerie] es true y pertenece a un grupo
      * ([grupoRepeticionId]), borra también todas las ocurrencias posteriores (desde
      * [fecha] en adelante) de esa misma serie.

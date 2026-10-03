@@ -237,6 +237,12 @@ class SemaforoViewModel @Inject constructor(
         }
     }
 
+    /** Ver [EditorDeActividades.ocurrenciasDeSerie]. */
+    suspend fun ocurrenciasDeSerie(need: CoverageNeed): List<CoverageNeed> {
+        val familyId = familyIdActual ?: return listOf(need)
+        return editor.ocurrenciasDeSerie(familyId, need)
+    }
+
     suspend fun patronDeSerie(grupoRepeticionId: String, desde: LocalDate): Pair<Set<DayOfWeek>, LocalDate?> {
         val familyId = familyIdActual ?: return emptySet<DayOfWeek>() to null
         return editor.patronDeSerie(familyId, grupoRepeticionId, desde)

@@ -109,6 +109,9 @@ fun DialogoActividad(
     onGuardar: (needs: List<CoverageNeed>, aplicarATodaLaSerie: Boolean) -> Unit,
     onEliminar: ((aplicarATodaLaSerie: Boolean) -> Unit)?,
     onActualizarSerie: ((plantilla: CoverageNeed, nuevasFechas: List<LocalDate>) -> Unit)? = null,
+    // Busca todas las veces que se repite la actividad que se edita (ella incluida): según
+    // devuelva más de una, se ofrece "Guardar toda la serie". Null = sin series (creando).
+    buscarOcurrencias: (suspend (CoverageNeed) -> List<CoverageNeed>)? = null,
     onCerrar: () -> Unit
 ) {
     var childId by remember { mutableStateOf(actividad?.childId ?: ninos.firstOrNull()?.id) }
@@ -125,7 +128,13 @@ fun DialogoActividad(
     // Qué se está pidiendo confirmar al guardar una actividad que pertenece a una serie:
     // false = solo esta actividad, true = la serie completa, null = nada pendiente.
     var confirmarGuardadoSerie by remember { mutableStateOf<Boolean?>(null) }
-    val tieneSerie = actividad?.grupoRepeticionId != null
+    var ocurrenciasSerie by remember { mutableStateOf<List<CoverageNeed>>(emptyList()) }
+    LaunchedEffect(actividad?.id) {
+        if (actividad != null && buscarOcurrencias != null) {
+            ocurrenciasSerie = runCatching { buscarOcurrencias(actividad) }.getOrDefault(emptyList())
+        }
+    }
+    val tieneSerie = ocurrenciasSerie.size > 1
 
     val fechaBase = actividad?.fecha ?: fecha
 
@@ -171,7 +180,27 @@ fun DialogoActividad(
         // "Repetir"), manteniendo el grupo de la serie a la que ya pertenecía. Toda la
         // serie: se envía únicamente esta ocurrencia editada como plantilla, y el editor
         // copia sus cambios (todo menos la fecha) a todas las de la serie.
-        val fechas = if (aplicarATodaLaSerie && actividad != null) listOf(actividad.fecha) else fechasAGuardar
+        // Toda la serie: se rehace cada ocurrencia (con su id y su fecha) con lo editado, y las
+        // que aún no tuvieran grupo (de antes de existir las series) pasan a compartir uno.
+        if (aplicarATodaLaSerie && actividad != null && ocurrenciasSerie.size > 1) {
+            val grupo = actividad.grupoRepeticionId ?: UUID.randomUUID().toString()
+            val ids = ocurrenciasSerie.map { it.id }.iterator()
+            onGuardar(
+                crearActividades(
+                    fechas = ocurrenciasSerie.map { it.fecha },
+                    childId = id, inicio = inicio, fin = fin, descripcion = descripcion,
+                    requiereDesplazamiento = requiereDesplazamiento,
+                    generarId = { ids.next() },
+                    quienLlevaId = quienLlevaId.takeIf { requiereDesplazamiento },
+                    quienRecogeId = quienRecogeId.takeIf { requiereDesplazamiento },
+                    grupoRepeticionId = grupo,
+                    avisoLlevarMin = avisoLlevarMin, avisoRecogerMin = avisoRecogerMin, icono = iconoId
+                ),
+                false
+            )
+            return
+        }
+        val fechas = fechasAGuardar
         val idsPorFecha = fechas.iterator()
         onGuardar(
             crearActividades(
@@ -196,7 +225,7 @@ fun DialogoActividad(
                 avisoRecogerMin = avisoRecogerMin,
                 icono = iconoId
             ),
-            aplicarATodaLaSerie
+            false
         )
     }
 

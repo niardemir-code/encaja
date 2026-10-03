@@ -38,9 +38,13 @@ class CompraViewModel @Inject constructor(
 
     fun recargar() = cargar()
 
-    private fun cargar() {
+    /** [mostrarCargando] false al refrescar tras marcar/añadir/borrar un artículo: así la
+     * lista no parpadea con la rueda de carga ni pierde lo que se estaba escribiendo. */
+    private fun cargar(mostrarCargando: Boolean = true) {
         viewModelScope.launch {
-            _pantalla.value = CompraPantallaEstado.Cargando
+            if (mostrarCargando || _pantalla.value !is CompraPantallaEstado.ConDatos) {
+                _pantalla.value = CompraPantallaEstado.Cargando
+            }
 
             val uid = authRepository.sesionActual()?.uid
             if (uid == null) {
@@ -74,7 +78,7 @@ class CompraViewModel @Inject constructor(
 
         viewModelScope.launch {
             compraRepository.guardarArticulo(familyId, ArticuloCompra(id, nombreLimpio, tiendaLimpia))
-            cargar()
+            cargar(mostrarCargando = false)
         }
     }
 
@@ -83,7 +87,7 @@ class CompraViewModel @Inject constructor(
         val familyId = familyIdActual ?: return
         viewModelScope.launch {
             compraRepository.guardarArticulo(familyId, articulo.copy(comprado = comprado))
-            cargar()
+            cargar(mostrarCargando = false)
         }
     }
 
@@ -91,7 +95,7 @@ class CompraViewModel @Inject constructor(
         val familyId = familyIdActual ?: return
         viewModelScope.launch {
             compraRepository.eliminarArticulo(familyId, articuloId)
-            cargar()
+            cargar(mostrarCargando = false)
         }
     }
 }

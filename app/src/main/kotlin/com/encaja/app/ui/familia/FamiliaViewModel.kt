@@ -203,32 +203,55 @@ class FamiliaViewModel @Inject constructor(
     }
 
     /**
+     * Todas las veces que se repite [bloque] para las personas de [caregiverIds] (él
+     * incluido): las de su grupo si hay más de un día; si no (ocupaciones de antes de
+     * existir las series), las idénticas — misma categoría, horario y detalle — en el año
+     * anterior y posterior a su fecha. Si solo sale un día, no hay serie.
+     */
+    suspend fun ocurrenciasDeSerie(bloque: AvailabilityBlock, caregiverIds: List<CaregiverId>): List<AvailabilityBlock> {
+        val familyId = familyIdActual ?: return listOf(bloque)
+        val grupoId = bloque.grupoRepeticionId
+        if (grupoId != null) {
+            val delGrupo = availabilityRepository.obtenerBloquesDelGrupo(familyId, grupoId)
+                .filter { it.caregiverId in caregiverIds }
+            if (delGrupo.map { it.fecha }.distinct().size > 1) return delGrupo.sortedBy { it.fecha }
+        }
+        return availabilityRepository.obtenerDisponibilidad(familyId, bloque.fecha.minusYears(1), bloque.fecha.plusYears(1))
+            .filter {
+                it.caregiverId in caregiverIds && it.motivo == bloque.motivo && it.categoriaId == bloque.categoriaId &&
+                    it.horaInicio == bloque.horaInicio && it.horaFin == bloque.horaFin &&
+                    (it.etiqueta ?: "") == (bloque.etiqueta ?: "") &&
+                    (it.grupoRepeticionId == null || it.grupoRepeticionId == grupoId)
+            }
+            .sortedBy { it.fecha }
+    }
+
+    /**
      * "Guardar toda la serie": aplica [categoria], el horario ([inicio]-[fin]) y la
-     * [etiqueta] a todas las ocupaciones de la serie de [bloqueOriginal] (las que
-     * comparten su grupo) de las personas de [caregiverIds], respetando el día de cada
-     * una. Se borran y se vuelven a guardar porque la hora de inicio forma parte de la
-     * clave de cada bloque.
+     * [etiqueta] a todas las [ocurrencias] de la serie, respetando el día de cada una, y
+     * las deja con un mismo grupo ([grupoRepeticionId], o uno nuevo si eran de antes de
+     * existir las series). Se borran y se vuelven a guardar porque la hora de inicio
+     * forma parte de la clave de cada bloque.
      */
     fun guardarSerie(
-        bloqueOriginal: AvailabilityBlock,
+        ocurrencias: List<AvailabilityBlock>,
         caregiverIds: List<CaregiverId>,
         categoria: CategoriaDisponibilidad,
         inicio: java.time.LocalTime,
         fin: java.time.LocalTime,
-        etiqueta: String?
+        etiqueta: String?,
+        grupoRepeticionId: String?
     ) {
         val familyId = familyIdActual ?: return
-        val grupoId = bloqueOriginal.grupoRepeticionId ?: return
-        if (caregiverIds.isEmpty()) return
+        if (caregiverIds.isEmpty() || ocurrencias.isEmpty()) return
+        val grupo = grupoRepeticionId ?: java.util.UUID.randomUUID().toString()
         viewModelScope.launch {
-            val deLaSerie = availabilityRepository.obtenerBloquesDelGrupo(familyId, grupoId)
-                .filter { it.caregiverId in caregiverIds }
-            val fechas = deLaSerie.map { it.fecha }.distinct().ifEmpty { listOf(bloqueOriginal.fecha) }
-            deLaSerie.forEach { availabilityRepository.eliminarBloque(familyId, it.caregiverId, it.fecha, it.horaInicio) }
+            val fechas = ocurrencias.map { it.fecha }.distinct()
+            ocurrencias.forEach { availabilityRepository.eliminarBloque(familyId, it.caregiverId, it.fecha, it.horaInicio) }
             caregiverIds.forEach { caregiverId ->
                 fechas.forEach { fecha ->
                     availabilityRepository.guardarBloque(
-                        familyId, bloqueDeCategoria(categoria, caregiverId, fecha, inicio, fin, etiqueta, grupoId)
+                        familyId, bloqueDeCategoria(categoria, caregiverId, fecha, inicio, fin, etiqueta, grupo)
                     )
                 }
             }

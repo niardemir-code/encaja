@@ -386,6 +386,7 @@ fun GuiaScreen(
                             diasSerieActual = diasSerieActual,
                             hastaSerieActual = hastaSerieActual,
                             patronSerieCargando = patronSerieCargando,
+                            buscarOcurrencias = { viewModel.ocurrenciasDeSerie(it) },
                             onGuardar = { needs, aplicarATodaLaSerie ->
                                 viewModel.guardarActividades(needs, aplicarATodaLaSerie)
                                 cerrarEdicion()

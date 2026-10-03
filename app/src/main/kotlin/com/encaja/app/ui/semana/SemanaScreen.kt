@@ -278,6 +278,7 @@ fun SemanaScreen(
                     diasSerieActual = diasSerieActual,
                     hastaSerieActual = hastaSerieActual,
                     patronSerieCargando = patronSerieCargando,
+                    buscarOcurrencias = { viewModel.ocurrenciasDeSerie(it) },
                     onGuardar = { needs, aplicarATodaLaSerie ->
                         viewModel.guardarActividades(needs, aplicarATodaLaSerie)
                         actividadEnEdicion = null

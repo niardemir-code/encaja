@@ -142,6 +142,12 @@ class GuiaViewModel @Inject constructor(
         }
     }
 
+    /** Ver [EditorDeActividades.ocurrenciasDeSerie]. */
+    suspend fun ocurrenciasDeSerie(need: CoverageNeed): List<CoverageNeed> {
+        val familyId = familyIdActual ?: return listOf(need)
+        return editor.ocurrenciasDeSerie(familyId, need)
+    }
+
     /** Ver [EditorDeActividades.patronDeSerie]. */
     suspend fun patronDeSerie(grupoRepeticionId: String, desde: LocalDate): Pair<Set<DayOfWeek>, LocalDate?> {
         val familyId = familyIdActual ?: return emptySet<DayOfWeek>() to null

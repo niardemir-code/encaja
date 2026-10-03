@@ -116,9 +116,10 @@ fun DialogoDisponibilidad(
     // Guarda un tramo por horas de una categoría en varias fechas (sustituyendo lo que
     // ya hubiera de esa categoría esos días) y, si se pide, también la semana siguiente.
     onGuardarHoras: (caregiverIds: List<CaregiverId>, categoria: CategoriaDisponibilidad, fechas: List<LocalDate>, inicio: LocalTime, fin: LocalTime, duplicarSemanaSiguiente: Boolean, etiqueta: String?, grupoRepeticionId: String?) -> Unit,
-    // "Guardar toda la serie": aplica los cambios a todas las ocupaciones de la serie del
-    // bloque que se está editando (las que comparten su grupo).
-    onGuardarSerie: (bloqueOriginal: AvailabilityBlock, caregiverIds: List<CaregiverId>, categoria: CategoriaDisponibilidad, inicio: LocalTime, fin: LocalTime, etiqueta: String?) -> Unit,
+    // Busca todas las veces que se repite el bloque que se está editando (él incluido).
+    buscarOcurrencias: suspend (AvailabilityBlock) -> List<AvailabilityBlock>,
+    // "Guardar toda la serie": aplica los cambios a todas esas ocurrencias.
+    onGuardarSerie: (ocurrencias: List<AvailabilityBlock>, caregiverIds: List<CaregiverId>, categoria: CategoriaDisponibilidad, inicio: LocalTime, fin: LocalTime, etiqueta: String?, grupoRepeticionId: String?) -> Unit,
     onCrearTurno: (nombre: String, inicio: LocalTime, fin: LocalTime, categoriaId: CategoriaId) -> Unit,
     onEliminarTurno: (TurnoId) -> Unit,
     onGuardarBloques: (List<AvailabilityBlock>) -> Unit,
@@ -195,7 +196,13 @@ fun DialogoDisponibilidad(
 
     // Si la ocupación que se edita pertenece a una serie (se creó junto a otros días), se
     // ofrecen dos formas de guardar: solo esta, o toda la serie.
-    val tieneSerie = bloqueEnEdicion?.grupoRepeticionId != null
+    var ocurrenciasSerie by remember { mutableStateOf<List<AvailabilityBlock>>(emptyList()) }
+    LaunchedEffect(bloqueEnEdicion) {
+        val bloque = bloqueEnEdicion
+        ocurrenciasSerie = if (bloque == null) emptyList()
+        else runCatching { buscarOcurrencias(bloque) }.getOrDefault(emptyList())
+    }
+    val tieneSerie = ocurrenciasSerie.map { it.fecha }.distinct().size > 1
     // Qué se pide confirmar: false = solo esta ocupación, true = la serie completa.
     var confirmarGuardadoSerie by remember { mutableStateOf<Boolean?>(null) }
 
@@ -208,7 +215,7 @@ fun DialogoDisponibilidad(
         }
         val original = bloqueEnEdicion
         if (serieCompleta && original != null) {
-            onGuardarSerie(original, destinatarios, cat, inicioAGuardar, finAGuardar, horasEtiqueta.trim().ifBlank { null })
+            onGuardarSerie(ocurrenciasSerie, destinatarios, cat, inicioAGuardar, finAGuardar, horasEtiqueta.trim().ifBlank { null }, original.grupoRepeticionId)
         } else {
             original?.let { onEliminar(it) }
             onGuardarHoras(
@@ -224,7 +231,7 @@ fun DialogoDisponibilidad(
         val original = bloqueEnEdicion
         val etiquetaRango = horasEtiqueta.trim().ifBlank { null }
         if (serieCompleta && original != null) {
-            onGuardarSerie(original, destinatarios, cat, AvailabilityBlock.INICIO_DIA, AvailabilityBlock.FIN_DIA, etiquetaRango)
+            onGuardarSerie(ocurrenciasSerie, destinatarios, cat, AvailabilityBlock.INICIO_DIA, AvailabilityBlock.FIN_DIA, etiquetaRango, original.grupoRepeticionId)
         } else {
             original?.let { onEliminar(it) }
             // Varios días de golpe forman una serie; si ya era de una, sigue en ella.
