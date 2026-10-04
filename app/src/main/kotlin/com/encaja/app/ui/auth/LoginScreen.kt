@@ -69,19 +69,19 @@ fun LoginScreen(
                 .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(Modifier.height(40.dp))
+            Spacer(Modifier.height(16.dp))
 
             // Logo + nombre
             Image(
                 painter = painterResource(R.drawable.logo_encaja),
                 contentDescription = "Encaja",
-                modifier = Modifier.height(110.dp).aspectRatio(640f / 576f)
+                modifier = Modifier.height(80.dp).aspectRatio(640f / 576f)
             )
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(6.dp))
             Text(
                 "encaja",
                 color = colores.primary,
-                fontSize = 34.sp,
+                fontSize = 30.sp,
                 fontWeight = FontWeight.ExtraBold
             )
             Text(
@@ -91,7 +91,7 @@ fun LoginScreen(
                 textAlign = TextAlign.Center
             )
 
-            Spacer(Modifier.height(28.dp))
+            Spacer(Modifier.height(16.dp))
 
             // Tarjeta del formulario
             Surface(
@@ -100,11 +100,11 @@ fun LoginScreen(
                 shadowElevation = 3.dp,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(Modifier.padding(20.dp)) {
+                Column(Modifier.padding(16.dp)) {
                     Text(
                         if (modoRegistro) "Crea tu cuenta" else "Te damos la bienvenida",
                         color = colores.onSurface,
-                        fontSize = 22.sp,
+                        fontSize = 20.sp,
                         fontWeight = FontWeight.ExtraBold
                     )
                     Text(
@@ -113,7 +113,7 @@ fun LoginScreen(
                         color = colores.onSurface.copy(alpha = 0.65f),
                         fontSize = 13.sp
                     )
-                    Spacer(Modifier.height(18.dp))
+                    Spacer(Modifier.height(12.dp))
 
                     OutlinedTextField(
                         value = email,
@@ -125,7 +125,7 @@ fun LoginScreen(
                         shape = RoundedCornerShape(16.dp),
                         modifier = Modifier.fillMaxWidth()
                     )
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(8.dp))
 
                     OutlinedTextField(
                         value = password,
@@ -151,7 +151,7 @@ fun LoginScreen(
                         Spacer(Modifier.height(10.dp))
                         Text(uiState.error!!, color = colores.error, fontSize = 13.sp)
                     }
-                    Spacer(Modifier.height(18.dp))
+                    Spacer(Modifier.height(12.dp))
 
                     Button(
                         onClick = {
@@ -163,7 +163,7 @@ fun LoginScreen(
                         },
                         enabled = !uiState.cargando && email.isNotBlank() && password.isNotBlank(),
                         shape = RoundedCornerShape(16.dp),
-                        modifier = Modifier.fillMaxWidth().height(52.dp)
+                        modifier = Modifier.fillMaxWidth().height(48.dp)
                     ) {
                         if (uiState.cargando) {
                             CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
@@ -176,7 +176,7 @@ fun LoginScreen(
                         }
                     }
 
-                    Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(10.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         HorizontalDivider(Modifier.weight(1f))
                         Text(
@@ -186,7 +186,7 @@ fun LoginScreen(
                         )
                         HorizontalDivider(Modifier.weight(1f))
                     }
-                    Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(10.dp))
 
                     OutlinedButton(
                         onClick = {
@@ -196,21 +196,21 @@ fun LoginScreen(
                         },
                         enabled = !uiState.cargando,
                         shape = RoundedCornerShape(16.dp),
-                        modifier = Modifier.fillMaxWidth().height(52.dp)
+                        modifier = Modifier.fillMaxWidth().height(48.dp)
                     ) {
                         Text("Continuar con Google", fontWeight = FontWeight.Bold)
                     }
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(4.dp))
             TextButton(onClick = { modoRegistro = !modoRegistro }) {
                 Text(
                     if (modoRegistro) "¿Ya tienes cuenta? Inicia sesión" else "¿No tienes cuenta? Regístrate",
                     fontWeight = FontWeight.Bold
                 )
             }
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(8.dp))
         }
     }
 }
