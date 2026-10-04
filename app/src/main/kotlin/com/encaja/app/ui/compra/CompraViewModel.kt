@@ -91,6 +91,17 @@ class CompraViewModel @Inject constructor(
         }
     }
 
+    /** Cambia el nombre de un artículo (mismo id, misma tienda y mismo estado de comprado). */
+    fun renombrarArticulo(articulo: ArticuloCompra, nuevoNombre: String) {
+        val familyId = familyIdActual ?: return
+        val nombreLimpio = nuevoNombre.trim()
+        if (nombreLimpio.isBlank() || nombreLimpio == articulo.nombre) return
+        viewModelScope.launch {
+            compraRepository.guardarArticulo(familyId, articulo.copy(nombre = nombreLimpio))
+            cargar(mostrarCargando = false)
+        }
+    }
+
     fun eliminarArticulo(articuloId: ArticuloCompraId) {
         val familyId = familyIdActual ?: return
         viewModelScope.launch {

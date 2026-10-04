@@ -10,6 +10,10 @@ package com.encaja.app.ui.compra
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,12 +34,16 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Storefront
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -99,6 +107,8 @@ fun CompraScreen(viewModel: CompraViewModel = hiltViewModel()) {
                 tiendasPlegadas = tiendasPlegadas,
                 onAgregar = { nombre, tienda -> viewModel.agregarArticulo(nombre, tienda) },
                 onMarcarComprado = { articulo, comprado -> viewModel.marcarComprado(articulo, comprado) },
+                onRenombrar = { articulo, nombre -> viewModel.renombrarArticulo(articulo, nombre) },
+                onAgregarATienda = { nombre, tienda -> viewModel.agregarArticulo(nombre, tienda) },
                 onEliminar = { id -> viewModel.eliminarArticulo(id) }
             )
         }
@@ -111,6 +121,8 @@ private fun ContenidoCompra(
     tiendasPlegadas: MutableList<String>,
     onAgregar: (String, String) -> Unit,
     onMarcarComprado: (ArticuloCompra, Boolean) -> Unit,
+    onRenombrar: (ArticuloCompra, String) -> Unit,
+    onAgregarATienda: (String, String) -> Unit,
     onEliminar: (ArticuloCompraId) -> Unit
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
@@ -153,13 +165,15 @@ private fun ContenidoCompra(
                             else tiendasPlegadas.add(grupo.tienda)
                         },
                         onMarcarComprado = onMarcarComprado,
+                        onRenombrar = onRenombrar,
+                        onAgregarATienda = onAgregarATienda,
                         onEliminar = onEliminar
                     )
                 }
             }
         }
 
-        PanelNuevoArticulo(onAgregar = onAgregar)
+        PanelNuevoArticulo(tiendas = estado.grupos.map { it.tienda }, onAgregar = onAgregar)
     }
 }
 
@@ -183,6 +197,8 @@ private fun TarjetaTienda(
     plegada: Boolean,
     onAlternarPlegada: () -> Unit,
     onMarcarComprado: (ArticuloCompra, Boolean) -> Unit,
+    onRenombrar: (ArticuloCompra, String) -> Unit,
+    onAgregarATienda: (String, String) -> Unit,
     onEliminar: (ArticuloCompraId) -> Unit
 ) {
     val colorCabecera = colorDeTienda(grupo.tienda)
@@ -253,11 +269,72 @@ private fun TarjetaTienda(
                     FilaArticulo(
                         articulo = articulo,
                         onMarcarComprado = { comprado -> onMarcarComprado(articulo, comprado) },
+                        onRenombrar = { nombre -> onRenombrar(articulo, nombre) },
                         onEliminar = { onEliminar(articulo.id) }
                     )
                 }
+                FilaNuevoArticuloEnTienda(onAgregar = { nombre -> onAgregarATienda(nombre, grupo.tienda) })
             }
         }
+    }
+}
+
+/** "+ Añadir artículo" al final de la lista de una tienda: al tocarlo aparece un campo para
+ * escribir el nombre y el artículo se añade a ESA tienda, sin tener que repetir su nombre. */
+@Composable
+private fun FilaNuevoArticuloEnTienda(onAgregar: (String) -> Unit) {
+    var abierta by remember { mutableStateOf(false) }
+    var texto by remember { mutableStateOf("") }
+    val foco = remember { FocusRequester() }
+    val acento = LocalEncajaExtraColors.current.acento
+
+    fun confirmar() {
+        if (texto.isNotBlank()) {
+            onAgregar(texto)
+            texto = ""   // sigue abierto: lo normal es añadir varios seguidos
+        }
+    }
+
+    if (!abierta) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .clickable { abierta = true }
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier.size(26.dp).clip(CircleShape).background(acento),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Default.Add, contentDescription = null, tint = LocalEncajaExtraColors.current.onAcento, modifier = Modifier.size(18.dp))
+            }
+            Spacer(Modifier.width(14.dp))
+            Text("Añadir artículo", color = acento, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyLarge)
+        }
+    } else {
+        LaunchedEffect(Unit) { foco.requestFocus() }
+        OutlinedTextField(
+            value = texto,
+            onValueChange = { texto = it },
+            placeholder = { Text("Nuevo artículo", maxLines = 1) },
+            singleLine = true,
+            shape = RoundedCornerShape(16.dp),
+            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = { confirmar() }),
+            trailingIcon = {
+                Row {
+                    IconButton(onClick = { confirmar() }, enabled = texto.isNotBlank()) {
+                        Icon(Icons.Default.Check, contentDescription = "Añadir", tint = if (texto.isNotBlank()) acento else MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    IconButton(onClick = { abierta = false; texto = "" }) {
+                        Icon(Icons.Default.Close, contentDescription = "Cerrar", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            },
+            modifier = Modifier.fillMaxWidth().focusRequester(foco)
+        )
     }
 }
 
@@ -271,8 +348,39 @@ private fun textoArticulos(total: Int, pendientes: Int): String {
 private fun FilaArticulo(
     articulo: ArticuloCompra,
     onMarcarComprado: (Boolean) -> Unit,
+    onRenombrar: (String) -> Unit,
     onEliminar: () -> Unit
 ) {
+    var editando by remember { mutableStateOf(false) }
+    var nombreEditado by remember(articulo.nombre) { mutableStateOf(articulo.nombre) }
+
+    if (editando) {
+        AlertDialog(
+            onDismissRequest = { editando = false },
+            title = { Text("Cambiar nombre") },
+            text = {
+                OutlinedTextField(
+                    value = nombreEditado,
+                    onValueChange = { nombreEditado = it },
+                    singleLine = true,
+                    shape = RoundedCornerShape(16.dp),
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = {
+                        if (nombreEditado.isNotBlank()) { onRenombrar(nombreEditado); editando = false }
+                    }),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = { onRenombrar(nombreEditado); editando = false },
+                    enabled = nombreEditado.isNotBlank()
+                ) { Text("Guardar") }
+            },
+            dismissButton = { TextButton(onClick = { editando = false }) { Text("Cancelar") } }
+        )
+    }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -291,6 +399,13 @@ private fun FilaArticulo(
             color = if (articulo.comprado) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.weight(1f).padding(vertical = 8.dp)
         )
+        IconButton(onClick = { nombreEditado = articulo.nombre; editando = true }) {
+            Icon(
+                Icons.Default.Edit,
+                contentDescription = "Cambiar nombre de ${articulo.nombre}",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
         IconButton(onClick = onEliminar) {
             Icon(
                 Icons.Default.Delete,
@@ -319,9 +434,10 @@ private fun CasillaCompra(marcada: Boolean) {
     }
 }
 
-/** Panel lavanda de abajo: campos "Artículo" y "Tienda" y botón redondo "+". */
+/** Panel lavanda de abajo: para crear una tienda nueva (artículo + tienda) con el botón redondo "+".
+ * Para añadir a una tienda que ya existe se usa el "+ Añadir artículo" de su propia tarjeta. */
 @Composable
-private fun PanelNuevoArticulo(onAgregar: (String, String) -> Unit) {
+private fun PanelNuevoArticulo(tiendas: List<String>, onAgregar: (String, String) -> Unit) {
     var nombre by remember { mutableStateOf("") }
     var tienda by remember { mutableStateOf("") }
     val extra = LocalEncajaExtraColors.current
@@ -329,12 +445,16 @@ private fun PanelNuevoArticulo(onAgregar: (String, String) -> Unit) {
 
     fun agregar() {
         if (puedeAgregar) {
-            onAgregar(nombre, tienda)
+            // Si ya existe esa tienda (aunque se escriba con otras mayúsculas), se usa el nombre
+            // existente para que el artículo vaya a la misma lista y no se cree otra duplicada.
+            val tiendaFinal = tiendas.firstOrNull { it.equals(tienda.trim(), ignoreCase = true) } ?: tienda
+            onAgregar(nombre, tiendaFinal)
             nombre = ""
             // La tienda se conserva: lo normal es añadir varios artículos seguidos a la misma.
         }
     }
 
+    Column {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -374,6 +494,7 @@ private fun PanelNuevoArticulo(onAgregar: (String, String) -> Unit) {
         ) {
             Icon(Icons.Default.Add, contentDescription = "Añadir artículo", tint = extra.onAcento, modifier = Modifier.size(28.dp))
         }
+    }
     }
 }
 
