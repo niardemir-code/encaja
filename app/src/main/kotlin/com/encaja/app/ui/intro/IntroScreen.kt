@@ -84,7 +84,7 @@ fun IntroScreen(alTerminar: (registrarse: Boolean, codigo: String?) -> Unit) {
     ) {
         // Cabecera: paso y "Saltar"
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp).height(40.dp),
+            Modifier.fillMaxWidth().padding(horizontal = 24.dp).height(40.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             if (pager.currentPage > 0) {
@@ -104,7 +104,7 @@ fun IntroScreen(alTerminar: (registrarse: Boolean, codigo: String?) -> Unit) {
 
         HorizontalPager(state = pager, modifier = Modifier.weight(1f).fillMaxWidth()) { pagina ->
             Column(
-                Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp),
+                Modifier.fillMaxSize().padding(horizontal = 24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 when (pagina) {
@@ -142,13 +142,13 @@ fun IntroScreen(alTerminar: (registrarse: Boolean, codigo: String?) -> Unit) {
                         alTenerCuenta = { alTerminar(false, null) }
                     )
                 }
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(4.dp))
             }
         }
 
         // Pie: puntos + botones (la última página lleva los suyos dentro)
         Column(
-            Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 12.dp),
+            Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -161,7 +161,7 @@ fun IntroScreen(alTerminar: (registrarse: Boolean, codigo: String?) -> Unit) {
                 }
             }
             if (!ultima) {
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(10.dp))
                 if (pager.currentPage == 0) {
                     BotonPrincipal("Comenzar") { scope.launch { pager.animateScrollToPage(1) } }
                     TextButton(onClick = { alTerminar(false, null) }) {
@@ -200,12 +200,14 @@ private fun BotonPrincipal(texto: String, onClick: () -> Unit) {
 }
 
 @Composable
-private fun Ilustracion(@DrawableRes recurso: Int, modifier: Modifier = Modifier) {
+private fun ColumnScope.Ilustracion(@DrawableRes recurso: Int) {
+    // Ocupa el alto que sobra y se encoge (manteniendo proporción) para que la pantalla
+    // entera quepa sin scroll.
     Image(
         painter = painterResource(recurso),
         contentDescription = null,
-        contentScale = ContentScale.FillWidth,
-        modifier = modifier.fillMaxWidth()
+        contentScale = ContentScale.Fit,
+        modifier = Modifier.weight(1f, fill = true).fillMaxWidth()
     )
 }
 
@@ -213,8 +215,8 @@ private data class Fila(val icono: ImageVector, val titulo: String, val detalle:
 
 @Composable
 private fun FilaFuncion(f: Fila, fondoIcono: Color = Lavanda, colorIcono: Color = Acento) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(44.dp).clip(CircleShape).background(fondoIcono), contentAlignment = Alignment.Center) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(40.dp).clip(CircleShape).background(fondoIcono), contentAlignment = Alignment.Center) {
             Icon(f.icono, null, tint = colorIcono, modifier = Modifier.size(22.dp))
         }
         Spacer(Modifier.width(14.dp))
@@ -227,20 +229,20 @@ private fun FilaFuncion(f: Fila, fondoIcono: Color = Lavanda, colorIcono: Color 
 
 @Composable
 private fun Titulo(texto: String, subtitulo: String) {
-    Text(texto, color = Violeta, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center)
-    Spacer(Modifier.height(6.dp))
-    Text(subtitulo, color = TextoSuave, fontSize = 15.sp, textAlign = TextAlign.Center)
-    Spacer(Modifier.height(12.dp))
+    Text(texto, color = Violeta, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center)
+    Spacer(Modifier.height(4.dp))
+    Text(subtitulo, color = TextoSuave, fontSize = 14.sp, textAlign = TextAlign.Center)
+    Spacer(Modifier.height(8.dp))
 }
 
 @Composable
-private fun PaginaBienvenida() {
+private fun ColumnScope.PaginaBienvenida() {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Image(painterResource(R.drawable.logo_encaja), null, modifier = Modifier.height(48.dp).aspectRatio(640f / 576f))
         Spacer(Modifier.width(8.dp))
         Text("encaja", color = Violeta, fontSize = 32.sp, fontWeight = FontWeight.ExtraBold)
     }
-    Spacer(Modifier.height(8.dp))
+    Spacer(Modifier.height(4.dp))
     Text(
         "Organiza la vida familiar de forma sencilla",
         color = TextoSuave, fontSize = 16.sp, textAlign = TextAlign.Center
@@ -254,7 +256,7 @@ private fun PaginaBienvenida() {
 }
 
 @Composable
-private fun PaginaGenerica(titulo: String, subtitulo: String, @DrawableRes imagen: Int, filas: List<Fila>) {
+private fun ColumnScope.PaginaGenerica(titulo: String, subtitulo: String, @DrawableRes imagen: Int, filas: List<Fila>) {
     Titulo(titulo, subtitulo)
     Ilustracion(imagen)
     Spacer(Modifier.height(8.dp))
@@ -262,7 +264,7 @@ private fun PaginaGenerica(titulo: String, subtitulo: String, @DrawableRes image
 }
 
 @Composable
-private fun PaginaSemaforo() {
+private fun ColumnScope.PaginaSemaforo() {
     Titulo("El semáforo de la semana", "Mira de un vistazo cómo va cada día.")
     Ilustracion(R.drawable.intro_semaforo)
     Spacer(Modifier.height(8.dp))
@@ -271,16 +273,16 @@ private fun PaginaSemaforo() {
         ChipLeyenda(Modifier.weight(1f), Ambar, AmbarClaro, "Hay avisos", "Revisa los detalles")
         ChipLeyenda(Modifier.weight(1f), Rojo, RojoClaro, "Hay huecos", "Necesita tu atención")
     }
-    Spacer(Modifier.height(12.dp))
+    Spacer(Modifier.height(8.dp))
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(AmbarClaro).padding(14.dp),
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(AmbarClaro).padding(10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(Icons.Default.Lightbulb, null, tint = Ambar, modifier = Modifier.size(28.dp))
         Spacer(Modifier.width(12.dp))
         Text(
             "La app cruza las actividades de los niños con la disponibilidad de cada persona y te avisa de lo que necesita organización.",
-            color = Texto, fontSize = 13.sp
+            color = Texto, fontSize = 12.sp, lineHeight = 15.sp
         )
     }
 }
@@ -299,13 +301,13 @@ private fun ChipLeyenda(modifier: Modifier, color: Color, fondo: Color, titulo: 
 }
 
 @Composable
-private fun PaginaUnirse(alUnirse: (String) -> Unit, alTenerCuenta: () -> Unit) {
+private fun ColumnScope.PaginaUnirse(alUnirse: (String) -> Unit, alTenerCuenta: () -> Unit) {
     var codigo by remember { mutableStateOf("") }
     Titulo("Únete a tu familia", "Introduce el código que te han compartido.")
     Ilustracion(R.drawable.intro_familia)
     Spacer(Modifier.height(8.dp))
     Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Color.White).padding(16.dp)
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Color.White).padding(12.dp)
     ) {
         OutlinedTextField(
             value = codigo,
@@ -317,7 +319,7 @@ private fun PaginaUnirse(alUnirse: (String) -> Unit, alTenerCuenta: () -> Unit) 
             shape = RoundedCornerShape(14.dp),
             modifier = Modifier.fillMaxWidth()
         )
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(8.dp))
         Button(
             onClick = { alUnirse(codigo) },
             enabled = codigo.isNotBlank(),
@@ -328,7 +330,7 @@ private fun PaginaUnirse(alUnirse: (String) -> Unit, alTenerCuenta: () -> Unit) 
     }
     Spacer(Modifier.height(12.dp))
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Lavanda).padding(14.dp),
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Lavanda).padding(10.dp),
         verticalAlignment = Alignment.Top
     ) {
         Icon(Icons.Default.Info, null, tint = Acento, modifier = Modifier.size(22.dp))
@@ -337,15 +339,14 @@ private fun PaginaUnirse(alUnirse: (String) -> Unit, alTenerCuenta: () -> Unit) 
             Text("¿Cómo consigo el código?", color = Violeta, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             Text(
                 "Pídeselo a quien ya usa Encaja en tu familia: puede generarlo desde la sección Familia.",
-                color = TextoSuave, fontSize = 13.sp
+                color = TextoSuave, fontSize = 12.sp, lineHeight = 15.sp
             )
         }
     }
-    Spacer(Modifier.height(8.dp))
-    Text("o", color = TextoSuave)
+    Text("o", color = TextoSuave, fontSize = 13.sp)
     OutlinedButton(
         onClick = alTenerCuenta,
-        modifier = Modifier.fillMaxWidth().height(52.dp),
+        modifier = Modifier.fillMaxWidth().height(48.dp),
         shape = RoundedCornerShape(16.dp),
         border = BorderStroke(1.dp, Acento)
     ) {
