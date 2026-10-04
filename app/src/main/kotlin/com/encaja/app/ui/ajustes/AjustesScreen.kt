@@ -28,6 +28,9 @@ import androidx.compose.material.icons.filled.ChildCare
 import androidx.compose.material.icons.filled.EventBusy
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Mail
+import androidx.compose.material.icons.filled.QuestionMark
 import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
@@ -61,6 +64,9 @@ fun AjustesScreen(
     onAbrirCuidadores: () -> Unit,
     onAbrirTodasActividades: () -> Unit,
     onAbrirOcupaciones: () -> Unit = {},
+    onAbrirAyuda: () -> Unit = {},
+    onAbrirContacto: () -> Unit = {},
+    onAbrirLegal: () -> Unit = {},
     viewModel: AjustesViewModel = hiltViewModel()
 ) {
     // Con scroll: con las tarjetas de avisos (alarma exacta, batería) ya no cabe todo en
@@ -108,6 +114,28 @@ fun AjustesScreen(
             titulo = "Ocupaciones",
             subtitulo = "Todo lo apuntado en Familia, para repasar y borrar",
             onClick = onAbrirOcupaciones
+        )
+
+        Spacer(Modifier.height(12.dp))
+        FilaAjuste(
+            icono = Icons.Default.QuestionMark,
+            titulo = "Ayuda",
+            subtitulo = "Cómo funciona la app, pantalla por pantalla",
+            onClick = onAbrirAyuda
+        )
+        Spacer(Modifier.height(12.dp))
+        FilaAjuste(
+            icono = Icons.Default.Mail,
+            titulo = "Contacto",
+            subtitulo = "Escribe al desarrollador",
+            onClick = onAbrirContacto
+        )
+        Spacer(Modifier.height(12.dp))
+        FilaAjuste(
+            icono = Icons.Default.Lock,
+            titulo = "Privacidad y legal",
+            subtitulo = "Tus datos, condiciones de uso y aviso legal",
+            onClick = onAbrirLegal
         )
 
         Spacer(Modifier.height(12.dp))

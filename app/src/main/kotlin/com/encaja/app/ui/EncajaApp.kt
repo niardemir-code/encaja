@@ -99,10 +99,16 @@ private const val RUTA_AJUSTES_NINOS = "ajustes/ninos"
 private const val RUTA_AJUSTES_CUIDADORES = "ajustes/cuidadores"
 private const val RUTA_TODAS_ACTIVIDADES = "todas_actividades"
 private const val RUTA_OCUPACIONES = "ocupaciones"
+private const val RUTA_AYUDA = "ajustes/ayuda"
+private const val RUTA_CONTACTO = "ajustes/contacto"
+private const val RUTA_LEGAL = "ajustes/legal"
 
 /** Rutas fuera de las pestañas de la barra inferior: llevan flecha de "atrás" en vez de
  * quedarse sin icono de navegación a la izquierda. */
-private val RUTAS_CON_ATRAS = setOf(RUTA_AJUSTES, RUTA_AJUSTES_NINOS, RUTA_AJUSTES_CUIDADORES, RUTA_TODAS_ACTIVIDADES, RUTA_OCUPACIONES)
+private val RUTAS_CON_ATRAS = setOf(
+    RUTA_AJUSTES, RUTA_AJUSTES_NINOS, RUTA_AJUSTES_CUIDADORES, RUTA_TODAS_ACTIVIDADES, RUTA_OCUPACIONES,
+    RUTA_AYUDA, RUTA_CONTACTO, RUTA_LEGAL
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -265,13 +271,19 @@ fun EncajaApp(onCerrarSesion: () -> Unit, viewModel: EncajaAppViewModel = hiltVi
                     onAbrirNinos = { navController.navigate(RUTA_AJUSTES_NINOS) },
                     onAbrirCuidadores = { navController.navigate(RUTA_AJUSTES_CUIDADORES) },
                     onAbrirTodasActividades = { navController.navigate(RUTA_TODAS_ACTIVIDADES) },
-                    onAbrirOcupaciones = { navController.navigate(RUTA_OCUPACIONES) }
+                    onAbrirOcupaciones = { navController.navigate(RUTA_OCUPACIONES) },
+                    onAbrirAyuda = { navController.navigate(RUTA_AYUDA) },
+                    onAbrirContacto = { navController.navigate(RUTA_CONTACTO) },
+                    onAbrirLegal = { navController.navigate(RUTA_LEGAL) }
                 )
             }
             composable(RUTA_AJUSTES_NINOS) { AjustesNinosScreen() }
             composable(RUTA_AJUSTES_CUIDADORES) { AjustesCuidadoresScreen() }
             composable(RUTA_TODAS_ACTIVIDADES) { TodasActividadesScreen() }
             composable(RUTA_OCUPACIONES) { OcupacionesScreen() }
+            composable(RUTA_AYUDA) { com.encaja.app.ui.informacion.AyudaScreen() }
+            composable(RUTA_CONTACTO) { com.encaja.app.ui.informacion.ContactoScreen() }
+            composable(RUTA_LEGAL) { com.encaja.app.ui.informacion.LegalScreen() }
         }
     }
     CapaAyuda(ayuda)

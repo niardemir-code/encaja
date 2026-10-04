@@ -343,7 +343,7 @@ private fun ColumnScope.PaginaUnirse(alUnirse: (String) -> Unit, alCrearFamilia:
         Column {
             Text("¿Cómo consigo el código?", color = Violeta, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             Text(
-                "Pídeselo a quien ya usa Encaja en tu familia (sección Familia).",
+                "Pídeselo a quien ya usa Encaja en tu familia (con el botón «Invitar a alguien»).",
                 color = TextoSuave, fontSize = 12.sp, lineHeight = 15.sp
             )
         }
