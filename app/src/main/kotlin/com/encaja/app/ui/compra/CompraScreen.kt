@@ -12,6 +12,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.layout.Arrangement
@@ -37,11 +38,13 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Icon
@@ -80,6 +83,8 @@ fun CompraScreen(viewModel: CompraViewModel = hiltViewModel()) {
     val pantalla by viewModel.pantalla.collectAsState()
     // Tiendas plegadas: vive aquí (fuera del "when") para no perderse al recargar la lista.
     val tiendasPlegadas = remember { mutableStateListOf<String>() }
+    // Tiendas que el usuario ha decidido no ver por ahora (filtro). Vacío = se ven todas.
+    val tiendasOcultas = remember { mutableStateListOf<String>() }
     // El ViewModel vive ahora lo que vive la app (ver entradaDelGrafo en EncajaApp), para
     // no perder la semana/día elegido al cambiar de pestaña; a cambio, hay que recargar
     // al reentrar para reflejar cambios hechos desde otras pantallas.
@@ -105,7 +110,13 @@ fun CompraScreen(viewModel: CompraViewModel = hiltViewModel()) {
             ContenidoCompra(
                 estado = estadoActual.estado,
                 tiendasPlegadas = tiendasPlegadas,
-                onAgregar = { nombre, tienda -> viewModel.agregarArticulo(nombre, tienda) },
+                tiendasOcultas = tiendasOcultas,
+                onAgregar = { nombre, tienda ->
+                    // Si se crea (o se añade a) una tienda que estaba oculta, vuelve a verse para
+                    // que el artículo recién añadido no desaparezca.
+                    tiendasOcultas.removeAll { it.equals(tienda.trim(), ignoreCase = true) }
+                    viewModel.agregarArticulo(nombre, tienda)
+                },
                 onMarcarComprado = { articulo, comprado -> viewModel.marcarComprado(articulo, comprado) },
                 onRenombrar = { articulo, nombre -> viewModel.renombrarArticulo(articulo, nombre) },
                 onAgregarATienda = { nombre, tienda -> viewModel.agregarArticulo(nombre, tienda) },
@@ -119,6 +130,7 @@ fun CompraScreen(viewModel: CompraViewModel = hiltViewModel()) {
 private fun ContenidoCompra(
     estado: CompraUiState,
     tiendasPlegadas: MutableList<String>,
+    tiendasOcultas: MutableList<String>,
     onAgregar: (String, String) -> Unit,
     onMarcarComprado: (ArticuloCompra, Boolean) -> Unit,
     onRenombrar: (ArticuloCompra, String) -> Unit,
@@ -126,18 +138,54 @@ private fun ContenidoCompra(
     onEliminar: (ArticuloCompraId) -> Unit
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
-        // Cabecera: título grande y subtítulo.
-        Column(modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 12.dp)) {
-            Text(
-                "Compra",
-                style = MaterialTheme.typography.displaySmall,
-                fontWeight = FontWeight.ExtraBold,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-            Text(
-                "Lista de la compra familiar",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+        // Cabecera: título grande y subtítulo, con el botón de filtro de comercios a la derecha.
+        var filtroAbierto by remember { mutableStateOf(false) }
+        val hayFiltro = tiendasOcultas.any { oculta -> estado.grupos.any { it.tienda == oculta } }
+        val gruposVisibles = estado.grupos.filter { it.tienda !in tiendasOcultas }
+
+        Row(
+            modifier = Modifier.padding(start = 20.dp, end = 12.dp, top = 12.dp, bottom = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "Compra",
+                    style = MaterialTheme.typography.displaySmall,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Text(
+                    if (hayFiltro) "Mostrando ${gruposVisibles.size} de ${estado.grupos.size} comercios"
+                    else "Lista de la compra familiar",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = if (hayFiltro) LocalEncajaExtraColors.current.acento else MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = if (hayFiltro) FontWeight.Bold else null
+                )
+            }
+            if (estado.grupos.size > 1) {
+                val extra = LocalEncajaExtraColors.current
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(if (hayFiltro) extra.acento else MaterialTheme.colorScheme.primaryContainer)
+                        .clickable { filtroAbierto = true },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.FilterList,
+                        contentDescription = "Filtrar comercios",
+                        tint = if (hayFiltro) extra.onAcento else MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        }
+
+        if (filtroAbierto) {
+            DialogoFiltroComercios(
+                grupos = estado.grupos,
+                ocultas = tiendasOcultas,
+                onCerrar = { filtroAbierto = false }
             )
         }
 
@@ -150,13 +198,27 @@ private fun ContenidoCompra(
                     textAlign = TextAlign.Center
                 )
             }
+        } else if (gruposVisibles.isEmpty()) {
+            Column(
+                modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    "Has ocultado todos los comercios.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+                TextButton(onClick = { tiendasOcultas.clear() }) { Text("Mostrar todos", fontWeight = FontWeight.Bold) }
+            }
         } else {
             LazyColumn(
                 modifier = Modifier.weight(1f),
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                items(estado.grupos, key = { it.tienda }) { grupo ->
+                items(gruposVisibles, key = { it.tienda }) { grupo ->
                     TarjetaTienda(
                         grupo = grupo,
                         plegada = grupo.tienda in tiendasPlegadas,
@@ -336,6 +398,48 @@ private fun FilaNuevoArticuloEnTienda(onAgregar: (String) -> Unit) {
             modifier = Modifier.fillMaxWidth().focusRequester(foco)
         )
     }
+}
+
+/** Elegir qué comercios se ven: una casilla por comercio, con cuántos artículos le quedan. */
+@Composable
+private fun DialogoFiltroComercios(
+    grupos: List<GrupoTienda>,
+    ocultas: MutableList<String>,
+    onCerrar: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onCerrar,
+        title = { Text("Comercios a mostrar") },
+        text = {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                grupos.forEach { grupo ->
+                    val visible = grupo.tienda !in ocultas
+                    val pendientes = grupo.articulos.count { !it.comprado }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { if (visible) ocultas.add(grupo.tienda) else ocultas.remove(grupo.tienda) }
+                            .padding(vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = visible,
+                            onCheckedChange = { marcada -> if (marcada) ocultas.remove(grupo.tienda) else ocultas.add(grupo.tienda) }
+                        )
+                        Text(grupo.tienda, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), maxLines = 1)
+                        Text(
+                            if (pendientes == 1) "1 por comprar" else "$pendientes por comprar",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+            }
+        },
+        dismissButton = { TextButton(onClick = { ocultas.clear() }) { Text("Mostrar todos") } },
+        confirmButton = { TextButton(onClick = onCerrar) { Text("Listo", fontWeight = FontWeight.Bold) } }
+    )
 }
 
 /** "1 artículo", "3 artículos" o, si ya hay comprados, "3 artículos · 1 por comprar". */
