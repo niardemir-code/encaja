@@ -196,7 +196,7 @@ fun DialogoActividad(
                     quienRecogeId = quienRecogeId.takeIf { requiereDesplazamiento },
                     grupoRepeticionId = grupo,
                     avisoLlevarMin = avisoLlevarMin, avisoRecogerMin = avisoRecogerMin, icono = iconoId,
-                    creadoPorId = actividad?.creadoPorId
+                    creadoPorId = actividad.creadoPorId
                 ),
                 false
             )

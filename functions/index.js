@@ -13,6 +13,7 @@
 //   users/{uid}/tokens/{token}                   (los registra la app)
 
 const { onDocumentCreated, onDocumentWritten } = require("firebase-functions/v2/firestore");
+const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const admin = require("firebase-admin");
 
 admin.initializeApp();
@@ -120,3 +121,100 @@ exports.avisarCambioActividad = onDocumentWritten(
     await enviar(await tokensDe(uids), { tipo: "sync_avisos", familyId }, { collapseKey: "sync_avisos" });
   }
 );
+
+// 3) Dar de baja ----------------------------------------------------------------------------
+// Se hacen en el servidor (Admin SDK) porque quien se da de baja o echa a otro necesita tocar
+// documentos que las reglas de Firestore no le dejan: los tokens y la membresía de otra cuenta.
+
+/** Borra los tokens de notificaciones de una cuenta. */
+async function borrarTokens(uid) {
+  const snap = await db.collection("users").doc(uid).collection("tokens").get();
+  await Promise.all(snap.docs.map((d) => d.ref.delete()));
+}
+
+/** Quita el vínculo de una cuenta con su familia (no borra al cuidador de la familia). */
+async function desvincular(uid) {
+  const usuario = await db.collection("users").doc(uid).get();
+  const familyId = usuario.get("familyId");
+  const caregiverId = usuario.get("caregiverId");
+  if (familyId && caregiverId) {
+    const enlace = db.collection("families").doc(familyId).collection("caregiverLinks").doc(caregiverId);
+    const actual = await enlace.get();
+    if (actual.exists && actual.get("uid") === uid) await enlace.delete();
+  }
+  await borrarTokens(uid);
+  if (usuario.exists) await usuario.ref.delete();
+}
+
+// Código de invitación de 6 caracteres (sin 0/O ni 1/I), igual que el que genera la app.
+const CARACTERES_CODIGO = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+async function crearInvitacion(familyId, caregiverId) {
+  for (let intento = 0; intento < 5; intento++) {
+    let codigo = "";
+    for (let i = 0; i < 6; i++) codigo += CARACTERES_CODIGO[Math.floor(Math.random() * CARACTERES_CODIGO.length)];
+    const ref = db.collection("invites").doc(codigo);
+    if (!(await ref.get()).exists) {
+      await ref.set({ familyId, caregiverId, usado: false });
+      return codigo;
+    }
+  }
+  return null;
+}
+
+// El usuario borra su propia cuenta: se desvincula, se borran sus tokens y su cuenta de acceso.
+// El cuidador y todo su historial se quedan tal cual en la familia. Si era la última cuenta
+// vinculada de la familia (nadie más podría generar una invitación), se deja creado un código
+// para ese cuidador y se devuelve, para que quien llegue después pueda retomar todo con él.
+exports.borrarMiCuenta = onCall({ region: REGION }, async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Hay que iniciar sesión.");
+  const uid = request.auth.uid;
+  const usuario = await db.collection("users").doc(uid).get();
+  const familyId = usuario.get("familyId");
+  const caregiverId = usuario.get("caregiverId");
+  await desvincular(uid);
+
+  let codigo = null;
+  if (familyId && caregiverId) {
+    const familia = db.collection("families").doc(familyId);
+    const quedan = await familia.collection("caregiverLinks").limit(1).get();
+    const cuidador = await familia.collection("caregivers").doc(caregiverId).get();
+    if (quedan.empty && cuidador.exists) codigo = await crearInvitacion(familyId, caregiverId);
+  }
+  try {
+    await admin.auth().deleteUser(uid);
+  } catch (e) {
+    if (e.code !== "auth/user-not-found") throw new HttpsError("internal", "No se pudo borrar la cuenta.");
+  }
+  return { ok: true, codigo };
+});
+
+// Un administrador desvincula la cuenta de otro cuidador de su familia: esa persona pierde el
+// acceso a los datos de la familia, pero conserva su cuenta y puede volver con otra invitación.
+exports.desvincularCuenta = onCall({ region: REGION }, async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Hay que iniciar sesión.");
+  const miUid = request.auth.uid;
+  const cuidadorObjetivo = request.data && request.data.caregiverId;
+  if (!cuidadorObjetivo || typeof cuidadorObjetivo !== "string") {
+    throw new HttpsError("invalid-argument", "Falta el cuidador.");
+  }
+
+  const yo = await db.collection("users").doc(miUid).get();
+  const familyId = yo.get("familyId");
+  const miCuidador = yo.get("caregiverId");
+  if (!familyId || !miCuidador) throw new HttpsError("permission-denied", "No perteneces a ninguna familia.");
+
+  const familia = db.collection("families").doc(familyId);
+  const miFicha = await familia.collection("caregivers").doc(miCuidador).get();
+  if (miFicha.get("rol") !== "ADMIN") throw new HttpsError("permission-denied", "Solo un administrador puede hacerlo.");
+
+  const enlace = await familia.collection("caregiverLinks").doc(cuidadorObjetivo).get();
+  const uidObjetivo = enlace.get("uid");
+  if (!enlace.exists || !uidObjetivo) throw new HttpsError("not-found", "Ese cuidador no tiene cuenta vinculada.");
+  if (uidObjetivo === miUid) throw new HttpsError("failed-precondition", "Para salir tú, usa Borrar mi cuenta.");
+
+  await enlace.ref.delete();
+  await borrarTokens(uidObjetivo);
+  const usuarioObjetivo = await db.collection("users").doc(uidObjetivo).get();
+  if (usuarioObjetivo.exists && usuarioObjetivo.get("familyId") === familyId) await usuarioObjetivo.ref.delete();
+  return { ok: true };
+});

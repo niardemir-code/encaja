@@ -31,7 +31,9 @@ class AjustesViewModel @Inject constructor(
     private val familyMembershipRepository: FamilyMembershipRepository,
     private val childRepository: ChildRepository,
     private val caregiverRepository: CaregiverRepository,
-    private val familyUnitRepository: FamilyUnitRepository
+    private val familyUnitRepository: FamilyUnitRepository,
+    private val cambiosDeMembresia: com.encaja.app.ui.CambiosDeMembresia,
+    private val cuentaRepository: com.encaja.app.domain.repository.CuentaRepository
 ) : ViewModel() {
 
     private val _pantalla = MutableStateFlow<AjustesPantallaEstado>(AjustesPantallaEstado.Cargando)
@@ -73,7 +75,38 @@ class AjustesViewModel @Inject constructor(
             val ninos = childRepository.obtenerNinos(membresia.familyId)
             val cuidadores = caregiverRepository.obtenerCuidadores(membresia.familyId)
             val unidades = familyUnitRepository.obtenerUnidades(membresia.familyId)
-            _pantalla.value = AjustesPantallaEstado.ConDatos(ninos, cuidadores, unidades)
+            val vinculados = cuentaRepository.cuidadoresVinculados(membresia.familyId)
+            val yo = cuidadores.firstOrNull { it.id == membresia.caregiverId }
+            _pantalla.value = AjustesPantallaEstado.ConDatos(
+                ninos, cuidadores, unidades,
+                miCaregiverId = membresia.caregiverId,
+                soyAdmin = yo?.rol == CaregiverRole.ADMIN,
+                vinculados = vinculados
+            )
+        }
+    }
+
+    /**
+     * Borra la cuenta con la sesión abierta (la desvincula de la familia y elimina el acceso).
+     * Si sale bien se llama a [alTerminar] (con un código de invitación si era la última cuenta
+     * de la familia); si no, a [alFallar]. El cuidador y su historial no se tocan.
+     */
+    fun borrarMiCuenta(alTerminar: (codigoParaVolver: String?) -> Unit, alFallar: (String) -> Unit) {
+        viewModelScope.launch {
+            cuentaRepository.borrarMiCuenta().fold(
+                onSuccess = { codigo -> alTerminar(codigo) },
+                onFailure = { alFallar("No se pudo borrar la cuenta. Comprueba la conexión e inténtalo de nuevo.") }
+            )
+        }
+    }
+
+    /** (Administradores) quita la cuenta vinculada a un cuidador; el cuidador sigue en la familia. */
+    fun desvincularCuenta(caregiverId: CaregiverId, alFallar: (String) -> Unit) {
+        viewModelScope.launch {
+            cuentaRepository.desvincularCuenta(caregiverId).fold(
+                onSuccess = { cargar() },
+                onFailure = { alFallar("No se pudo desvincular la cuenta. Inténtalo de nuevo.") }
+            )
         }
     }
 
@@ -139,6 +172,7 @@ class AjustesViewModel @Inject constructor(
         viewModelScope.launch {
             val uid = authRepository.sesionActual()?.uid ?: return@launch
             familyMembershipRepository.vincularAFamilia(uid, FamilyMembership(familyId, caregiverId))
+            cambiosDeMembresia.avisar()
         }
     }
 

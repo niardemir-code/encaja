@@ -360,7 +360,7 @@ fun GuiaScreen(
                             ) {
                                 CabeceraActividadesDelDia(onAnadir = { actividadEnCreacion = true })
                                 estadoActual.estado.filas.forEach { fila ->
-                                    TarjetaActividadesDelNino(fila = fila, esHoy = esHoy, onEditar = { actividadEnEdicion = it })
+                                    TarjetaActividadesDelNino(fila = fila, onEditar = { actividadEnEdicion = it })
                                 }
                             }
                         }
@@ -912,7 +912,7 @@ private fun CabeceraActividadesDelDia(onAnadir: () -> Unit) {
  * repasar entero sin scroll horizontal. Tocar una actividad la abre para editarla.
  */
 @Composable
-private fun TarjetaActividadesDelNino(fila: FilaGuia, esHoy: Boolean, onEditar: (CoverageNeed) -> Unit) {
+private fun TarjetaActividadesDelNino(fila: FilaGuia, onEditar: (CoverageNeed) -> Unit) {
     val ahora = LocalAhora.current
     Surface(
         modifier = Modifier.fillMaxWidth(),

@@ -44,7 +44,8 @@ class SemaforoViewModel @Inject constructor(
     private val availabilityRepository: AvailabilityRepository,
     private val anuncioRepository: AnuncioRepository,
     private val familyUnitRepository: FamilyUnitRepository,
-    private val editor: EditorDeActividades
+    private val editor: EditorDeActividades,
+    private val cambiosDeMembresia: com.encaja.app.ui.CambiosDeMembresia
 ) : ViewModel() {
 
     private val _pantalla = MutableStateFlow<SemaforoPantallaEstado>(SemaforoPantallaEstado.Cargando)
@@ -109,6 +110,7 @@ class SemaforoViewModel @Inject constructor(
             inviteRepository.canjearInvitacion(codigo).fold(
                 onSuccess = { membership ->
                     familyMembershipRepository.vincularAFamilia(uid, membership)
+                    cambiosDeMembresia.avisar()
                     cargar()
                 },
                 onFailure = { error -> alFallar(error.message ?: "Código no válido") }
@@ -136,6 +138,7 @@ class SemaforoViewModel @Inject constructor(
                 )
                 caregiverRepository.guardarCuidadores(familyId, listOf(yo))
                 familyMembershipRepository.vincularAFamilia(uid, FamilyMembership(familyId, caregiverId))
+                cambiosDeMembresia.avisar()
                 cargar()
             } catch (e: Exception) {
                 alFallar("No se pudo crear la familia, inténtalo de nuevo")

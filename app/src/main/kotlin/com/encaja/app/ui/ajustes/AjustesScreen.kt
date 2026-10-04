@@ -137,6 +137,76 @@ fun AjustesScreen(
         OutlinedButton(onClick = onCerrarSesion, modifier = Modifier.fillMaxWidth()) {
             Text("Cerrar sesión")
         }
+
+        // Darse de baja: desvincula la cuenta de la familia y elimina el acceso con Google.
+        var confirmandoBaja by remember { mutableStateOf(false) }
+        var borrando by remember { mutableStateOf(false) }
+        var errorBaja by remember { mutableStateOf<String?>(null) }
+        var codigoParaVolver by remember { mutableStateOf<String?>(null) }
+        var cuentaBorrada by remember { mutableStateOf(false) }
+        Spacer(Modifier.height(12.dp))
+        androidx.compose.material3.TextButton(
+            onClick = { errorBaja = null; confirmandoBaja = true },
+            enabled = !borrando,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Borrar mi cuenta", color = MaterialTheme.colorScheme.error)
+        }
+        errorBaja?.let {
+            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+        }
+        // Cuenta ya borrada: si era la última de la familia, se enseña el código para que quien
+        // llegue después pueda retomar a este cuidador con todo su historial.
+        if (cuentaBorrada) {
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = {},
+                title = { Text("Cuenta borrada") },
+                text = {
+                    if (codigoParaVolver != null) {
+                        Text(
+                            "Eras la última persona con cuenta en esta familia. Su información sigue " +
+                                "guardada. Apunta este código: quien lo introduzca al crear su cuenta se " +
+                                "vinculará a tu persona y seguirá con todo.\n\n${codigoParaVolver}"
+                        )
+                    } else {
+                        Text("Tu cuenta se ha eliminado. La información de la familia sigue guardada.")
+                    }
+                },
+                confirmButton = {
+                    androidx.compose.material3.TextButton(onClick = { onCerrarSesion() }) { Text("Entendido") }
+                }
+            )
+        }
+        if (confirmandoBaja) {
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { confirmandoBaja = false },
+                title = { Text("¿Borrar tu cuenta?") },
+                text = {
+                    Text(
+                        "Se eliminará tu cuenta de la app y dejarás de tener acceso a esta familia y de " +
+                            "recibir avisos. Tu persona y todo su historial se quedan en la familia, y podrán " +
+                            "volver a vincular a alguien con ella. No se puede deshacer."
+                    )
+                },
+                confirmButton = {
+                    androidx.compose.material3.TextButton(onClick = {
+                        confirmandoBaja = false
+                        borrando = true
+                        viewModel.borrarMiCuenta(
+                            alTerminar = { codigo ->
+                                borrando = false
+                                codigoParaVolver = codigo
+                                cuentaBorrada = true
+                            },
+                            alFallar = { borrando = false; errorBaja = it }
+                        )
+                    }) { Text("Borrar", color = MaterialTheme.colorScheme.error) }
+                },
+                dismissButton = {
+                    androidx.compose.material3.TextButton(onClick = { confirmandoBaja = false }) { Text("Cancelar") }
+                }
+            )
+        }
     }
 }
 

@@ -18,6 +18,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.LinkOff
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
@@ -64,12 +65,24 @@ fun AjustesCuidadoresScreen(viewModel: AjustesViewModel = hiltViewModel()) {
                 )
             }
             is AjustesPantallaEstado.ConDatos -> {
+                var errorBaja by remember { mutableStateOf<String?>(null) }
                 SeccionCuidadores(
                     cuidadores = estadoActual.cuidadores,
+                    miCaregiverId = estadoActual.miCaregiverId,
+                    soyAdmin = estadoActual.soyAdmin,
+                    vinculados = estadoActual.vinculados,
+                    onDesvincular = { caregiverId ->
+                        errorBaja = null
+                        viewModel.desvincularCuenta(caregiverId) { errorBaja = it }
+                    },
                     onAgregar = { nombre, apellido1, apellido2 -> viewModel.agregarCuidador(nombre, apellido1, apellido2) },
                     onEliminar = { caregiverId -> viewModel.eliminarCuidador(caregiverId) },
                     onVincularme = { caregiverId -> viewModel.vincularmeAEsteCuidador(caregiverId) }
                 )
+                errorBaja?.let {
+                    Spacer(Modifier.height(8.dp))
+                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                }
 
                 Spacer(Modifier.height(24.dp))
                 HorizontalDivider()
@@ -89,6 +102,10 @@ fun AjustesCuidadoresScreen(viewModel: AjustesViewModel = hiltViewModel()) {
 @Composable
 private fun SeccionCuidadores(
     cuidadores: List<Caregiver>,
+    miCaregiverId: CaregiverId?,
+    soyAdmin: Boolean,
+    vinculados: Set<CaregiverId>,
+    onDesvincular: (CaregiverId) -> Unit,
     onAgregar: (nombre: String, apellido1: String, apellido2: String) -> Unit,
     onEliminar: (CaregiverId) -> Unit,
     onVincularme: (CaregiverId) -> Unit
@@ -97,6 +114,29 @@ private fun SeccionCuidadores(
     var apellido1Nuevo by remember { mutableStateOf("") }
     var apellido2Nuevo by remember { mutableStateOf("") }
     var vinculadoAId by remember { mutableStateOf<CaregiverId?>(null) }
+    var cuidadorADesvincular by remember { mutableStateOf<Caregiver?>(null) }
+
+    cuidadorADesvincular?.let { cuidador ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { cuidadorADesvincular = null },
+            title = { Text("¿Desvincular a ${cuidador.nombreCompleto}?") },
+            text = {
+                Text(
+                    "Su cuenta dejará de tener acceso a los datos de la familia y dejará de recibir " +
+                        "avisos. ${cuidador.nombreCompleto} seguirá en la lista y podrás volver a invitarle."
+                )
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    onDesvincular(cuidador.id)
+                    cuidadorADesvincular = null
+                }) { Text("Desvincular") }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { cuidadorADesvincular = null }) { Text("Cancelar") }
+            }
+        )
+    }
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Text("Personas", style = MaterialTheme.typography.titleMedium)
@@ -123,8 +163,30 @@ private fun SeccionCuidadores(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(cuidador.nombreCompleto, style = MaterialTheme.typography.bodyLarge)
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(cuidador.nombreCompleto, style = MaterialTheme.typography.bodyLarge)
+                            val estado = when {
+                                cuidador.id == miCaregiverId -> "Tú"
+                                cuidador.id in vinculados -> "Con cuenta vinculada"
+                                else -> null
+                            }
+                            estado?.let {
+                                Text(
+                                    it,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
                         Row {
+                            if (soyAdmin && cuidador.id in vinculados && cuidador.id != miCaregiverId) {
+                                IconButton(onClick = { cuidadorADesvincular = cuidador }) {
+                                    Icon(
+                                        Icons.Default.LinkOff,
+                                        contentDescription = "Desvincular la cuenta de ${cuidador.nombreCompleto}"
+                                    )
+                                }
+                            }
                             IconButton(onClick = {
                                 onVincularme(cuidador.id)
                                 vinculadoAId = cuidador.id
@@ -138,7 +200,7 @@ private fun SeccionCuidadores(
                     }
                     if (vinculadoAId == cuidador.id) {
                         Text(
-                            "Vinculado. Cierra y vuelve a abrir la app para verlo reflejado en el avatar.",
+                            "Vinculado.",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary
                         )

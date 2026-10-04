@@ -32,6 +32,8 @@ dependencies {
     implementation("com.google.firebase:firebase-auth-ktx")
     // Notificaciones push (token del dispositivo)
     implementation("com.google.firebase:firebase-messaging-ktx")
+    // Cloud Functions (darse de baja / desvincular cuentas)
+    implementation("com.google.firebase:firebase-functions-ktx")
 
     // Hilt
     implementation("com.google.dagger:hilt-android:2.51.1")

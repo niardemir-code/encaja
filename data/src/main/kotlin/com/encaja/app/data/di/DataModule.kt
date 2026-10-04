@@ -101,6 +101,9 @@ abstract class RepositoryModule {
     abstract fun enlazarInviteRepository(impl: InviteRepositoryImpl): InviteRepository
 
     @Binds
+    abstract fun enlazarCuentaRepository(impl: com.encaja.app.data.repository.CuentaRepositoryImpl): com.encaja.app.domain.repository.CuentaRepository
+
+    @Binds
     abstract fun enlazarMenuRepository(impl: MenuRepositoryImpl): MenuRepository
 
     @Binds

@@ -38,15 +38,23 @@ class EncajaAppViewModel @Inject constructor(
     private val childRepository: ChildRepository,
     private val avisos: ProgramadorDeAvisos,
     private val sincronizador: SincronizadorDeAvisos,
-    private val dispositivos: DispositivoRepository
+    private val dispositivos: DispositivoRepository,
+    private val cambiosDeMembresia: CambiosDeMembresia
 ) : ViewModel() {
 
     private val _inicialesUsuario = MutableStateFlow("")
     val inicialesUsuario: StateFlow<String> = _inicialesUsuario.asStateFlow()
 
     init {
-        viewModelScope.launch {
-            val sesion = authRepository.sesionActual() ?: return@launch
+        viewModelScope.launch { iniciar() }
+        // Al vincularse la cuenta a una familia (código de invitación, crear familia o
+        // "Vincularme"), se repite todo esto sin esperar a reiniciar la app.
+        viewModelScope.launch { cambiosDeMembresia.eventos.collect { iniciar() } }
+    }
+
+    private suspend fun iniciar() {
+        run {
+            val sesion = authRepository.sesionActual() ?: return
             val membresia = familyMembershipRepository.obtenerMembresia(sesion.uid)
 
             _inicialesUsuario.value = if (membresia != null) {
