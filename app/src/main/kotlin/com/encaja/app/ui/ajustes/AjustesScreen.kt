@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ChildCare
 import androidx.compose.material.icons.filled.EventBusy
 import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
@@ -107,6 +108,20 @@ fun AjustesScreen(
             titulo = "Ocupaciones",
             subtitulo = "Todo lo apuntado en Familia, para repasar y borrar",
             onClick = onAbrirOcupaciones
+        )
+
+        Spacer(Modifier.height(12.dp))
+        val contexto = LocalContext.current
+        var ayudasReiniciadas by remember { mutableStateOf(false) }
+        FilaAjuste(
+            icono = Icons.Default.Info,
+            titulo = "Ver las ayudas otra vez",
+            subtitulo = if (ayudasReiniciadas) "Hecho: volverán a mostrarse al entrar en cada pantalla"
+            else "Repite la guía de la primera vez en cada pantalla",
+            onClick = {
+                com.encaja.app.ui.ayuda.PreferenciaAyuda.reiniciar(contexto)
+                ayudasReiniciadas = true
+            }
         )
 
         Spacer(Modifier.height(24.dp))

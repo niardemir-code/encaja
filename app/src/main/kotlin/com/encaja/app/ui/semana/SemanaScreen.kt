@@ -69,6 +69,9 @@ import com.encaja.app.domain.usecase.RolResponsable
 import com.encaja.app.ui.familia.etiquetaMotivo
 import com.encaja.app.ui.familia.fechaAMillisUtc
 import com.encaja.app.ui.familia.millisUtcAFecha
+import com.encaja.app.ui.ayuda.AyudaPantalla
+import com.encaja.app.ui.ayuda.PasoAyuda
+import com.encaja.app.ui.ayuda.ayudaObjetivo
 import com.encaja.app.ui.guia.DialogoActividad
 import com.encaja.app.ui.intro.PreferenciaIntro
 import com.encaja.app.ui.theme.LocalEncajaExtraColors
@@ -81,6 +84,26 @@ import java.time.format.TextStyle
 import java.util.Locale
 
 private val ES = Locale("es")
+
+/** Visita guiada de la primera vez en Semana. */
+private val PASOS_AYUDA_SEMANA = listOf(
+    PasoAyuda(
+        "semana_tarjeta", "El semáforo de la semana",
+        "Cada círculo es un día. Verde: todo cubierto. Ámbar: hay avisos. Rojo: falta alguien. Toca un día para ver el detalle."
+    ),
+    PasoAyuda(
+        "semana_tablon", "Tablón de la familia",
+        "Escribe aquí notas para todos: las verán al abrir la app."
+    ),
+    PasoAyuda(
+        "barra_invitar", "Invita a tu familia",
+        "Genera un código para que otra persona se una a tu familia y vea lo mismo que tú."
+    ),
+    PasoAyuda(
+        "barra_inferior", "Tus pestañas",
+        "Guía: el día hora a hora. Familia: la disponibilidad de cada uno. Menú: las comidas de la semana. Compra: la lista familiar."
+    )
+)
 
 // Atajos a los colores del tema activo (Cálido/Nocturno) con los nombres del diseño.
 private val TINTA: Color @Composable get() = MaterialTheme.colorScheme.onBackground
@@ -208,6 +231,7 @@ fun SemanaScreen(
 
         is SemaforoPantallaEstado.ConDatos -> {
             val uiState = estadoActual.estado
+            AyudaPantalla(id = "semana", listo = true, pasos = PASOS_AYUDA_SEMANA)
             val cuidadores by viewModel.cuidadores.collectAsState()
             val ninos by viewModel.ninos.collectAsState()
             val responsables by viewModel.responsables.collectAsState()
@@ -248,6 +272,7 @@ fun SemanaScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     item {
+                        Box(Modifier.ayudaObjetivo("semana_tarjeta")) {
                         TarjetaSemana(
                             dias = uiState.dias,
                             esSemanaActual = uiState.esSemanaActual,
@@ -274,14 +299,17 @@ fun SemanaScreen(
                                 }
                             }
                         )
+                        }
                     }
 
                     item {
+                        Box(Modifier.ayudaObjetivo("semana_tablon")) {
                         TablonDeAnuncios(
                             anuncios = uiState.anuncios,
                             onPublicar = { texto -> viewModel.publicarAnuncio(texto) },
                             onEliminar = { anuncioId -> viewModel.eliminarAnuncio(anuncioId) }
                         )
+                        }
                     }
 
                     items(uiState.huecosDeLaSemana) { hueco ->

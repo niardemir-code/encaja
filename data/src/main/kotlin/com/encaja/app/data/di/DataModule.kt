@@ -120,4 +120,7 @@ abstract class RepositoryModule {
 
     @Binds
     abstract fun enlazarCategoriaRepository(impl: CategoriaRepositoryImpl): CategoriaRepository
+
+    @Binds
+    abstract fun enlazarDispositivoRepository(impl: DispositivoRepositoryImpl): DispositivoRepository
 }

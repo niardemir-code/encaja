@@ -5,6 +5,8 @@ package com.encaja.app.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.encaja.app.avisos.ProgramadorDeAvisos
+import com.encaja.app.avisos.SincronizadorDeAvisos
+import com.encaja.app.domain.repository.DispositivoRepository
 import com.encaja.app.domain.model.FamilyId
 import com.encaja.app.domain.repository.AuthRepository
 import com.encaja.app.domain.repository.ChildRepository
@@ -34,7 +36,9 @@ class EncajaAppViewModel @Inject constructor(
     private val coverageNeedRepository: CoverageNeedRepository,
     private val availabilityRepository: AvailabilityRepository,
     private val childRepository: ChildRepository,
-    private val avisos: ProgramadorDeAvisos
+    private val avisos: ProgramadorDeAvisos,
+    private val sincronizador: SincronizadorDeAvisos,
+    private val dispositivos: DispositivoRepository
 ) : ViewModel() {
 
     private val _inicialesUsuario = MutableStateFlow("")
@@ -64,6 +68,8 @@ class EncajaAppViewModel @Inject constructor(
                 limpiarOcupacionesAntiguas(membresia.familyId)
                 reprogramarAvisos(membresia.familyId)
             }
+            // Registra este móvil para recibir las notificaciones push de la familia.
+            dispositivos.registrarDispositivoActual()
         }
     }
 
@@ -86,12 +92,7 @@ class EncajaAppViewModel @Inject constructor(
      * cree otro miembro de la familia solo llegan aquí a través de los datos).
      */
     private suspend fun reprogramarAvisos(familyId: FamilyId) {
-        val hoy = java.time.LocalDate.now()
-        val proximas = coverageNeedRepository.obtenerNeeds(familyId, hoy, hoy.plusDays(60))
-            .filter { it.avisoLlevarMin != null || it.avisoRecogerMin != null }
-        if (proximas.isEmpty()) return
-        val nombres = childRepository.obtenerNinos(familyId).associate { it.id to it.nombre }
-        proximas.forEach { avisos.programar(it, nombres[it.childId]) }
+        sincronizador.reprogramar(familyId)
     }
 
     /**

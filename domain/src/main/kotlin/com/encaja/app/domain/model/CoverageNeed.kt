@@ -34,5 +34,9 @@ data class CoverageNeed(
     /** Id del icono elegido (ver IconoActividad, en la capa de UI de Guía) para
      * distinguir el tipo de actividad en las listas: deportiva, educativa,
      * recreativa... null = sin elegir (se muestra un icono genérico). */
-    val icono: String? = null
+    val icono: String? = null,
+    /** Id del cuidador que creó la actividad: recibe sus avisos aunque no lleve ni recoja. null
+     * en actividades creadas antes de existir este dato (esas avisan a toda la familia, como
+     * antes, hasta que se vuelvan a guardar). */
+    val creadoPorId: String? = null
 )

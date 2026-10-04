@@ -22,8 +22,8 @@ import javax.inject.Singleton
  * a…"), según [CoverageNeed.avisoLlevarMin] y [CoverageNeed.avisoRecogerMin]. Cuando
  * salta, [AvisoReceiver] muestra la notificación.
  *
- * Las alarmas son locales a cada teléfono: cada móvil de la familia programa las suyas
- * al abrir la app (ver EncajaAppViewModel) y al guardar o borrar una actividad.
+ * Las alarmas son locales a cada teléfono, y cada móvil programa solo las que le tocan
+ * (ver SincronizadorDeAvisos): las de quien creó la actividad y las de quien lleva o recoge.
  */
 @Singleton
 class ProgramadorDeAvisos @Inject constructor(@ApplicationContext private val contexto: Context) {
@@ -34,10 +34,15 @@ class ProgramadorDeAvisos @Inject constructor(@ApplicationContext private val co
      * futuro. Independiente de [CoverageNeed.requiereDesplazamiento]: un aviso es un
      * recordatorio del inicio/fin de la actividad, haga falta o no que alguien la
      * acompañe. */
-    fun programar(need: CoverageNeed, nombreNino: String?) {
+    fun programar(
+        need: CoverageNeed,
+        nombreNino: String?,
+        avisarLlevar: Boolean = true,
+        avisarRecoger: Boolean = true
+    ) {
         cancelar(need.id)
-        need.avisoLlevarMin?.let { programarUno(need, nombreNino, Tipo.LLEVAR, it) }
-        need.avisoRecogerMin?.let { programarUno(need, nombreNino, Tipo.RECOGER, it) }
+        if (avisarLlevar) need.avisoLlevarMin?.let { programarUno(need, nombreNino, Tipo.LLEVAR, it) }
+        if (avisarRecoger) need.avisoRecogerMin?.let { programarUno(need, nombreNino, Tipo.RECOGER, it) }
     }
 
     fun cancelar(id: CoverageNeedId) {

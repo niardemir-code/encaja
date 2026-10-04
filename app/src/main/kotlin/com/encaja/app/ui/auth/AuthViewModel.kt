@@ -1,7 +1,10 @@
 package com.encaja.app.ui.auth
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.encaja.app.domain.repository.AuthRepository
+import com.encaja.app.domain.repository.DispositivoRepository
+import kotlinx.coroutines.launch
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,7 +19,8 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class AuthViewModel @Inject constructor(
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val dispositivos: DispositivoRepository
 ) : ViewModel() {
 
     private val _autenticado = MutableStateFlow(authRepository.sesionActual() != null)
@@ -27,7 +31,12 @@ class AuthViewModel @Inject constructor(
     }
 
     fun cerrarSesion() {
-        authRepository.cerrarSesion()
-        _autenticado.value = false
+        viewModelScope.launch {
+            // Antes de cerrar la sesión (hace falta para borrar el token): este móvil deja de
+            // recibir las notificaciones de la cuenta.
+            runCatching { dispositivos.olvidarDispositivoActual() }
+            authRepository.cerrarSesion()
+            _autenticado.value = false
+        }
     }
 }

@@ -31,6 +31,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -54,6 +55,10 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import java.time.LocalDate
 import com.encaja.app.ui.actividades.TodasActividadesScreen
+import com.encaja.app.ui.ayuda.AyudaState
+import com.encaja.app.ui.ayuda.CapaAyuda
+import com.encaja.app.ui.ayuda.LocalAyuda
+import com.encaja.app.ui.ayuda.ayudaObjetivo
 import com.encaja.app.ui.ajustes.AjustesCuidadoresScreen
 import com.encaja.app.ui.ajustes.AjustesNinosScreen
 import com.encaja.app.ui.ajustes.AjustesScreen
@@ -108,6 +113,11 @@ fun EncajaApp(onCerrarSesion: () -> Unit, viewModel: EncajaAppViewModel = hiltVi
     val rutaActual = backStackEntry?.destination?.hierarchy?.firstOrNull()?.route
     val inicialesUsuario by viewModel.inicialesUsuario.collectAsState()
 
+    // Ayuda interactiva de primera vez: el estado y la capa viven aquí, en la raíz, para poder
+    // iluminar tanto el contenido de cada pantalla como la barra superior y la inferior.
+    val ayuda = remember { AyudaState() }
+    CompositionLocalProvider(LocalAyuda provides ayuda) {
+    Box {
     Scaffold(
         topBar = {
             TopAppBar(
@@ -154,7 +164,7 @@ fun EncajaApp(onCerrarSesion: () -> Unit, viewModel: EncajaAppViewModel = hiltVi
                     }
                     semanaEntry?.let { entry ->
                         val semanaViewModel: SemaforoViewModel = hiltViewModel(entry)
-                        BotonInvitar(semanaViewModel)
+                        Box(Modifier.ayudaObjetivo("barra_invitar")) { BotonInvitar(semanaViewModel) }
                     }
                     if (inicialesUsuario.isNotBlank()) {
                         AvatarUsuario(inicialesUsuario)
@@ -169,7 +179,10 @@ fun EncajaApp(onCerrarSesion: () -> Unit, viewModel: EncajaAppViewModel = hiltVi
             )
         },
         bottomBar = {
-            NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
+            NavigationBar(
+                containerColor = MaterialTheme.colorScheme.surface,
+                modifier = Modifier.ayudaObjetivo("barra_inferior")
+            ) {
                 destinosBarraInferior.forEach { destino ->
                     NavigationBarItem(
                         // Pestaña activa: pastilla lavanda con icono y texto en índigo.
@@ -260,6 +273,9 @@ fun EncajaApp(onCerrarSesion: () -> Unit, viewModel: EncajaAppViewModel = hiltVi
             composable(RUTA_TODAS_ACTIVIDADES) { TodasActividadesScreen() }
             composable(RUTA_OCUPACIONES) { OcupacionesScreen() }
         }
+    }
+    CapaAyuda(ayuda)
+    }
     }
 }
 

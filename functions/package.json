@@ -1,0 +1,11 @@
+{
+  "name": "encaja-functions",
+  "description": "Notificaciones push de Encaja (tablón y cambios en actividades)",
+  "private": true,
+  "main": "index.js",
+  "engines": { "node": "22" },
+  "dependencies": {
+    "firebase-admin": "^12.1.0",
+    "firebase-functions": "^5.0.1"
+  }
+}

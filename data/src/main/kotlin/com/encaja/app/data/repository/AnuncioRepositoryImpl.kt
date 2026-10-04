@@ -7,6 +7,7 @@ import com.encaja.app.domain.model.Anuncio
 import com.encaja.app.domain.model.AnuncioId
 import com.encaja.app.domain.model.FamilyId
 import com.encaja.app.domain.repository.AnuncioRepository
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 import java.time.LocalDateTime
@@ -36,7 +37,9 @@ class AnuncioRepositoryImpl @Inject constructor(
     override suspend fun publicarAnuncio(familyId: FamilyId, autorNombre: String, texto: String): Anuncio {
         val documento = coleccion(familyId).document()
         val anuncio = Anuncio(AnuncioId(documento.id), autorNombre, texto, LocalDateTime.now())
-        documento.set(AnuncioFirestoreMapper.aDocumento(anuncio)).await()
+        // autorUid: lo usa el servidor para no avisar al propio autor de su anuncio.
+        val datos = AnuncioFirestoreMapper.aDocumento(anuncio) + ("autorUid" to FirebaseAuth.getInstance().currentUser?.uid)
+        documento.set(datos).await()
         dao.guardar(AnuncioEntity.desdeDominio(familyId.value, anuncio))
         return anuncio
     }

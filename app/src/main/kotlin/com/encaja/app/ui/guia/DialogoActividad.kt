@@ -76,6 +76,7 @@ import com.encaja.app.ui.theme.casillaHoja
 import com.encaja.app.ui.theme.indigoHoja
 import com.encaja.app.ui.theme.lavandaHoja
 import com.encaja.app.ui.theme.onAcentoHoja
+import com.encaja.app.ui.theme.tarjetaHoja
 import com.encaja.app.ui.theme.tintaHoja
 import com.encaja.app.ui.theme.tintaSuaveHoja
 import java.time.DayOfWeek
@@ -194,7 +195,8 @@ fun DialogoActividad(
                     quienLlevaId = quienLlevaId.takeIf { requiereDesplazamiento },
                     quienRecogeId = quienRecogeId.takeIf { requiereDesplazamiento },
                     grupoRepeticionId = grupo,
-                    avisoLlevarMin = avisoLlevarMin, avisoRecogerMin = avisoRecogerMin, icono = iconoId
+                    avisoLlevarMin = avisoLlevarMin, avisoRecogerMin = avisoRecogerMin, icono = iconoId,
+                    creadoPorId = actividad?.creadoPorId
                 ),
                 false
             )
@@ -223,7 +225,8 @@ fun DialogoActividad(
                 // lleve o recoja al niño.
                 avisoLlevarMin = avisoLlevarMin,
                 avisoRecogerMin = avisoRecogerMin,
-                icono = iconoId
+                icono = iconoId,
+                creadoPorId = actividad?.creadoPorId
             ),
             false
         )
@@ -469,7 +472,7 @@ fun DialogoActividad(
                     modifier = Modifier.weight(1f).height(56.dp),
                     shape = RoundedCornerShape(18.dp),
                     border = null,
-                    colors = ButtonDefaults.outlinedButtonColors(containerColor = casillaHoja, contentColor = tintaHoja)
+                    colors = ButtonDefaults.outlinedButtonColors(containerColor = tarjetaHoja, contentColor = tintaHoja)
                 ) {
                     Text("Cancelar", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 }

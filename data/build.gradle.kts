@@ -30,6 +30,8 @@ dependencies {
     implementation(platform("com.google.firebase:firebase-bom:33.1.2"))
     implementation("com.google.firebase:firebase-firestore-ktx")
     implementation("com.google.firebase:firebase-auth-ktx")
+    // Notificaciones push (token del dispositivo)
+    implementation("com.google.firebase:firebase-messaging-ktx")
 
     // Hilt
     implementation("com.google.dagger:hilt-android:2.51.1")

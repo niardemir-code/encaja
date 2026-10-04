@@ -20,7 +20,8 @@ object CoverageNeedFirestoreMapper {
         "grupoRepeticionId" to need.grupoRepeticionId,
         "avisoLlevarMin" to need.avisoLlevarMin,
         "avisoRecogerMin" to need.avisoRecogerMin,
-        "icono" to need.icono
+        "icono" to need.icono,
+        "creadoPorId" to need.creadoPorId
     )
 
     fun desdeDocumento(id: String, datos: Map<String, Any?>): CoverageNeed? {
@@ -37,10 +38,11 @@ object CoverageNeedFirestoreMapper {
         val avisoLlevarMin = (datos["avisoLlevarMin"] as? Number)?.toInt()
         val avisoRecogerMin = (datos["avisoRecogerMin"] as? Number)?.toInt()
         val icono = datos["icono"] as? String
+        val creadoPorId = datos["creadoPorId"] as? String
 
         return CoverageNeed(
             CoverageNeedId(id), childId, fecha, horaInicio, horaFin, descripcion, requiereDesplazamiento,
-            quienLlevaId, quienRecogeId, grupoRepeticionId, avisoLlevarMin, avisoRecogerMin, icono
+            quienLlevaId, quienRecogeId, grupoRepeticionId, avisoLlevarMin, avisoRecogerMin, icono, creadoPorId
         )
     }
 }

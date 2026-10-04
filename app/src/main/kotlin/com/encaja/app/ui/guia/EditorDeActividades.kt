@@ -1,6 +1,7 @@
 package com.encaja.app.ui.guia
 
 import com.encaja.app.avisos.ProgramadorDeAvisos
+import com.encaja.app.avisos.SincronizadorDeAvisos
 import com.encaja.app.domain.model.CoverageNeed
 import com.encaja.app.domain.model.CoverageNeedId
 import com.encaja.app.domain.model.FamilyId
@@ -21,16 +22,16 @@ import javax.inject.Inject
 class EditorDeActividades @Inject constructor(
     private val coverageNeedRepository: CoverageNeedRepository,
     private val childRepository: ChildRepository,
-    private val avisos: ProgramadorDeAvisos
+    private val avisos: ProgramadorDeAvisos,
+    private val sincronizador: SincronizadorDeAvisos
 ) {
-    /** Programa en este móvil los avisos de [needs] (con el nombre del niño en el texto). */
+    /** Programa en este móvil los avisos que le tocan de [needs] (creador, quien lleva, quien recoge). */
     private suspend fun programarAvisos(familyId: FamilyId, needs: List<CoverageNeed>) {
         if (needs.none { it.avisoLlevarMin != null || it.avisoRecogerMin != null }) {
             needs.forEach { avisos.cancelar(it.id) }
             return
         }
-        val nombres = childRepository.obtenerNinos(familyId).associate { it.id to it.nombre }
-        needs.forEach { avisos.programar(it, nombres[it.childId]) }
+        sincronizador.programarMisAvisos(familyId, needs)
     }
 
     /**
@@ -40,8 +41,10 @@ class EditorDeActividades @Inject constructor(
      * las ocurrencias del grupo (anteriores y posteriores), conservando el id y la fecha
      * de cada una.
      */
-    suspend fun guardar(familyId: FamilyId, needs: List<CoverageNeed>, aplicarATodaLaSerie: Boolean) {
-        if (needs.isEmpty()) return
+    suspend fun guardar(familyId: FamilyId, necesidades: List<CoverageNeed>, aplicarATodaLaSerie: Boolean) {
+        if (necesidades.isEmpty()) return
+        // Las actividades nuevas quedan firmadas por quien las crea (recibirá sus avisos).
+        val needs = sincronizador.sellarCreador(necesidades)
         if (aplicarATodaLaSerie) {
             val plantilla = needs.first()
             val grupoId = plantilla.grupoRepeticionId
@@ -125,7 +128,8 @@ class EditorDeActividades @Inject constructor(
      * ocurrencias de [nuevasFechas] que ya existían conservan su id, las nuevas se crean
      * y las que ya no encajan en el patrón se borran (ver [diferenciaSerie]).
      */
-    suspend fun actualizarSerie(familyId: FamilyId, plantilla: CoverageNeed, nuevasFechas: List<LocalDate>) {
+    suspend fun actualizarSerie(familyId: FamilyId, plantillaOriginal: CoverageNeed, nuevasFechas: List<LocalDate>) {
+        val plantilla = sincronizador.sellarCreador(listOf(plantillaOriginal)).first()
         val grupoId = plantilla.grupoRepeticionId ?: return
         val existentesDesdeSuFecha = coverageNeedRepository.obtenerNeedsDelGrupo(familyId, grupoId)
             .filter { !it.fecha.isBefore(plantilla.fecha) }
