@@ -23,6 +23,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.GroupAdd
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Schedule
@@ -70,7 +71,10 @@ private const val TOTAL = 6
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun IntroScreen(alTerminar: (registrarse: Boolean, codigo: String?) -> Unit) {
+fun IntroScreen(
+    alTerminar: (registrarse: Boolean, codigo: String?) -> Unit,
+    alCrearFamilia: () -> Unit
+) {
     val pager = rememberPagerState(pageCount = { TOTAL })
     val scope = rememberCoroutineScope()
     val ultima = pager.currentPage == TOTAL - 1
@@ -139,6 +143,7 @@ fun IntroScreen(alTerminar: (registrarse: Boolean, codigo: String?) -> Unit) {
                     )
                     else -> PaginaUnirse(
                         alUnirse = { codigo -> alTerminar(true, codigo) },
+                        alCrearFamilia = alCrearFamilia,
                         alTenerCuenta = { alTerminar(false, null) }
                     )
                 }
@@ -301,7 +306,7 @@ private fun ChipLeyenda(modifier: Modifier, color: Color, fondo: Color, titulo: 
 }
 
 @Composable
-private fun ColumnScope.PaginaUnirse(alUnirse: (String) -> Unit, alTenerCuenta: () -> Unit) {
+private fun ColumnScope.PaginaUnirse(alUnirse: (String) -> Unit, alCrearFamilia: () -> Unit, alTenerCuenta: () -> Unit) {
     var codigo by remember { mutableStateOf("") }
     Titulo("Únete a tu familia", "Introduce el código que te han compartido.")
     Ilustracion(R.drawable.intro_familia)
@@ -338,12 +343,23 @@ private fun ColumnScope.PaginaUnirse(alUnirse: (String) -> Unit, alTenerCuenta: 
         Column {
             Text("¿Cómo consigo el código?", color = Violeta, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             Text(
-                "Pídeselo a quien ya usa Encaja en tu familia: puede generarlo desde la sección Familia.",
+                "Pídeselo a quien ya usa Encaja en tu familia (sección Familia).",
                 color = TextoSuave, fontSize = 12.sp, lineHeight = 15.sp
             )
         }
     }
-    Text("o", color = TextoSuave, fontSize = 13.sp)
+    Spacer(Modifier.height(8.dp))
+    Button(
+        onClick = alCrearFamilia,
+        modifier = Modifier.fillMaxWidth().height(48.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = Acento, contentColor = Color.White)
+    ) {
+        Icon(Icons.Default.GroupAdd, null, modifier = Modifier.size(20.dp))
+        Spacer(Modifier.width(8.dp))
+        Text("Crear una familia nueva", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+    }
+    Spacer(Modifier.height(6.dp))
     OutlinedButton(
         onClick = alTenerCuenta,
         modifier = Modifier.fillMaxWidth().height(48.dp),

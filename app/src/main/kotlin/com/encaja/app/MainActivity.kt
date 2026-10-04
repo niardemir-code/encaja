@@ -66,12 +66,20 @@ class MainActivity : ComponentActivity() {
                     if (autenticado) {
                         EncajaApp(onCerrarSesion = { authViewModel.cerrarSesion() })
                     } else if (!introVista) {
-                        IntroScreen(alTerminar = { registrarse, codigo ->
-                            if (codigo != null) PreferenciaIntro.guardarCodigo(this@MainActivity, codigo)
-                            PreferenciaIntro.marcarVista(this@MainActivity)
-                            registroInicial = registrarse
-                            introVista = true
-                        })
+                        IntroScreen(
+                            alTerminar = { registrarse, codigo ->
+                                if (codigo != null) PreferenciaIntro.guardarCodigo(this@MainActivity, codigo)
+                                PreferenciaIntro.marcarVista(this@MainActivity)
+                                registroInicial = registrarse
+                                introVista = true
+                            },
+                            alCrearFamilia = {
+                                PreferenciaIntro.guardarIntencionCrear(this@MainActivity)
+                                PreferenciaIntro.marcarVista(this@MainActivity)
+                                registroInicial = true
+                                introVista = true
+                            }
+                        )
                     } else {
                         LoginScreen(
                             onLoginExitoso = { authViewModel.marcarAutenticado() },

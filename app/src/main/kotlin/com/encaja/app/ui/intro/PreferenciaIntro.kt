@@ -5,6 +5,7 @@ import android.content.Context
 private const val PREFS = "encaja_prefs"
 private const val CLAVE_VISTA = "intro_vista"
 private const val CLAVE_CODIGO = "intro_codigo_pendiente"
+private const val CLAVE_CREAR = "intro_crear_familia"
 
 /**
  * Guarda si ya se mostró la intro y el código de invitación que se escribió en ella
@@ -23,4 +24,10 @@ object PreferenciaIntro {
         prefs(c).getString(CLAVE_CODIGO, null)?.takeIf { it.isNotBlank() }
 
     fun borrarCodigo(c: Context) = prefs(c).edit().remove(CLAVE_CODIGO).apply()
+
+    /** El usuario eligió "Crear una familia nueva" en la intro: al entrar con su cuenta se le
+     * ofrece primero crearla. */
+    fun guardarIntencionCrear(c: Context) = prefs(c).edit().putBoolean(CLAVE_CREAR, true).apply()
+    fun intencionCrear(c: Context): Boolean = prefs(c).getBoolean(CLAVE_CREAR, false)
+    fun borrarIntencionCrear(c: Context) = prefs(c).edit().remove(CLAVE_CREAR).apply()
 }

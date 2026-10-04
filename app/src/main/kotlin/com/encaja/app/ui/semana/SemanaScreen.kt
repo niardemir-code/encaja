@@ -19,6 +19,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -122,43 +124,84 @@ fun SemanaScreen(
         is SemaforoPantallaEstado.SinFamilia -> {
             var codigo by remember { mutableStateOf("") }
             var error by remember { mutableStateOf<String?>(null) }
+            var nombre by remember { mutableStateOf("") }
+            var apellido1 by remember { mutableStateOf("") }
+            var apellido2 by remember { mutableStateOf("") }
+            var errorCrear by remember { mutableStateOf<String?>(null) }
 
             // Si se escribió un código en la intro, se canjea solo al entrar con la cuenta.
             val contexto = LocalContext.current
+            val codigoDeIntro = remember { PreferenciaIntro.codigoPendiente(contexto) }
             LaunchedEffect(Unit) {
-                val pendiente = PreferenciaIntro.codigoPendiente(contexto)
-                if (pendiente != null) {
-                    codigo = pendiente
+                PreferenciaIntro.borrarIntencionCrear(contexto)
+                if (codigoDeIntro != null) {
+                    codigo = codigoDeIntro
                     PreferenciaIntro.borrarCodigo(contexto)
-                    viewModel.canjearCodigo(pendiente) { mensaje -> error = mensaje }
+                    viewModel.canjearCodigo(codigoDeIntro) { mensaje -> error = mensaje }
                 }
             }
 
             Column(
-                modifier = Modifier.fillMaxSize().padding(24.dp),
-                verticalArrangement = Arrangement.Center
+                modifier = Modifier
+                    .fillMaxSize()
+                    .imePadding()
+                    .verticalScroll(rememberScrollState())
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Text("Todavía no perteneces a ninguna familia", style = MaterialTheme.typography.headlineSmall)
-                Spacer(Modifier.height(16.dp))
+                Text("Empieza con tu familia", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
 
-                OutlinedTextField(
-                    value = codigo,
-                    onValueChange = { codigo = it.uppercase(); error = null },
-                    label = { Text("Código de invitación") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                if (error != null) {
-                    Spacer(Modifier.height(4.dp))
-                    Text(error!!, color = MaterialTheme.colorScheme.error)
+                Surface(shape = RoundedCornerShape(24.dp), color = BLANCO, shadowElevation = 2.dp, modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Crear una familia nueva", fontWeight = FontWeight.ExtraBold, color = INDIGO, style = MaterialTheme.typography.titleMedium)
+                        Text("Para empezar de cero. Tú serás la primera persona; luego añadirás a los niños y a quien quieras invitar.", color = TINTA_SUAVE, fontSize = 13.sp)
+                        OutlinedTextField(
+                            value = nombre, onValueChange = { nombre = it; errorCrear = null },
+                            label = { Text("Tu nombre") }, singleLine = true,
+                            shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth()
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedTextField(
+                                value = apellido1, onValueChange = { apellido1 = it },
+                                label = { Text("1er apellido") }, singleLine = true,
+                                shape = RoundedCornerShape(14.dp), modifier = Modifier.weight(1f)
+                            )
+                            OutlinedTextField(
+                                value = apellido2, onValueChange = { apellido2 = it },
+                                label = { Text("2º apellido") }, singleLine = true,
+                                shape = RoundedCornerShape(14.dp), modifier = Modifier.weight(1f)
+                            )
+                        }
+                        if (errorCrear != null) Text(errorCrear!!, color = MaterialTheme.colorScheme.error, fontSize = 13.sp)
+                        Button(
+                            onClick = { viewModel.crearFamilia(nombre, apellido1, apellido2) { errorCrear = it } },
+                            enabled = nombre.isNotBlank(),
+                            shape = RoundedCornerShape(16.dp),
+                            modifier = Modifier.fillMaxWidth().height(50.dp)
+                        ) { Text("Crear mi familia", fontWeight = FontWeight.Bold) }
+                    }
                 }
-                Spacer(Modifier.height(8.dp))
-                Button(
-                    onClick = { viewModel.canjearCodigo(codigo) { mensaje -> error = mensaje } },
-                    enabled = codigo.isNotBlank(),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Unirme con este código")
+
+                Surface(shape = RoundedCornerShape(24.dp), color = BLANCO, shadowElevation = 2.dp, modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Unirme a una familia", fontWeight = FontWeight.ExtraBold, color = INDIGO, style = MaterialTheme.typography.titleMedium)
+                        Text("Si ya te han invitado, escribe el código que te han dado.", color = TINTA_SUAVE, fontSize = 13.sp)
+                        OutlinedTextField(
+                            value = codigo,
+                            onValueChange = { codigo = it.uppercase(); error = null },
+                            label = { Text("Código de invitación") },
+                            singleLine = true,
+                            shape = RoundedCornerShape(14.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        if (error != null) Text(error!!, color = MaterialTheme.colorScheme.error, fontSize = 13.sp)
+                        OutlinedButton(
+                            onClick = { viewModel.canjearCodigo(codigo) { mensaje -> error = mensaje } },
+                            enabled = codigo.isNotBlank(),
+                            shape = RoundedCornerShape(16.dp),
+                            modifier = Modifier.fillMaxWidth().height(50.dp)
+                        ) { Text("Unirme con este código", fontWeight = FontWeight.Bold) }
+                    }
                 }
             }
         }

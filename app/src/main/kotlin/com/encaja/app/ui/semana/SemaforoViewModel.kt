@@ -9,6 +9,7 @@ import com.encaja.app.domain.model.Child
 import com.encaja.app.domain.model.CoverageNeed
 import com.encaja.app.domain.model.CoverageNeedId
 import com.encaja.app.domain.model.FamilyId
+import com.encaja.app.domain.model.FamilyMembership
 import com.encaja.app.domain.repository.AnuncioRepository
 import com.encaja.app.domain.repository.AuthRepository
 import com.encaja.app.domain.repository.AvailabilityRepository
@@ -112,6 +113,33 @@ class SemaforoViewModel @Inject constructor(
                 },
                 onFailure = { error -> alFallar(error.message ?: "Código no válido") }
             )
+        }
+    }
+
+    /**
+     * Crea una familia nueva desde cero para quien empieza sin invitación: la persona queda
+     * como primer cuidador (administrador) y su cuenta se vincula a él.
+     */
+    fun crearFamilia(nombre: String, apellido1: String, apellido2: String, alFallar: (String) -> Unit) {
+        val nombreLimpio = nombre.trim()
+        if (nombreLimpio.isBlank()) return
+        viewModelScope.launch {
+            val uid = authRepository.sesionActual()?.uid ?: return@launch
+            try {
+                val familyId = FamilyId(java.util.UUID.randomUUID().toString())
+                val caregiverId = com.encaja.app.ui.ajustes.generarCaregiverIdDesdeNombre(
+                    nombreLimpio, apellido1.trim(), apellido2.trim(), emptyList()
+                )
+                val yo = Caregiver(
+                    caregiverId, nombreLimpio, apellido1.trim(), apellido2.trim(),
+                    com.encaja.app.domain.model.CaregiverRole.ADMIN
+                )
+                caregiverRepository.guardarCuidadores(familyId, listOf(yo))
+                familyMembershipRepository.vincularAFamilia(uid, FamilyMembership(familyId, caregiverId))
+                cargar()
+            } catch (e: Exception) {
+                alFallar("No se pudo crear la familia, inténtalo de nuevo")
+            }
         }
     }
 
