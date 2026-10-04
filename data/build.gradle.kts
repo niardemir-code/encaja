@@ -2,7 +2,7 @@ plugins {
     id("com.android.library")
     kotlin("android")
     id("com.google.dagger.hilt.android")
-    id("kotlin-kapt")
+    id("com.google.devtools.ksp")
 }
 
 android {
@@ -24,7 +24,7 @@ dependencies {
     // Room — caché local
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
-    kapt("androidx.room:room-compiler:2.6.1")
+    ksp("androidx.room:room-compiler:2.6.1")
 
     // Firebase — Firestore como fuente de verdad remota
     implementation(platform("com.google.firebase:firebase-bom:33.1.2"))
@@ -33,7 +33,7 @@ dependencies {
 
     // Hilt
     implementation("com.google.dagger:hilt-android:2.51.1")
-    kapt("com.google.dagger:hilt-compiler:2.51.1")
+    ksp("com.google.dagger:hilt-compiler:2.51.1")
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
 }
