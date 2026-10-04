@@ -36,11 +36,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -98,6 +100,16 @@ private fun textoNivelEscala(nivel: Int): String =
 private fun margenDeAncho(anchoMinuto: Dp): Dp = anchoMinuto * 30
 
 /** Ancho por minuto vigente para la línea de tiempo (lo fija GuiaScreen con el zoom). */
+/** Hora actual (refrescada cada 20 s) si se está viendo hoy; null en cualquier otro día. Sirve
+ * para resaltar la actividad en curso y atenuar las que ya han pasado. */
+private val LocalAhora = compositionLocalOf<LocalTime?> { null }
+
+private fun estaEnCurso(need: CoverageNeed, ahora: LocalTime?): Boolean =
+    ahora != null && !ahora.isBefore(need.horaInicio) && ahora.isBefore(need.horaFin)
+
+private fun yaHaPasado(need: CoverageNeed, ahora: LocalTime?): Boolean =
+    ahora != null && !ahora.isBefore(need.horaFin)
+
 private val LocalAnchoMinuto = compositionLocalOf { anchoMinutoDeNivel(NIVEL_ESCALA_NORMAL) }
 
 // Media hora de margen a cada lado del lienzo, para que la etiqueta de la primera y la
@@ -225,6 +237,13 @@ fun GuiaScreen(
                 is GuiaPantallaEstado.ConDatos -> {
                     val fecha = estadoActual.estado.fecha
                     val esHoy = fecha == LocalDate.now()
+                    val ahoraReloj by produceState<LocalTime?>(null, esHoy) {
+                        value = null
+                        while (esHoy) {
+                            value = LocalTime.now()
+                            kotlinx.coroutines.delay(20_000)
+                        }
+                    }
                     val scrollState = rememberScrollState()
                     val coroutineScope = rememberCoroutineScope()
                     val density = LocalDensity.current
@@ -286,6 +305,7 @@ fun GuiaScreen(
 
                     // Sin margen lateral global: la cabecera del día y la lista de abajo
                     // llevan el suyo, y la línea de tiempo va de borde a borde de la pantalla.
+                    CompositionLocalProvider(LocalAhora provides ahoraReloj) {
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -340,10 +360,11 @@ fun GuiaScreen(
                             ) {
                                 CabeceraActividadesDelDia(onAnadir = { actividadEnCreacion = true })
                                 estadoActual.estado.filas.forEach { fila ->
-                                    TarjetaActividadesDelNino(fila = fila, onEditar = { actividadEnEdicion = it })
+                                    TarjetaActividadesDelNino(fila = fila, esHoy = esHoy, onEditar = { actividadEnEdicion = it })
                                 }
                             }
                         }
+                    }
                     }
 
                     if (actividadEnCreacion) {
@@ -891,7 +912,8 @@ private fun CabeceraActividadesDelDia(onAnadir: () -> Unit) {
  * repasar entero sin scroll horizontal. Tocar una actividad la abre para editarla.
  */
 @Composable
-private fun TarjetaActividadesDelNino(fila: FilaGuia, onEditar: (CoverageNeed) -> Unit) {
+private fun TarjetaActividadesDelNino(fila: FilaGuia, esHoy: Boolean, onEditar: (CoverageNeed) -> Unit) {
+    val ahora = LocalAhora.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
@@ -914,7 +936,12 @@ private fun TarjetaActividadesDelNino(fila: FilaGuia, onEditar: (CoverageNeed) -
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     fila.bloques.sortedBy { it.need.horaInicio }.forEach { bloque ->
-                        FilaActividadEnLista(bloque = bloque, onClick = { onEditar(bloque.need) })
+                        FilaActividadEnLista(
+                            bloque = bloque,
+                            enCurso = estaEnCurso(bloque.need, ahora),
+                            yaPaso = yaHaPasado(bloque.need, ahora),
+                            onClick = { onEditar(bloque.need) }
+                        )
                     }
                 }
             }
@@ -923,7 +950,7 @@ private fun TarjetaActividadesDelNino(fila: FilaGuia, onEditar: (CoverageNeed) -
 }
 
 @Composable
-private fun FilaActividadEnLista(bloque: BloqueGuia, onClick: () -> Unit) {
+private fun FilaActividadEnLista(bloque: BloqueGuia, enCurso: Boolean, yaPaso: Boolean, onClick: () -> Unit) {
     val franja = if (bloque.cubierto) ON_VERDE else MaterialTheme.colorScheme.error
     val tintaIcono = if (bloque.cubierto) ON_VERDE else ON_ROJO
     val fondoIcono = if (bloque.cubierto) VERDE else ROJO
@@ -931,8 +958,14 @@ private fun FilaActividadEnLista(bloque: BloqueGuia, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .alpha(if (yaPaso) 0.55f else 1f)
             .clip(RoundedCornerShape(18.dp))
-            .background(BLANCO)
+            .background(if (enCurso) LocalEncajaExtraColors.current.acento.copy(alpha = 0.10f).compositeOver(BLANCO) else BLANCO)
+            .then(
+                // Actividad en curso: borde completo y fondo tintado que la distinguen del resto.
+                if (enCurso) Modifier.border(3.dp, LocalEncajaExtraColors.current.acento, RoundedCornerShape(18.dp))
+                else Modifier
+            )
             .clickable(onClick = onClick)
             .height(IntrinsicSize.Min)
     ) {
@@ -947,12 +980,27 @@ private fun FilaActividadEnLista(bloque: BloqueGuia, onClick: () -> Unit) {
                 }
                 Spacer(Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        "${formatearHora(bloque.need.horaInicio)} – ${formatearHora(bloque.need.horaFin)}",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = TINTA
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            "${formatearHora(bloque.need.horaInicio)} – ${formatearHora(bloque.need.horaFin)}",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = TINTA
+                        )
+                        if (enCurso) {
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                "EN CURSO",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = LocalEncajaExtraColors.current.onAcento,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(50))
+                                    .background(LocalEncajaExtraColors.current.acento)
+                                    .padding(horizontal = 8.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
                     Text(bloque.need.descripcion, style = MaterialTheme.typography.bodyMedium, color = TINTA_SUAVE)
                     textoAvisos(bloque.need)?.let { avisos ->
                         Text("🔔 $avisos", style = MaterialTheme.typography.labelSmall, color = TINTA_SUAVE)
