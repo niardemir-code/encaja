@@ -218,3 +218,56 @@ exports.desvincularCuenta = onCall({ region: REGION }, async (request) => {
   if (usuarioObjetivo.exists && usuarioObjetivo.get("familyId") === familyId) await usuarioObjetivo.ref.delete();
   return { ok: true };
 });
+
+// Comprueba si el enlace de un cuidador está "huérfano" (la cuenta ya no existe, por ejemplo
+// porque se borró a mano en Firestore/Authentication) y, si lo está, lo limpia para poder invitar
+// de nuevo. Solo un administrador de la familia puede llamarla.
+exports.repararVinculo = onCall({ region: REGION }, async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Hay que iniciar sesión.");
+  const miUid = request.auth.uid;
+  const cuidadorObjetivo = request.data && request.data.caregiverId;
+  if (!cuidadorObjetivo || typeof cuidadorObjetivo !== "string") {
+    throw new HttpsError("invalid-argument", "Falta el cuidador.");
+  }
+
+  const yo = await db.collection("users").doc(miUid).get();
+  const familyId = yo.get("familyId");
+  const miCuidador = yo.get("caregiverId");
+  if (!familyId || !miCuidador) throw new HttpsError("permission-denied", "No perteneces a ninguna familia.");
+
+  const familia = db.collection("families").doc(familyId);
+  const miFicha = await familia.collection("caregivers").doc(miCuidador).get();
+  if (miFicha.get("rol") !== "ADMIN") throw new HttpsError("permission-denied", "Solo un administrador puede hacerlo.");
+
+  const enlace = await familia.collection("caregiverLinks").doc(cuidadorObjetivo).get();
+  if (!enlace.exists) return { huerfano: false, existe: false };
+  const uid = enlace.get("uid");
+
+  let huerfano = !uid;
+  if (uid) {
+    let cuentaExiste = true;
+    try {
+      await admin.auth().getUser(uid);
+    } catch (e) {
+      if (e && e.code === "auth/user-not-found") cuentaExiste = false;
+      else throw new HttpsError("internal", "No se pudo comprobar la cuenta.");
+    }
+    if (!cuentaExiste) {
+      huerfano = true;
+    } else {
+      const usuario = await db.collection("users").doc(uid).get();
+      huerfano = !usuario.exists ||
+        usuario.get("familyId") !== familyId ||
+        usuario.get("caregiverId") !== cuidadorObjetivo;
+    }
+  }
+
+  if (!huerfano) return { huerfano: false, existe: true };
+  await enlace.ref.delete();
+  if (uid) {
+    await borrarTokens(uid);
+    const usuario = await db.collection("users").doc(uid).get();
+    if (usuario.exists && usuario.get("familyId") === familyId) await usuario.ref.delete();
+  }
+  return { huerfano: true, existe: true };
+});

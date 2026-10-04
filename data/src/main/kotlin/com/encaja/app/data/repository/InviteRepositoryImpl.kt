@@ -5,6 +5,7 @@ import com.encaja.app.domain.model.FamilyId
 import com.encaja.app.domain.model.FamilyMembership
 import com.encaja.app.domain.repository.InviteRepository
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.functions.FirebaseFunctions
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
@@ -16,6 +17,20 @@ class InviteRepositoryImpl @Inject constructor(
     private val caracteresPermitidos = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"
 
     private fun generarCodigo(): String = (1..6).map { caracteresPermitidos.random() }.joinToString("")
+
+    private val funciones: FirebaseFunctions by lazy { FirebaseFunctions.getInstance("europe-west1") }
+
+    /**
+     * Pide al servidor que compruebe si el enlace es huérfano (cuenta borrada a mano) y lo limpie.
+     * Devuelve true solo si estaba huérfano y se ha limpiado; ante cualquier fallo, false.
+     */
+    private suspend fun enlaceHuerfano(caregiverId: CaregiverId): Boolean = try {
+        val r = funciones.getHttpsCallable("repararVinculo")
+            .call(mapOf("caregiverId" to caregiverId.value)).await()
+        (r.data as? Map<*, *>)?.get("huerfano") == true
+    } catch (e: Exception) {
+        false
+    }
 
     override suspend fun generarInvitacion(familyId: FamilyId, caregiverId: CaregiverId): Result<String> {
         return try {
@@ -31,7 +46,7 @@ class InviteRepositoryImpl @Inject constructor(
                 .collection("caregiverLinks").document(caregiverId.value)
                 .get()
                 .await()
-            if (yaVinculado.exists()) {
+            if (yaVinculado.exists() && !enlaceHuerfano(caregiverId)) {
                 return Result.failure(IllegalStateException("Ese cuidador ya tiene una cuenta vinculada"))
             }
 
