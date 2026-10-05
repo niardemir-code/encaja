@@ -290,7 +290,10 @@ fun EncajaApp(
                 GuiaScreen(
                     viewModel = hiltViewModel(entradaDelGrafo(navController, backStackEntry)),
                     fechaInicial = fechaArg,
-                    necesidadIdInicial = necesidadIdArg,
+                    // Desde la notificación de una actividad ("quedarse"): no se abre su edición,
+                    // se remarca en la Guía.
+                    necesidadIdInicial = if (quedarseEnGuia) null else necesidadIdArg,
+                    resaltarNecesidadId = if (quedarseEnGuia) necesidadIdArg else null,
                     // Se llegó aquí resolviendo un aviso concreto de Semana (no
                     // pidieron ver el día entero): al terminar (guardar, borrar o
                     // cancelar), se vuelve a Semana en vez de quedarse en Guía.

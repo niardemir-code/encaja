@@ -4,6 +4,7 @@ import com.encaja.app.domain.model.CaregiverId
 import com.encaja.app.domain.model.FamilyId
 import com.encaja.app.domain.model.FamilyMembership
 import com.encaja.app.domain.repository.InviteRepository
+import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.functions.FirebaseFunctions
 import kotlinx.coroutines.tasks.await
@@ -14,6 +15,10 @@ class InviteRepositoryImpl @Inject constructor(
 ) : InviteRepository {
 
     // Sin 0/O ni 1/I: se confunden fácilmente al leerlos en voz alta o a mano.
+    private companion object {
+        const val DIAS_VALIDEZ = 14
+    }
+
     private val caracteresPermitidos = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"
 
     private fun generarCodigo(): String = (1..6).map { caracteresPermitidos.random() }.joinToString("")
@@ -60,7 +65,10 @@ class InviteRepositoryImpl @Inject constructor(
                         mapOf(
                             "familyId" to familyId.value,
                             "caregiverId" to caregiverId.value,
-                            "usado" to false
+                            "usado" to false,
+                            // Firestore borra solo el documento al pasar esta fecha (política TTL
+                            // sobre "caducaEn" en la colección "invites") y canjear lo rechaza.
+                            "caducaEn" to Timestamp(java.util.Date(System.currentTimeMillis() + DIAS_VALIDEZ * 86_400_000L))
                         )
                     ).await()
                     return Result.success(codigo)
@@ -84,6 +92,11 @@ class InviteRepositoryImpl @Inject constructor(
                 val usado = snapshot.getBoolean("usado") ?: false
                 if (usado) {
                     throw IllegalStateException("Ese código ya se ha usado")
+                }
+                // Los códigos antiguos no tienen fecha de caducidad: siguen valiendo.
+                val caducaEn = snapshot.getTimestamp("caducaEn")
+                if (caducaEn != null && caducaEn.toDate().time < System.currentTimeMillis()) {
+                    throw IllegalStateException("Ese código ha caducado, pide uno nuevo")
                 }
                 val familyId = snapshot.getString("familyId") ?: throw IllegalStateException("Código incompleto")
                 val caregiverId = snapshot.getString("caregiverId") ?: throw IllegalStateException("Código incompleto")

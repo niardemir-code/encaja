@@ -156,7 +156,11 @@ fun GuiaScreen(
     // Al cerrar esa edición (guardar, borrar o cancelar) hay que volver a Semana en
     // vez de quedarse en Guía, ya que el usuario nunca pidió venir aquí a mirar el
     // día entero: solo quería resolver ese aviso concreto.
-    onVolverDespuesDeAsignar: () -> Unit = {}
+    onVolverDespuesDeAsignar: () -> Unit = {},
+    // Al llegar desde la notificación de llevar/recoger: esa actividad queda remarcada en
+    // la línea de tiempo y en la lista (y la línea de tiempo se desplaza hasta ella), sin
+    // abrir su edición.
+    resaltarNecesidadId: String? = null
 ) {
     val pantalla by viewModel.pantalla.collectAsState()
     var actividadEnCreacion by remember { mutableStateOf(false) }
@@ -181,6 +185,7 @@ fun GuiaScreen(
     LaunchedEffect(fechaInicial) {
         if (fechaInicial != null) viewModel.irADia(fechaInicial) else viewModel.recargar()
     }
+    val idResaltada = resaltarNecesidadId
 
     // En cuanto los datos de ese día están cargados, busca la actividad pendiente y
     // abre su diálogo de edición. Se limpia tras abrirlo para no volver a hacerlo si
@@ -298,9 +303,23 @@ fun GuiaScreen(
                     // (esperando a que el layout tenga ya el ancho real; ScrollState.maxValue
                     // empieza en Int.MAX_VALUE de sentinela hasta que se mide el contenido);
                     // si no es hoy, al principio del día.
+                    val needResaltada = idResaltada?.let { id ->
+                        estadoActual.estado.filas.flatMap { it.bloques }.map { it.need }.firstOrNull { it.id.value == id }
+                    }
                     LaunchedEffect(fecha) {
                         snapshotFlow { scrollState.maxValue }.first { it != Int.MAX_VALUE }
-                        scrollState.scrollTo(if (esHoy) destinoAhoraPx() else 0)
+                        if (needResaltada == null) scrollState.scrollTo(if (esHoy) destinoAhoraPx() else 0)
+                    }
+
+                    // Llegada desde una notificación: la línea de tiempo se desplaza hasta el
+                    // inicio de la actividad remarcada.
+                    LaunchedEffect(needResaltada?.id, fecha) {
+                        val need = needResaltada ?: return@LaunchedEffect
+                        snapshotFlow { scrollState.maxValue }.first { it != Int.MAX_VALUE }
+                        val inicioDp = margenDeAncho(anchoMinutoActual) +
+                            anchoMinutoActual * minutosDesdeInicioFranja(need.horaInicio)
+                        val px = with(density) { (inicioDp - 40.dp).toPx() }
+                        scrollState.animateScrollTo(px.coerceIn(0f, scrollState.maxValue.toFloat()).roundToInt())
                     }
 
                     // Sin margen lateral global: la cabecera del día y la lista de abajo
@@ -348,6 +367,7 @@ fun GuiaScreen(
                                         scrollState = scrollState,
                                         mostrarAhora = esHoy,
                                         iniciales = estadoActual.estado.iniciales,
+                                        idResaltada = idResaltada,
                                         onEditar = { actividadEnEdicion = it }
                                     )
                                 }
@@ -360,7 +380,7 @@ fun GuiaScreen(
                             ) {
                                 CabeceraActividadesDelDia(onAnadir = { actividadEnCreacion = true })
                                 estadoActual.estado.filas.forEach { fila ->
-                                    TarjetaActividadesDelNino(fila = fila, onEditar = { actividadEnEdicion = it })
+                                    TarjetaActividadesDelNino(fila = fila, idResaltada = idResaltada, onEditar = { actividadEnEdicion = it })
                                 }
                             }
                         }
@@ -559,6 +579,7 @@ private fun LineaDeTiempo(
     scrollState: ScrollState,
     mostrarAhora: Boolean,
     iniciales: Map<CaregiverId, String>,
+    idResaltada: String?,
     onEditar: (CoverageNeed) -> Unit
 ) {
     val density = LocalDensity.current
@@ -606,6 +627,7 @@ private fun LineaDeTiempo(
                         scrollState = scrollState,
                         iniciales = iniciales,
                         anchoVisiblePx = anchoVisiblePx,
+                        idResaltada = idResaltada,
                         onEditar = onEditar
                     )
                 }
@@ -700,6 +722,7 @@ private fun FilaTimelineDelNino(
     scrollState: ScrollState,
     iniciales: Map<CaregiverId, String>,
     anchoVisiblePx: Int,
+    idResaltada: String?,
     onEditar: (CoverageNeed) -> Unit
 ) {
     Box(modifier = Modifier.width(ANCHO_LIENZO).height(ALTO_FILA)) {
@@ -707,7 +730,13 @@ private fun FilaTimelineDelNino(
             FilaSinActividades(scrollState, anchoVisiblePx)
         }
         fila.bloques.forEach { bloque ->
-            BloqueActividad(bloque = bloque, scrollState = scrollState, iniciales = iniciales, onEditar = onEditar)
+            BloqueActividad(
+                bloque = bloque,
+                scrollState = scrollState,
+                iniciales = iniciales,
+                resaltado = bloque.need.id.value == idResaltada,
+                onEditar = onEditar
+            )
         }
     }
 }
@@ -771,6 +800,7 @@ private fun BloqueActividad(
     bloque: BloqueGuia,
     scrollState: ScrollState,
     iniciales: Map<CaregiverId, String>,
+    resaltado: Boolean,
     onEditar: (CoverageNeed) -> Unit
 ) {
     val density = LocalDensity.current
@@ -812,6 +842,11 @@ private fun BloqueActividad(
                 .clip(RoundedCornerShape(16.dp))
                 .background(fondo)
                 .border(1.dp, tinta.copy(alpha = 0.35f), RoundedCornerShape(16.dp))
+                // Actividad remarcada (llegada desde su notificación): borde grueso de acento.
+                .then(
+                    if (resaltado) Modifier.border(4.dp, LocalEncajaExtraColors.current.acento, RoundedCornerShape(16.dp))
+                    else Modifier
+                )
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -912,7 +947,7 @@ private fun CabeceraActividadesDelDia(onAnadir: () -> Unit) {
  * repasar entero sin scroll horizontal. Tocar una actividad la abre para editarla.
  */
 @Composable
-private fun TarjetaActividadesDelNino(fila: FilaGuia, onEditar: (CoverageNeed) -> Unit) {
+private fun TarjetaActividadesDelNino(fila: FilaGuia, idResaltada: String?, onEditar: (CoverageNeed) -> Unit) {
     val ahora = LocalAhora.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -940,6 +975,7 @@ private fun TarjetaActividadesDelNino(fila: FilaGuia, onEditar: (CoverageNeed) -
                             bloque = bloque,
                             enCurso = estaEnCurso(bloque.need, ahora),
                             yaPaso = yaHaPasado(bloque.need, ahora),
+                            resaltada = bloque.need.id.value == idResaltada,
                             onClick = { onEditar(bloque.need) }
                         )
                     }
@@ -950,7 +986,8 @@ private fun TarjetaActividadesDelNino(fila: FilaGuia, onEditar: (CoverageNeed) -
 }
 
 @Composable
-private fun FilaActividadEnLista(bloque: BloqueGuia, enCurso: Boolean, yaPaso: Boolean, onClick: () -> Unit) {
+private fun FilaActividadEnLista(bloque: BloqueGuia, enCurso: Boolean, yaPaso: Boolean, resaltada: Boolean = false, onClick: () -> Unit) {
+    val destacada = enCurso || resaltada
     val franja = if (bloque.cubierto) ON_VERDE else MaterialTheme.colorScheme.error
     val tintaIcono = if (bloque.cubierto) ON_VERDE else ON_ROJO
     val fondoIcono = if (bloque.cubierto) VERDE else ROJO
@@ -960,10 +997,10 @@ private fun FilaActividadEnLista(bloque: BloqueGuia, enCurso: Boolean, yaPaso: B
             .fillMaxWidth()
             .alpha(if (yaPaso) 0.55f else 1f)
             .clip(RoundedCornerShape(18.dp))
-            .background(if (enCurso) LocalEncajaExtraColors.current.acento.copy(alpha = 0.10f).compositeOver(BLANCO) else BLANCO)
+            .background(if (destacada) LocalEncajaExtraColors.current.acento.copy(alpha = 0.10f).compositeOver(BLANCO) else BLANCO)
             .then(
                 // Actividad en curso: borde completo y fondo tintado que la distinguen del resto.
-                if (enCurso) Modifier.border(3.dp, LocalEncajaExtraColors.current.acento, RoundedCornerShape(18.dp))
+                if (destacada) Modifier.border(3.dp, LocalEncajaExtraColors.current.acento, RoundedCornerShape(18.dp))
                 else Modifier
             )
             .clickable(onClick = onClick)

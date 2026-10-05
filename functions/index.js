@@ -154,7 +154,10 @@ async function crearInvitacion(familyId, caregiverId) {
     for (let i = 0; i < 6; i++) codigo += CARACTERES_CODIGO[Math.floor(Math.random() * CARACTERES_CODIGO.length)];
     const ref = db.collection("invites").doc(codigo);
     if (!(await ref.get()).exists) {
-      await ref.set({ familyId, caregiverId, usado: false });
+      // El código de reenganche tras borrar la última cuenta dura 90 días; el TTL de
+      // Firestore (campo "caducaEn" de "invites") lo borrará después.
+      const caducaEn = admin.firestore.Timestamp.fromMillis(Date.now() + 90 * 86400000);
+      await ref.set({ familyId, caregiverId, usado: false, caducaEn });
       return codigo;
     }
   }
