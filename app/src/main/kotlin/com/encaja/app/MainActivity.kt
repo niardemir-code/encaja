@@ -3,6 +3,7 @@ package com.encaja.app
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
@@ -34,11 +35,40 @@ class MainActivity : ComponentActivity() {
     // una vez al abrir; si se deniega, los avisos simplemente no se muestran.
     private val pedirNotificaciones = registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
+    // Actividad a la que hay que saltar en la Guía (fecha, id) cuando se abre la app desde el
+    // aviso de una actividad. Se consume una vez navegado.
+    private val abrirGuia = mutableStateOf<Pair<String, String>?>(null)
+
+    // True cuando se abre desde la notificación de un anuncio: hay que mostrar el tablón.
+    private val abrirTablon = mutableStateOf(false)
+
+    private fun leerDestino(intent: Intent?) {
+        if (intent?.getBooleanExtra(EXTRA_ABRIR_TABLON, false) == true) {
+            abrirTablon.value = true
+            intent.removeExtra(EXTRA_ABRIR_TABLON)
+        }
+        val fecha = intent?.getStringExtra(EXTRA_ABRIR_FECHA)
+        val id = intent?.getStringExtra(EXTRA_ABRIR_NECESIDAD)
+        if (fecha != null && id != null) {
+            abrirGuia.value = fecha to id
+            // Se limpian para que girar la pantalla o reabrir no repita la navegación.
+            intent.removeExtra(EXTRA_ABRIR_FECHA)
+            intent.removeExtra(EXTRA_ABRIR_NECESIDAD)
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        leerDestino(intent)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         // Debe ir antes de super.onCreate: aplica el splash con el logo de Encaja.
         installSplashScreen()
         super.onCreate(savedInstanceState)
         PreferenciaTema.cargar(this)
+        leerDestino(intent)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) {
@@ -64,7 +94,13 @@ class MainActivity : ComponentActivity() {
                     var registroInicial by remember { mutableStateOf(false) }
 
                     if (autenticado) {
-                        EncajaApp(onCerrarSesion = { authViewModel.cerrarSesion() })
+                        EncajaApp(
+                            onCerrarSesion = { authViewModel.cerrarSesion() },
+                            abrirGuia = abrirGuia.value,
+                            alAbrirGuia = { abrirGuia.value = null },
+                            abrirTablon = abrirTablon.value,
+                            alAbrirTablon = { abrirTablon.value = false }
+                        )
                     } else if (!introVista) {
                         IntroScreen(
                             alTerminar = { registrarse, codigo ->
@@ -89,5 +125,11 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    companion object {
+        const val EXTRA_ABRIR_FECHA = "abrir_fecha"
+        const val EXTRA_ABRIR_NECESIDAD = "abrir_necesidad"
+        const val EXTRA_ABRIR_TABLON = "abrir_tablon"
     }
 }

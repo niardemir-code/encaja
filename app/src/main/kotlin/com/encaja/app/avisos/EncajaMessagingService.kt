@@ -51,7 +51,11 @@ class EncajaMessagingService : FirebaseMessagingService() {
         crearCanal(this)
         val abrirApp = PendingIntent.getActivity(
             this, 0,
-            Intent(this, MainActivity::class.java).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP },
+            Intent(this, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                // Al tocarla, se abre Semana desplazada hasta el tablón.
+                putExtra(MainActivity.EXTRA_ABRIR_TABLON, true)
+            },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         val notificacion = NotificationCompat.Builder(this, CANAL_TABLON)

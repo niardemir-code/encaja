@@ -32,6 +32,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -78,7 +79,7 @@ import com.encaja.app.ui.semana.SemanaScreen
  * argumentos son opcionales: sin ellos es la pestaña normal; con ellos —usado desde
  * un aviso de Semana— salta directamente a esa fecha y abre esa actividad. */
 private const val RUTA_GUIA_BASE = "guia"
-private const val RUTA_GUIA_PLANTILLA = "guia?fecha={fecha}&necesidadId={necesidadId}"
+private const val RUTA_GUIA_PLANTILLA = "guia?fecha={fecha}&necesidadId={necesidadId}&quedarse={quedarse}"
 
 private sealed class Destino(val ruta: String, val rutaNavegacion: String = ruta, val etiqueta: String, val icono: ImageVector) {
     data object Semana : Destino(ruta = "semana", etiqueta = "Semana", icono = Icons.Default.DateRange)
@@ -112,8 +113,36 @@ private val RUTAS_CON_ATRAS = setOf(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EncajaApp(onCerrarSesion: () -> Unit, viewModel: EncajaAppViewModel = hiltViewModel()) {
+fun EncajaApp(
+    onCerrarSesion: () -> Unit,
+    abrirGuia: Pair<String, String>? = null,
+    alAbrirGuia: () -> Unit = {},
+    abrirTablon: Boolean = false,
+    alAbrirTablon: () -> Unit = {},
+    viewModel: EncajaAppViewModel = hiltViewModel()
+) {
     val navController = rememberNavController()
+
+    // Al tocar el aviso de una actividad: va a la Guía, a ese día y con esa actividad abierta.
+    LaunchedEffect(abrirGuia) {
+        if (abrirGuia != null) {
+            navController.navigate("$RUTA_GUIA_BASE?fecha=${abrirGuia.first}&necesidadId=${abrirGuia.second}&quedarse=true") {
+                popUpTo(navController.graph.findStartDestination().id)
+                launchSingleTop = true
+            }
+            alAbrirGuia()
+        }
+    }
+
+    // Al tocar el aviso de un anuncio: va a Semana; ella se desplaza hasta el tablón y avisa.
+    LaunchedEffect(abrirTablon) {
+        if (abrirTablon) {
+            navController.navigate(Destino.Semana.ruta) {
+                popUpTo(navController.graph.findStartDestination().id)
+                launchSingleTop = true
+            }
+        }
+    }
 
     val backStackEntry by navController.currentBackStackEntryAsState()
     val rutaActual = backStackEntry?.destination?.hierarchy?.firstOrNull()?.route
@@ -230,6 +259,8 @@ fun EncajaApp(onCerrarSesion: () -> Unit, viewModel: EncajaAppViewModel = hiltVi
         ) {
             composable(Destino.Semana.ruta) {
                 SemanaScreen(
+                    desplazarATablon = abrirTablon,
+                    alDesplazarATablon = alAbrirTablon,
                     // Desde el círculo de un día ámbar/rojo que ya no tiene un aviso o
                     // hueco vigente: solo salta a ese día en la Guía, sin intentar abrir
                     // ninguna actividad en concreto. (Los avisos se editan en la propia
@@ -246,12 +277,16 @@ fun EncajaApp(onCerrarSesion: () -> Unit, viewModel: EncajaAppViewModel = hiltVi
                 route = Destino.Guia.ruta,
                 arguments = listOf(
                     navArgument("fecha") { type = NavType.StringType; nullable = true; defaultValue = null },
-                    navArgument("necesidadId") { type = NavType.StringType; nullable = true; defaultValue = null }
+                    navArgument("necesidadId") { type = NavType.StringType; nullable = true; defaultValue = null },
+                    navArgument("quedarse") { type = NavType.BoolType; defaultValue = false }
                 )
             ) { backStackEntry ->
                 val fechaArg = backStackEntry.arguments?.getString("fecha")
                     ?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
                 val necesidadIdArg = backStackEntry.arguments?.getString("necesidadId")
+                // Llegada desde la notificación de una actividad: al cerrar el diálogo se
+                // queda en la Guía en vez de volver a Semana.
+                val quedarseEnGuia = backStackEntry.arguments?.getBoolean("quedarse") ?: false
                 GuiaScreen(
                     viewModel = hiltViewModel(entradaDelGrafo(navController, backStackEntry)),
                     fechaInicial = fechaArg,
@@ -259,7 +294,7 @@ fun EncajaApp(onCerrarSesion: () -> Unit, viewModel: EncajaAppViewModel = hiltVi
                     // Se llegó aquí resolviendo un aviso concreto de Semana (no
                     // pidieron ver el día entero): al terminar (guardar, borrar o
                     // cancelar), se vuelve a Semana en vez de quedarse en Guía.
-                    onVolverDespuesDeAsignar = { navController.popBackStack() }
+                    onVolverDespuesDeAsignar = { if (!quedarseEnGuia) navController.popBackStack() }
                 )
             }
             composable(Destino.Familia.ruta) { entry -> FamiliaScreen(viewModel = hiltViewModel(entradaDelGrafo(navController, entry))) }

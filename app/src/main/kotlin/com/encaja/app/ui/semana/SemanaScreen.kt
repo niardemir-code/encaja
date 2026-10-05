@@ -119,7 +119,10 @@ fun SemanaScreen(
     // Al tocar el círculo de un día del semáforo que ya no tiene un aviso o hueco
     // "vigente" que abrir: se salta a ese día en la Guía, sin intentar abrir ninguna
     // actividad en concreto.
-    onVerDia: (LocalDate) -> Unit = {}
+    onVerDia: (LocalDate) -> Unit = {},
+    // Al abrir la app desde la notificación de un anuncio: se desplaza hasta el tablón.
+    desplazarATablon: Boolean = false,
+    alDesplazarATablon: () -> Unit = {}
 ) {
     val pantalla by viewModel.pantalla.collectAsState()
 
@@ -235,6 +238,13 @@ fun SemanaScreen(
             val cuidadores by viewModel.cuidadores.collectAsState()
             val ninos by viewModel.ninos.collectAsState()
             val responsables by viewModel.responsables.collectAsState()
+            LaunchedEffect(desplazarATablon) {
+                if (desplazarATablon) {
+                    // El tablón es el elemento 1 de la lista (tras la tarjeta de la semana).
+                    listState.scrollToItem(1)
+                    alDesplazarATablon()
+                }
+            }
             var diaInfoAbierto by remember { mutableStateOf<DiaSemaforo?>(null) }
             // Actividad abierta en edición desde un aviso o un hueco: el mismo diálogo que
             // en la Guía, pero sin salir de esta pantalla.

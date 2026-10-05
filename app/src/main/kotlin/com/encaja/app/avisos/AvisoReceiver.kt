@@ -21,14 +21,24 @@ class AvisoReceiver : BroadcastReceiver() {
         val id = intent.getIntExtra(EXTRA_ID, 0)
         val titulo = intent.getStringExtra(EXTRA_TITULO) ?: return
         val texto = intent.getStringExtra(EXTRA_TEXTO) ?: ""
+        val fecha = intent.getStringExtra(EXTRA_FECHA)
+        val necesidadId = intent.getStringExtra(EXTRA_NECESIDAD)
 
         val manager = NotificationManagerCompat.from(context)
         if (!manager.areNotificationsEnabled()) return
         crearCanal(context)
 
         val abrirApp = PendingIntent.getActivity(
-            context, 0,
-            Intent(context, MainActivity::class.java).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP },
+            // Un requestCode distinto por aviso: si no, Android reutilizaría el PendingIntent
+            // de otro aviso y los datos de la actividad se mezclarían.
+            context, id,
+            Intent(context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                if (fecha != null && necesidadId != null) {
+                    putExtra(MainActivity.EXTRA_ABRIR_FECHA, fecha)
+                    putExtra(MainActivity.EXTRA_ABRIR_NECESIDAD, necesidadId)
+                }
+            },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         val notificacion = NotificationCompat.Builder(context, CANAL)
@@ -61,5 +71,7 @@ class AvisoReceiver : BroadcastReceiver() {
         const val EXTRA_ID = "id"
         const val EXTRA_TITULO = "titulo"
         const val EXTRA_TEXTO = "texto"
+        const val EXTRA_FECHA = "fecha"
+        const val EXTRA_NECESIDAD = "necesidad"
     }
 }

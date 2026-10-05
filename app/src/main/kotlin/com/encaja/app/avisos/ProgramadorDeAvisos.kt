@@ -48,7 +48,7 @@ class ProgramadorDeAvisos @Inject constructor(@ApplicationContext private val co
     fun cancelar(id: CoverageNeedId) {
         val alarmas = contexto.getSystemService(AlarmManager::class.java) ?: return
         Tipo.values().forEach { tipo ->
-            alarmas.cancel(pendingIntent(id, tipo, null, null))
+            alarmas.cancel(pendingIntent(id, tipo, null, null, null))
         }
     }
 
@@ -74,7 +74,7 @@ class ProgramadorDeAvisos @Inject constructor(@ApplicationContext private val co
 
         val millis = instante.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
         val alarmas = contexto.getSystemService(AlarmManager::class.java) ?: return
-        val pi = pendingIntent(need.id, tipo, titulo, texto)
+        val pi = pendingIntent(need.id, tipo, titulo, texto, need.fecha.toString())
         // Alarma exacta si el sistema lo permite (Android 12+ puede exigir permiso);
         // si no, una aproximada, que puede retrasarse unos minutos.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarmas.canScheduleExactAlarms()) {
@@ -84,12 +84,15 @@ class ProgramadorDeAvisos @Inject constructor(@ApplicationContext private val co
         }
     }
 
-    private fun pendingIntent(id: CoverageNeedId, tipo: Tipo, titulo: String?, texto: String?): PendingIntent {
+    private fun pendingIntent(id: CoverageNeedId, tipo: Tipo, titulo: String?, texto: String?, fecha: String?): PendingIntent {
         val intent = Intent(contexto, AvisoReceiver::class.java).apply {
             action = "com.encaja.app.AVISO_ACTIVIDAD"
             putExtra(AvisoReceiver.EXTRA_ID, codigo(id, tipo))
             putExtra(AvisoReceiver.EXTRA_TITULO, titulo)
             putExtra(AvisoReceiver.EXTRA_TEXTO, texto)
+            // Para que al tocar la notificación se abra la Guía en esa actividad.
+            putExtra(AvisoReceiver.EXTRA_FECHA, fecha)
+            putExtra(AvisoReceiver.EXTRA_NECESIDAD, id.value)
         }
         return PendingIntent.getBroadcast(
             contexto, codigo(id, tipo), intent,
