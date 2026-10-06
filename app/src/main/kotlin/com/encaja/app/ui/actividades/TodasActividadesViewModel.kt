@@ -3,7 +3,7 @@ package com.encaja.app.ui.actividades
 // NOTA: depende de Hilt/ViewModel (androidx.lifecycle), no compilado en este entorno.
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
+import com.encaja.app.ui.common.lanzarSeguro
 import com.encaja.app.domain.model.CoverageNeedId
 import com.encaja.app.domain.model.FamilyId
 import com.encaja.app.domain.repository.AuthRepository
@@ -46,21 +46,21 @@ class TodasActividadesViewModel @Inject constructor(
     fun recargar() = cargar()
 
     private fun cargar() {
-        viewModelScope.launch {
+        lanzarSeguro {
             _pantalla.value = TodasActividadesPantallaEstado.Cargando
 
             val uid = authRepository.sesionActual()?.uid
             if (uid == null) {
                 familyIdActual = null
                 _pantalla.value = TodasActividadesPantallaEstado.SinFamilia
-                return@launch
+                return@lanzarSeguro
             }
 
             val membresia = familyMembershipRepository.obtenerMembresia(uid)
             if (membresia == null) {
                 familyIdActual = null
                 _pantalla.value = TodasActividadesPantallaEstado.SinFamilia
-                return@launch
+                return@lanzarSeguro
             }
             familyIdActual = membresia.familyId
             val familyId = membresia.familyId
@@ -88,7 +88,7 @@ class TodasActividadesViewModel @Inject constructor(
     fun eliminarSeleccionadas(ids: Set<CoverageNeedId>) {
         val familyId = familyIdActual ?: return
         if (ids.isEmpty()) return
-        viewModelScope.launch {
+        lanzarSeguro {
             coverageNeedRepository.eliminarNeeds(familyId, ids.toList())
             cargar()
         }

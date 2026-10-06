@@ -3,7 +3,7 @@ package com.encaja.app.ui
 // NOTA: depende de Hilt/ViewModel (androidx.lifecycle), no compilado en este entorno.
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
+import com.encaja.app.ui.common.lanzarSeguro
 import com.encaja.app.avisos.ProgramadorDeAvisos
 import com.encaja.app.avisos.SincronizadorDeAvisos
 import com.encaja.app.domain.repository.DispositivoRepository
@@ -46,10 +46,10 @@ class EncajaAppViewModel @Inject constructor(
     val inicialesUsuario: StateFlow<String> = _inicialesUsuario.asStateFlow()
 
     init {
-        viewModelScope.launch { iniciar() }
+        lanzarSeguro(avisar = false) { iniciar() }
         // Al vincularse la cuenta a una familia (código de invitación, crear familia o
         // "Vincularme"), se repite todo esto sin esperar a reiniciar la app.
-        viewModelScope.launch { cambiosDeMembresia.eventos.collect { iniciar() } }
+        lanzarSeguro(avisar = false) { cambiosDeMembresia.eventos.collect { iniciar() } }
     }
 
     private suspend fun iniciar() {

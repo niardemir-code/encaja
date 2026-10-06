@@ -3,7 +3,7 @@ package com.encaja.app.ui.compra
 // NOTA: depende de Hilt/ViewModel (androidx.lifecycle), no compilado en este entorno.
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
+import com.encaja.app.ui.common.lanzarSeguro
 import com.encaja.app.domain.model.ArticuloCompra
 import com.encaja.app.domain.model.ArticuloCompraId
 import com.encaja.app.domain.model.FamilyId
@@ -41,7 +41,7 @@ class CompraViewModel @Inject constructor(
     /** [mostrarCargando] false al refrescar tras marcar/añadir/borrar un artículo: así la
      * lista no parpadea con la rueda de carga ni pierde lo que se estaba escribiendo. */
     private fun cargar(mostrarCargando: Boolean = true) {
-        viewModelScope.launch {
+        lanzarSeguro {
             if (mostrarCargando || _pantalla.value !is CompraPantallaEstado.ConDatos) {
                 _pantalla.value = CompraPantallaEstado.Cargando
             }
@@ -50,14 +50,14 @@ class CompraViewModel @Inject constructor(
             if (uid == null) {
                 familyIdActual = null
                 _pantalla.value = CompraPantallaEstado.SinFamilia
-                return@launch
+                return@lanzarSeguro
             }
 
             val membresia = familyMembershipRepository.obtenerMembresia(uid)
             if (membresia == null) {
                 familyIdActual = null
                 _pantalla.value = CompraPantallaEstado.SinFamilia
-                return@launch
+                return@lanzarSeguro
             }
             familyIdActual = membresia.familyId
 
@@ -76,7 +76,7 @@ class CompraViewModel @Inject constructor(
 
         val id = generarArticuloCompraIdDesdeNombre(nombreLimpio, articulosActuales.map { it.id })
 
-        viewModelScope.launch {
+        lanzarSeguro {
             compraRepository.guardarArticulo(familyId, ArticuloCompra(id, nombreLimpio, tiendaLimpia))
             cargar(mostrarCargando = false)
         }
@@ -85,9 +85,20 @@ class CompraViewModel @Inject constructor(
     /** Marca (o desmarca) un artículo como comprado, sin borrarlo de la lista. */
     fun marcarComprado(articulo: ArticuloCompra, comprado: Boolean) {
         val familyId = familyIdActual ?: return
-        viewModelScope.launch {
-            compraRepository.guardarArticulo(familyId, articulo.copy(comprado = comprado))
-            cargar(mostrarCargando = false)
+        // Actualización optimista: la lista cambia al instante y se guarda en segundo plano.
+        // Solo si falla el guardado se recarga el estado real del servidor.
+        val actualizado = articulo.copy(comprado = comprado)
+        articulosActuales = articulosActuales.map { if (it.id == articulo.id) actualizado else it }
+        _pantalla.value = CompraPantallaEstado.ConDatos(mapper.construir(articulosActuales))
+        lanzarSeguro {
+            try {
+                compraRepository.guardarArticulo(familyId, actualizado)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                cargar(mostrarCargando = false)
+                throw e
+            }
         }
     }
 
@@ -96,7 +107,7 @@ class CompraViewModel @Inject constructor(
         val familyId = familyIdActual ?: return
         val nombreLimpio = nuevoNombre.trim()
         if (nombreLimpio.isBlank() || nombreLimpio == articulo.nombre) return
-        viewModelScope.launch {
+        lanzarSeguro {
             compraRepository.guardarArticulo(familyId, articulo.copy(nombre = nombreLimpio))
             cargar(mostrarCargando = false)
         }
@@ -104,7 +115,7 @@ class CompraViewModel @Inject constructor(
 
     fun eliminarArticulo(articuloId: ArticuloCompraId) {
         val familyId = familyIdActual ?: return
-        viewModelScope.launch {
+        lanzarSeguro {
             compraRepository.eliminarArticulo(familyId, articuloId)
             cargar(mostrarCargando = false)
         }

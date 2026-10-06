@@ -3,7 +3,7 @@ package com.encaja.app.ui.guia
 // NOTA: depende de Hilt/ViewModel (androidx.lifecycle), no compilado en este entorno.
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
+import com.encaja.app.ui.common.lanzarSeguro
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import com.encaja.app.domain.model.CoverageNeed
@@ -75,21 +75,21 @@ class GuiaViewModel @Inject constructor(
     /** Primera carga (o recarga forzada): valida sesión y familia y solo entonces
      * pide los datos del día. */
     private fun cargar() {
-        viewModelScope.launch {
+        lanzarSeguro {
             _pantalla.value = GuiaPantallaEstado.Cargando
 
             val uid = authRepository.sesionActual()?.uid
             if (uid == null) {
                 familyIdActual = null
                 _pantalla.value = GuiaPantallaEstado.SinFamilia
-                return@launch
+                return@lanzarSeguro
             }
 
             val membresia = familyMembershipRepository.obtenerMembresia(uid)
             if (membresia == null) {
                 familyIdActual = null
                 _pantalla.value = GuiaPantallaEstado.SinFamilia
-                return@launch
+                return@lanzarSeguro
             }
             familyIdActual = membresia.familyId
             cargarDia()
@@ -100,7 +100,7 @@ class GuiaViewModel @Inject constructor(
      * actividad, no necesita volver a comprobar sesión ni familia. */
     private fun cargarDia() {
         val familyId = familyIdActual ?: return
-        viewModelScope.launch {
+        lanzarSeguro {
             val fecha = fechaActual
 
             // Las seis lecturas son independientes entre sí, así que se lanzan todas a la
@@ -127,7 +127,7 @@ class GuiaViewModel @Inject constructor(
     /** Ver [EditorDeActividades.guardar]. */
     fun guardarActividades(needs: List<CoverageNeed>, aplicarATodaLaSerie: Boolean) {
         val familyId = familyIdActual ?: return
-        viewModelScope.launch {
+        lanzarSeguro {
             editor.guardar(familyId, needs, aplicarATodaLaSerie)
             cargarDia()
         }
@@ -136,7 +136,7 @@ class GuiaViewModel @Inject constructor(
     /** Ver [EditorDeActividades.eliminar]. */
     fun eliminarActividad(id: CoverageNeedId, grupoRepeticionId: String?, fecha: LocalDate, aplicarATodaLaSerie: Boolean) {
         val familyId = familyIdActual ?: return
-        viewModelScope.launch {
+        lanzarSeguro {
             editor.eliminar(familyId, id, grupoRepeticionId, fecha, aplicarATodaLaSerie)
             cargarDia()
         }
@@ -157,7 +157,7 @@ class GuiaViewModel @Inject constructor(
     /** Ver [EditorDeActividades.actualizarSerie]. */
     fun actualizarSerie(plantilla: CoverageNeed, nuevasFechas: List<LocalDate>) {
         val familyId = familyIdActual ?: return
-        viewModelScope.launch {
+        lanzarSeguro {
             editor.actualizarSerie(familyId, plantilla, nuevasFechas)
             cargarDia()
         }

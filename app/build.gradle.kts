@@ -18,6 +18,18 @@ android {
         versionName = "0.1.0"
     }
 
+    buildTypes {
+        release {
+            // R8: reduce y ofusca el código. Probar SIEMPRE el APK/AAB release antes de publicar.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+        }
+    }
+
     buildFeatures {
         compose = true
     }

@@ -3,7 +3,7 @@ package com.encaja.app.ui.ajustes
 // NOTA: depende de Hilt/ViewModel (androidx.lifecycle), no compilado en este entorno.
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
+import com.encaja.app.ui.common.lanzarSeguro
 import com.encaja.app.domain.model.Caregiver
 import com.encaja.app.domain.model.CaregiverId
 import com.encaja.app.domain.model.CaregiverRole
@@ -54,21 +54,21 @@ class AjustesViewModel @Inject constructor(
     fun recargar() = cargar()
 
     private fun cargar() {
-        viewModelScope.launch {
+        lanzarSeguro {
             _pantalla.value = AjustesPantallaEstado.Cargando
 
             val uid = authRepository.sesionActual()?.uid
             if (uid == null) {
                 familyIdActual = null
                 _pantalla.value = AjustesPantallaEstado.SinFamilia
-                return@launch
+                return@lanzarSeguro
             }
 
             val membresia = familyMembershipRepository.obtenerMembresia(uid)
             if (membresia == null) {
                 familyIdActual = null
                 _pantalla.value = AjustesPantallaEstado.SinFamilia
-                return@launch
+                return@lanzarSeguro
             }
             familyIdActual = membresia.familyId
 
@@ -92,7 +92,7 @@ class AjustesViewModel @Inject constructor(
      * de la familia); si no, a [alFallar]. El cuidador y su historial no se tocan.
      */
     fun borrarMiCuenta(alTerminar: (codigoParaVolver: String?) -> Unit, alFallar: (String) -> Unit) {
-        viewModelScope.launch {
+        lanzarSeguro {
             cuentaRepository.borrarMiCuenta().fold(
                 onSuccess = { codigo -> alTerminar(codigo) },
                 onFailure = { alFallar("No se pudo borrar la cuenta. Comprueba la conexión e inténtalo de nuevo.") }
@@ -102,7 +102,7 @@ class AjustesViewModel @Inject constructor(
 
     /** (Administradores) quita la cuenta vinculada a un cuidador; el cuidador sigue en la familia. */
     fun desvincularCuenta(caregiverId: CaregiverId, alFallar: (String) -> Unit) {
-        viewModelScope.launch {
+        lanzarSeguro {
             cuentaRepository.desvincularCuenta(caregiverId).fold(
                 onSuccess = { cargar() },
                 onFailure = { alFallar("No se pudo desvincular la cuenta. Inténtalo de nuevo.") }
@@ -119,7 +119,7 @@ class AjustesViewModel @Inject constructor(
         val actuales = (_pantalla.value as? AjustesPantallaEstado.ConDatos)?.ninos.orEmpty()
         val id = generarChildIdDesdeNombre(nombreLimpio, actuales.map { it.id })
 
-        viewModelScope.launch {
+        lanzarSeguro {
             childRepository.guardarNinos(familyId, actuales + Child(id, nombreLimpio))
             cargar()
         }
@@ -127,7 +127,7 @@ class AjustesViewModel @Inject constructor(
 
     fun eliminarNino(childId: ChildId) {
         val familyId = familyIdActual ?: return
-        viewModelScope.launch {
+        lanzarSeguro {
             childRepository.eliminarNino(familyId, childId)
             cargar()
         }
@@ -145,7 +145,7 @@ class AjustesViewModel @Inject constructor(
         val id = generarCaregiverIdDesdeNombre(nombreLimpio, apellido1Limpio, apellido2Limpio, actuales.map { it.id })
         val nuevo = Caregiver(id, nombreLimpio, apellido1Limpio, apellido2Limpio, CaregiverRole.CUIDADOR)
 
-        viewModelScope.launch {
+        lanzarSeguro {
             caregiverRepository.guardarCuidadores(familyId, actuales + nuevo)
             cargar()
         }
@@ -153,7 +153,7 @@ class AjustesViewModel @Inject constructor(
 
     fun eliminarCuidador(caregiverId: CaregiverId) {
         val familyId = familyIdActual ?: return
-        viewModelScope.launch {
+        lanzarSeguro {
             caregiverRepository.eliminarCuidador(familyId, caregiverId)
             cargar()
         }
@@ -169,8 +169,8 @@ class AjustesViewModel @Inject constructor(
      */
     fun vincularmeAEsteCuidador(caregiverId: CaregiverId) {
         val familyId = familyIdActual ?: return
-        viewModelScope.launch {
-            val uid = authRepository.sesionActual()?.uid ?: return@launch
+        lanzarSeguro {
+            val uid = authRepository.sesionActual()?.uid ?: return@lanzarSeguro
             familyMembershipRepository.vincularAFamilia(uid, FamilyMembership(familyId, caregiverId))
             cambiosDeMembresia.avisar()
         }
@@ -190,7 +190,7 @@ class AjustesViewModel @Inject constructor(
         val id = generarFamilyUnitIdDesdeNombre(nombreLimpio, actuales.map { it.id })
         val nueva = FamilyUnit(id, codigoLimpio, nombreLimpio, miembros)
 
-        viewModelScope.launch {
+        lanzarSeguro {
             familyUnitRepository.guardarUnidades(familyId, actuales + nueva)
             cargar()
         }
@@ -198,7 +198,7 @@ class AjustesViewModel @Inject constructor(
 
     fun eliminarUnidad(unidadId: FamilyUnitId) {
         val familyId = familyIdActual ?: return
-        viewModelScope.launch {
+        lanzarSeguro {
             familyUnitRepository.eliminarUnidad(familyId, unidadId)
             cargar()
         }

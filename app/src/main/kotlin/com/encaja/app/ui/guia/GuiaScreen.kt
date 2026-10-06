@@ -824,8 +824,6 @@ private fun BloqueActividad(
     var anchoContenidoPx by remember { mutableStateOf(0f) }
     val anchoTarjetaPx = (anchoBloquePx - gutterInicioPx - gutterFinPx).coerceAtLeast(0f)
     val margenMaximoPx = (anchoTarjetaPx - anchoContenidoPx).coerceAtLeast(0f)
-    val offsetContenidoPx = (scrollState.value - inicioPx - gutterInicioPx).coerceIn(0f, margenMaximoPx)
-    val offsetContenidoDp = with(density) { offsetContenidoPx.toDp() }
 
     Box(
         modifier = Modifier
@@ -853,7 +851,14 @@ private fun BloqueActividad(
                 modifier = Modifier
                     .fillMaxHeight()
                     .padding(horizontal = 10.dp)
-                    .offset(x = offsetContenidoDp)
+                    .offset {
+                        // Se lee el scroll aquí (fase de layout), no en composición: así al
+                        // desplazar no se recomponen todos los bloques.
+                        IntOffset(
+                            (scrollState.value - inicioPx - gutterInicioPx).coerceIn(0f, margenMaximoPx).roundToInt(),
+                            0
+                        )
+                    }
                     .onGloballyPositioned { coordenadas -> anchoContenidoPx = coordenadas.size.width.toFloat() }
             ) {
                 Column {

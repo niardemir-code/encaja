@@ -10,14 +10,13 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />
-    <!-- Para poder pedir que no se restrinja en segundo plano (ver Ajustes): si no, el
-         sistema puede matar la app y los avisos de actividades no suenan cuando no
-         está abierta en pantalla. -->
-    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <!-- Sin REQUEST_IGNORE_BATTERY_OPTIMIZATIONS a propósito: Google Play lo restringe a apps
+         cuya función principal lo necesita. Para quitar la restricción de batería se abre la
+         lista de ajustes de batería del sistema (sin permiso) y el usuario marca Encaja. -->
 
     <application
         android:name=".EncajaApplication"
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:label="Encaja"

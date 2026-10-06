@@ -1,7 +1,7 @@
 package com.encaja.app.ui.semana
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
+import com.encaja.app.ui.common.lanzarSeguro
 import com.encaja.app.domain.model.AnuncioId
 import com.encaja.app.domain.model.Caregiver
 import com.encaja.app.domain.model.CaregiverId
@@ -17,6 +17,7 @@ import com.encaja.app.domain.repository.CaregiverRepository
 import com.encaja.app.domain.repository.ChildRepository
 import com.encaja.app.domain.repository.CoverageNeedRepository
 import com.encaja.app.domain.repository.FamilyMembershipRepository
+import com.encaja.app.domain.repository.ResultadoMembresia
 import com.encaja.app.domain.repository.FamilyUnitRepository
 import com.encaja.app.domain.repository.InviteRepository
 import com.encaja.app.domain.usecase.lunesDeEstaSemana
@@ -105,8 +106,8 @@ class SemaforoViewModel @Inject constructor(
 
     /** Introduce un código de invitación y, si es válido, vincula al usuario a esa familia. */
     fun canjearCodigo(codigo: String, alFallar: (String) -> Unit) {
-        viewModelScope.launch {
-            val uid = authRepository.sesionActual()?.uid ?: return@launch
+        lanzarSeguro {
+            val uid = authRepository.sesionActual()?.uid ?: return@lanzarSeguro
             inviteRepository.canjearInvitacion(codigo).fold(
                 onSuccess = { membership ->
                     familyMembershipRepository.vincularAFamilia(uid, membership)
@@ -125,8 +126,18 @@ class SemaforoViewModel @Inject constructor(
     fun crearFamilia(nombre: String, apellido1: String, apellido2: String, alFallar: (String) -> Unit) {
         val nombreLimpio = nombre.trim()
         if (nombreLimpio.isBlank()) return
-        viewModelScope.launch {
-            val uid = authRepository.sesionActual()?.uid ?: return@launch
+        lanzarSeguro {
+            val uid = authRepository.sesionActual()?.uid ?: return@lanzarSeguro
+            // Antes de crear nada, comprobar que esta cuenta de verdad no tiene ya una familia:
+            // crear una nueva sobrescribiría el vínculo existente (users/{uid}).
+            when (familyMembershipRepository.consultarMembresia(uid)) {
+                is ResultadoMembresia.Tiene -> { cargar(); return@lanzarSeguro }
+                ResultadoMembresia.Error -> {
+                    alFallar("No se pudo comprobar tu cuenta. Revisa la conexión e inténtalo de nuevo")
+                    return@lanzarSeguro
+                }
+                ResultadoMembresia.NoTiene -> Unit
+            }
             try {
                 val familyId = FamilyId(java.util.UUID.randomUUID().toString())
                 val caregiverId = com.encaja.app.ui.ajustes.generarCaregiverIdDesdeNombre(
@@ -149,7 +160,7 @@ class SemaforoViewModel @Inject constructor(
     /** Genera un código de invitación para un cuidador concreto de la familia actual. */
     fun generarInvitacion(caregiverId: CaregiverId, alConseguirlo: (String) -> Unit, alFallar: (String) -> Unit) {
         val familyId = familyIdActual ?: return
-        viewModelScope.launch {
+        lanzarSeguro {
             inviteRepository.generarInvitacion(familyId, caregiverId).fold(
                 onSuccess = { codigo -> alConseguirlo(codigo) },
                 onFailure = { error -> alFallar(error.message ?: "No se pudo generar el código") }
@@ -160,7 +171,7 @@ class SemaforoViewModel @Inject constructor(
     /** Primera carga (o recarga forzada): valida sesión y familia — lo único que de
      * verdad puede tardar un poco — y solo entonces pide los datos de la semana. */
     private fun cargar(mostrarCargando: Boolean = true) {
-        viewModelScope.launch {
+        lanzarSeguro {
             // Si ya había datos en pantalla (recarga al reentrar en la pestaña), se dejan
             // visibles hasta que lleguen los nuevos: pasar por "Cargando" vaciaba la lista y
             // con ella se perdía la posición del scroll.
@@ -169,14 +180,24 @@ class SemaforoViewModel @Inject constructor(
             val uid = authRepository.sesionActual()?.uid
             if (uid == null) {
                 _pantalla.value = SemaforoPantallaEstado.SinFamilia
-                return@launch
+                return@lanzarSeguro
             }
 
-            val membresia = familyMembershipRepository.obtenerMembresia(uid)
-            if (membresia == null) {
-                familyIdActual = null
-                _pantalla.value = SemaforoPantallaEstado.SinFamilia
-                return@launch
+            val membresia = when (val resultado = familyMembershipRepository.consultarMembresia(uid)) {
+                is ResultadoMembresia.Tiene -> resultado.membresia
+                ResultadoMembresia.NoTiene -> {
+                    familyIdActual = null
+                    _pantalla.value = SemaforoPantallaEstado.SinFamilia
+                    return@lanzarSeguro
+                }
+                ResultadoMembresia.Error -> {
+                    // Un fallo de red NO es "sin familia": si ya había datos en pantalla se
+                    // dejan como están; si no, se ofrece reintentar en vez de "Crear mi familia".
+                    if (_pantalla.value !is SemaforoPantallaEstado.ConDatos) {
+                        _pantalla.value = SemaforoPantallaEstado.ErrorDeConexion
+                    }
+                    return@lanzarSeguro
+                }
             }
             familyIdActual = membresia.familyId
 
@@ -194,7 +215,7 @@ class SemaforoViewModel @Inject constructor(
      */
     private fun cargarSemana(mostrarCargando: Boolean, caregiverIdPropio: CaregiverId? = null) {
         val familyId = familyIdActual ?: return
-        viewModelScope.launch {
+        lanzarSeguro {
             if (mostrarCargando) _pantalla.value = SemaforoPantallaEstado.Cargando
 
             val lunes = lunesActual
@@ -235,7 +256,7 @@ class SemaforoViewModel @Inject constructor(
         if (textoLimpio.isBlank()) return
         val familyId = familyIdActual ?: return
 
-        viewModelScope.launch {
+        lanzarSeguro {
             anuncioRepository.publicarAnuncio(familyId, nombreCuidadorActual, textoLimpio)
             cargarSemana(mostrarCargando = false)
         }
@@ -244,7 +265,7 @@ class SemaforoViewModel @Inject constructor(
     /** Cualquier miembro de la familia puede borrar un anuncio del tablón. */
     fun eliminarAnuncio(anuncioId: AnuncioId) {
         val familyId = familyIdActual ?: return
-        viewModelScope.launch {
+        lanzarSeguro {
             anuncioRepository.eliminarAnuncio(familyId, anuncioId)
             cargarSemana(mostrarCargando = false)
         }
@@ -254,7 +275,7 @@ class SemaforoViewModel @Inject constructor(
 
     fun guardarActividades(needs: List<CoverageNeed>, aplicarATodaLaSerie: Boolean) {
         val familyId = familyIdActual ?: return
-        viewModelScope.launch {
+        lanzarSeguro {
             editor.guardar(familyId, needs, aplicarATodaLaSerie)
             cargarSemana(mostrarCargando = false)
         }
@@ -262,7 +283,7 @@ class SemaforoViewModel @Inject constructor(
 
     fun eliminarActividad(id: CoverageNeedId, grupoRepeticionId: String?, fecha: LocalDate, aplicarATodaLaSerie: Boolean) {
         val familyId = familyIdActual ?: return
-        viewModelScope.launch {
+        lanzarSeguro {
             editor.eliminar(familyId, id, grupoRepeticionId, fecha, aplicarATodaLaSerie)
             cargarSemana(mostrarCargando = false)
         }
@@ -281,7 +302,7 @@ class SemaforoViewModel @Inject constructor(
 
     fun actualizarSerie(plantilla: CoverageNeed, nuevasFechas: List<LocalDate>) {
         val familyId = familyIdActual ?: return
-        viewModelScope.launch {
+        lanzarSeguro {
             editor.actualizarSerie(familyId, plantilla, nuevasFechas)
             cargarSemana(mostrarCargando = false)
         }

@@ -3,7 +3,7 @@ package com.encaja.app.ui.ocupaciones
 // NOTA: depende de Hilt/ViewModel (androidx.lifecycle), no compilado en este entorno.
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
+import com.encaja.app.ui.common.lanzarSeguro
 import com.encaja.app.domain.model.AvailabilityBlock
 import com.encaja.app.domain.model.CategoriasBase
 import com.encaja.app.domain.model.FamilyId
@@ -52,20 +52,20 @@ class OcupacionesViewModel @Inject constructor(
     fun recargar() = cargar()
 
     private fun cargar() {
-        viewModelScope.launch {
+        lanzarSeguro {
             _pantalla.value = OcupacionesPantallaEstado.Cargando
 
             val uid = authRepository.sesionActual()?.uid
             if (uid == null) {
                 familyIdActual = null
                 _pantalla.value = OcupacionesPantallaEstado.SinFamilia
-                return@launch
+                return@lanzarSeguro
             }
             val membresia = familyMembershipRepository.obtenerMembresia(uid)
             if (membresia == null) {
                 familyIdActual = null
                 _pantalla.value = OcupacionesPantallaEstado.SinFamilia
-                return@launch
+                return@lanzarSeguro
             }
             familyIdActual = membresia.familyId
             val familyId = membresia.familyId
@@ -114,7 +114,7 @@ class OcupacionesViewModel @Inject constructor(
     fun eliminar(ocupaciones: List<Ocupacion>) {
         val familyId = familyIdActual ?: return
         if (ocupaciones.isEmpty()) return
-        viewModelScope.launch {
+        lanzarSeguro {
             ocupaciones.flatMap { it.bloques }.forEach { bloque ->
                 availabilityRepository.eliminarBloque(familyId, bloque.caregiverId, bloque.fecha, bloque.horaInicio)
             }

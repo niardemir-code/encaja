@@ -4,6 +4,7 @@ import com.encaja.app.domain.model.CaregiverId
 import com.encaja.app.domain.model.FamilyId
 import com.encaja.app.domain.model.FamilyMembership
 import com.encaja.app.domain.repository.FamilyMembershipRepository
+import com.encaja.app.domain.repository.ResultadoMembresia
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
@@ -12,14 +13,20 @@ class FamilyMembershipRepositoryImpl @Inject constructor(
     private val firestore: FirebaseFirestore
 ) : FamilyMembershipRepository {
 
-    override suspend fun obtenerMembresia(uid: String): FamilyMembership? {
+    override suspend fun consultarMembresia(uid: String): ResultadoMembresia {
         return try {
             val doc = firestore.collection("users").document(uid).get().await()
-            val familyId = doc.getString("familyId") ?: return null
-            val caregiverId = doc.getString("caregiverId") ?: return null
-            FamilyMembership(FamilyId(familyId), CaregiverId(caregiverId))
+            val familyId = doc.getString("familyId")
+            val caregiverId = doc.getString("caregiverId")
+            if (familyId == null || caregiverId == null) {
+                ResultadoMembresia.NoTiene
+            } else {
+                ResultadoMembresia.Tiene(FamilyMembership(FamilyId(familyId), CaregiverId(caregiverId)))
+            }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (e: Exception) {
-            null
+            ResultadoMembresia.Error
         }
     }
 

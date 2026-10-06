@@ -147,6 +147,30 @@ fun SemanaScreen(
             }
         }
 
+        is SemaforoPantallaEstado.ErrorDeConexion -> {
+            Column(
+                modifier = Modifier.fillMaxSize().padding(24.dp),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    "No se pudo cargar tu familia",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = TINTA
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "Revisa la conexión a internet y vuelve a intentarlo.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TINTA_SUAVE,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(Modifier.height(16.dp))
+                Button(onClick = { viewModel.recargar() }) { Text("Reintentar") }
+            }
+        }
+
         is SemaforoPantallaEstado.SinFamilia -> {
             var codigo by remember { mutableStateOf("") }
             var error by remember { mutableStateOf<String?>(null) }

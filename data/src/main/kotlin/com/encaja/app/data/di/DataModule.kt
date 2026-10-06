@@ -126,4 +126,7 @@ abstract class RepositoryModule {
 
     @Binds
     abstract fun enlazarDispositivoRepository(impl: DispositivoRepositoryImpl): DispositivoRepository
+
+    @Binds
+    abstract fun enlazarFiltroFamiliaRepository(impl: FiltroFamiliaRepositoryImpl): FiltroFamiliaRepository
 }

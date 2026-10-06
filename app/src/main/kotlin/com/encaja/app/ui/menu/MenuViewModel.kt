@@ -3,7 +3,7 @@ package com.encaja.app.ui.menu
 // NOTA: depende de Hilt/ViewModel (androidx.lifecycle), no compilado en este entorno.
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
+import com.encaja.app.ui.common.lanzarSeguro
 import com.encaja.app.domain.model.ComidaDelDia
 import com.encaja.app.domain.model.FamilyId
 import com.encaja.app.domain.repository.AuthRepository
@@ -67,19 +67,19 @@ class MenuViewModel @Inject constructor(
     /** Primera carga (o recarga forzada): valida sesión y familia y solo entonces
      * pide los datos de la semana. */
     private fun cargar() {
-        viewModelScope.launch {
+        lanzarSeguro {
             _pantalla.value = MenuPantallaEstado.Cargando
 
             val uid = authRepository.sesionActual()?.uid
             if (uid == null) {
                 _pantalla.value = MenuPantallaEstado.SinFamilia
-                return@launch
+                return@lanzarSeguro
             }
 
             val membresia = familyMembershipRepository.obtenerMembresia(uid)
             if (membresia == null) {
                 _pantalla.value = MenuPantallaEstado.SinFamilia
-                return@launch
+                return@lanzarSeguro
             }
             familyIdActual = membresia.familyId
             cargarDatos()
@@ -90,7 +90,7 @@ class MenuViewModel @Inject constructor(
      * semana no necesita volver a comprobar sesión ni familia. */
     private fun cargarDatos() {
         val familyId = familyIdActual ?: return
-        viewModelScope.launch {
+        lanzarSeguro {
             val lunes = LocalDate.now().lunesDeEstaSemana().plusWeeks(offsetSemanas.toLong())
             val domingo = lunes.plusDays(6)
             val guardados = menuRepository.obtenerSemana(familyId, lunes, domingo)
@@ -127,7 +127,7 @@ class MenuViewModel @Inject constructor(
         }
         _pantalla.value = actual.copy(dias = actualizados)
 
-        viewModelScope.launch {
+        lanzarSeguro {
             menuRepository.guardarSemana(familyId, actualizados)
         }
     }

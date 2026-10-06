@@ -2,8 +2,9 @@ package com.encaja.app.ui.familia
 
 // NOTA: depende de Hilt/ViewModel (androidx.lifecycle), no compilado en este entorno.
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
+import com.encaja.app.ui.common.lanzarSeguro
 import com.encaja.app.domain.model.AvailabilityBlock
 import com.encaja.app.domain.model.CaregiverId
 import com.encaja.app.domain.model.CategoriaDisponibilidad
@@ -18,9 +19,11 @@ import com.encaja.app.domain.repository.CaregiverRepository
 import com.encaja.app.domain.repository.CategoriaRepository
 import com.encaja.app.domain.repository.FamilyMembershipRepository
 import com.encaja.app.domain.repository.FamilyUnitRepository
+import com.encaja.app.domain.repository.FiltroFamiliaRepository
 import com.encaja.app.domain.repository.TurnoRepository
 import com.encaja.app.domain.usecase.lunesDeEstaSemana
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,8 +44,12 @@ class FamiliaViewModel @Inject constructor(
     private val availabilityRepository: AvailabilityRepository,
     private val turnoRepository: TurnoRepository,
     private val categoriaRepository: CategoriaRepository,
-    private val familyUnitRepository: FamilyUnitRepository
+    private val familyUnitRepository: FamilyUnitRepository,
+    private val filtroFamiliaRepository: FiltroFamiliaRepository,
+    @ApplicationContext contexto: Context
 ) : ViewModel() {
+
+    private val prefs = contexto.getSharedPreferences(PREFS_FILTRO, Context.MODE_PRIVATE)
 
     private val _pantalla = MutableStateFlow<FamiliaPantallaEstado>(FamiliaPantallaEstado.Cargando)
     val pantalla: StateFlow<FamiliaPantallaEstado> = _pantalla.asStateFlow()
@@ -56,25 +63,88 @@ class FamiliaViewModel @Inject constructor(
     private var lunesActual: LocalDate = LocalDate.now().lunesDeEstaSemana()
 
     /**
-     * Qué personas y unidades familiares (por el id de cada una, como texto) se han
-     * ocultado de la cuadrícula, por semana (clave = lunes de esa semana). Es solo una
-     * preferencia de visualización — no se guarda en ningún sitio, así que se pierde al
-     * salir de la pantalla — pero cada semana recuerda la suya propia mientras se
-     * navega entre ellas en la misma visita.
+     * Qué personas y unidades familiares (por el id de cada una, como texto) se ocultan de
+     * la cuadrícula, por semana (clave = lunes de esa semana). Hay dos niveles:
+     *  - Personal: se guarda en este móvil y se mantiene hasta que se cambie, también al
+     *    cerrar la app; cada semana tiene el suyo.
+     *  - Compartido ("aplicar a todos los usuarios"): se guarda en Firestore para esa
+     *    semana y lo ven todos los de la familia; mientras exista, manda sobre el personal.
      */
-    private val ocultosPorSemana = mutableMapOf<LocalDate, MutableSet<String>>()
+    private var ocultosLocales: Set<String> = emptySet()
+    private var ocultosCompartidos: Set<String>? = null
 
     private val _ocultos = MutableStateFlow<Set<String>>(emptySet())
-    /** Ids (persona o unidad) ocultos en la semana que se está viendo ahora. */
+    /** Ids (persona o unidad) ocultos en la semana que se está viendo ahora (ya con el nivel que manda). */
     val ocultos: StateFlow<Set<String>> = _ocultos.asStateFlow()
+
+    private val _filtroCompartido = MutableStateFlow(false)
+    /** True si la semana que se está viendo tiene un filtro compartido con todos los usuarios. */
+    val filtroCompartido: StateFlow<Boolean> = _filtroCompartido.asStateFlow()
 
     init { cargar() }
 
-    /** Muestra u oculta a una persona o unidad de la cuadrícula, solo para la semana actual. */
+    private fun claveLocal(lunes: LocalDate) = "ocultos_${familyIdActual?.value}_$lunes"
+
+    private fun leerLocal(lunes: LocalDate): Set<String> =
+        prefs.getStringSet(claveLocal(lunes), emptySet()).orEmpty().toSet()
+
+    private fun guardarLocal(lunes: LocalDate, ids: Set<String>) {
+        prefs.edit().putStringSet(claveLocal(lunes), ids).apply()
+    }
+
+    private fun publicarOcultos() {
+        _ocultos.value = ocultosCompartidos ?: ocultosLocales
+        _filtroCompartido.value = ocultosCompartidos != null
+    }
+
+    private fun Set<String>.alternando(id: String): Set<String> = if (id in this) this - id else this + id
+
+    /** Muestra u oculta a una persona o unidad de la cuadrícula, para la semana actual.
+     * Si esa semana tiene filtro compartido, el cambio lo ven todos los usuarios. */
     fun alternarVisibilidad(idTexto: String) {
-        val ocultosDeEstaSemana = ocultosPorSemana.getOrPut(lunesActual) { mutableSetOf() }
-        if (!ocultosDeEstaSemana.remove(idTexto)) ocultosDeEstaSemana.add(idTexto)
-        _ocultos.value = ocultosDeEstaSemana.toSet()
+        val lunes = lunesActual
+        val familyId = familyIdActual
+        val compartido = ocultosCompartidos
+        if (compartido != null && familyId != null) {
+            val nuevo = compartido.alternando(idTexto)
+            ocultosCompartidos = nuevo
+            publicarOcultos()
+            lanzarSeguro { runCatching { filtroFamiliaRepository.guardar(familyId, lunes, nuevo) } }
+        } else {
+            val nuevo = ocultosLocales.alternando(idTexto)
+            ocultosLocales = nuevo
+            guardarLocal(lunes, nuevo)
+            publicarOcultos()
+        }
+    }
+
+    /**
+     * Activa o desactiva "aplicar a todos los usuarios" para la semana actual. Al activarlo,
+     * la selección que ve esta persona pasa a ser la de todos; al desactivarlo, esa selección
+     * se queda como la suya personal y los demás vuelven a la propia.
+     */
+    fun fijarFiltroCompartido(activar: Boolean) {
+        val lunes = lunesActual
+        val familyId = familyIdActual ?: return
+        if (activar) {
+            if (ocultosCompartidos != null) return
+            ocultosCompartidos = ocultosLocales
+            publicarOcultos()
+            val enviado = ocultosLocales
+            lanzarSeguro {
+                runCatching { filtroFamiliaRepository.guardar(familyId, lunes, enviado) }.onFailure {
+                    // Sin conexión: se queda como estaba (solo personal).
+                    if (lunesActual == lunes) { ocultosCompartidos = null; publicarOcultos() }
+                }
+            }
+        } else {
+            val actual = ocultosCompartidos ?: return
+            ocultosLocales = actual
+            guardarLocal(lunes, actual)
+            ocultosCompartidos = null
+            publicarOcultos()
+            lanzarSeguro { runCatching { filtroFamiliaRepository.quitar(familyId, lunes) } }
+        }
     }
 
     /** Recarga completa: vuelve a comprobar sesión y familia (por si han cambiado). Se
@@ -113,12 +183,12 @@ class FamiliaViewModel @Inject constructor(
     /** Primera carga (o recarga forzada): valida sesión y familia — lo único que de
      * verdad puede tardar un poco — y solo entonces pide los datos de la semana. */
     private fun cargar() {
-        viewModelScope.launch {
+        lanzarSeguro {
             _pantalla.value = FamiliaPantallaEstado.Cargando
             val uid = authRepository.sesionActual()?.uid
-            if (uid == null) { _pantalla.value = FamiliaPantallaEstado.SinFamilia; return@launch }
+            if (uid == null) { _pantalla.value = FamiliaPantallaEstado.SinFamilia; return@lanzarSeguro }
             val membresia = familyMembershipRepository.obtenerMembresia(uid)
-            if (membresia == null) { familyIdActual = null; _pantalla.value = FamiliaPantallaEstado.SinFamilia; return@launch }
+            if (membresia == null) { familyIdActual = null; _pantalla.value = FamiliaPantallaEstado.SinFamilia; return@lanzarSeguro }
             familyIdActual = membresia.familyId
             cargarDatos(mostrarCargando = false)
         }
@@ -136,13 +206,12 @@ class FamiliaViewModel @Inject constructor(
      */
     private fun cargarDatos(mostrarCargando: Boolean) {
         val familyId = familyIdActual ?: return
-        viewModelScope.launch {
+        lanzarSeguro {
             if (mostrarCargando) _pantalla.value = FamiliaPantallaEstado.Cargando
 
             val lunes = LocalDate.now().lunesDeEstaSemana().plusWeeks(offsetSemanas.toLong())
             val domingo = lunes.plusDays(6)
             lunesActual = lunes
-            _ocultos.value = ocultosPorSemana[lunes].orEmpty()
 
             coroutineScope {
                 val caregiversDeferred = async { caregiverRepository.obtenerCuidadores(familyId) }
@@ -150,12 +219,17 @@ class FamiliaViewModel @Inject constructor(
                 val turnosDeferred = async { turnoRepository.obtenerTurnos(familyId) }
                 val categoriasDeferred = async { categoriaRepository.obtenerCategorias(familyId) }
                 val unidadesDeferred = async { familyUnitRepository.obtenerUnidades(familyId) }
+                val compartidoDeferred = async { runCatching { filtroFamiliaRepository.obtener(familyId, lunes) }.getOrNull() }
 
                 val mapper = FamiliaUiStateMapper(caregiversDeferred.await(), disponibilidadDeferred.await(), unidadesDeferred.await())
                 val turnos = turnosDeferred.await().sortedBy { it.horaInicio }
                 val guardadas = categoriasDeferred.await()
                 val categorias = CategoriasBase.combinar(guardadas)
                 val eliminadas = CategoriasBase.eliminadas(guardadas)
+
+                ocultosLocales = leerLocal(lunes)
+                ocultosCompartidos = compartidoDeferred.await()
+                publicarOcultos()
 
                 _pantalla.value = FamiliaPantallaEstado.ConDatos(
                     mapper.construir(lunes, esSemanaActual = offsetSemanas == 0)
@@ -189,7 +263,7 @@ class FamiliaViewModel @Inject constructor(
         // editando una ocupación que ya era de una serie, sigue en ella.
         val grupo = grupoRepeticionId ?: if (todas.size > 1) java.util.UUID.randomUUID().toString() else null
 
-        viewModelScope.launch {
+        lanzarSeguro {
             val existentes = availabilityRepository.obtenerDisponibilidad(familyId, todas.first(), todas.last())
                 .filter { it.caregiverId in caregiverIds && it.fecha in todas && esDeLaCategoria(it, categoria) }
             existentes.forEach { availabilityRepository.eliminarBloque(familyId, it.caregiverId, it.fecha, it.horaInicio) }
@@ -245,7 +319,7 @@ class FamiliaViewModel @Inject constructor(
         val familyId = familyIdActual ?: return
         if (caregiverIds.isEmpty() || ocurrencias.isEmpty()) return
         val grupo = grupoRepeticionId ?: java.util.UUID.randomUUID().toString()
-        viewModelScope.launch {
+        lanzarSeguro {
             val fechas = ocurrencias.map { it.fecha }.distinct()
             ocurrencias.forEach { availabilityRepository.eliminarBloque(familyId, it.caregiverId, it.fecha, it.horaInicio) }
             caregiverIds.forEach { caregiverId ->
@@ -268,7 +342,7 @@ class FamiliaViewModel @Inject constructor(
     fun guardarBloques(bloques: List<AvailabilityBlock>) {
         val familyId = familyIdActual ?: return
         if (bloques.isEmpty()) return
-        viewModelScope.launch {
+        lanzarSeguro {
             bloques.forEach { availabilityRepository.guardarBloque(familyId, it) }
             cargarDatos(mostrarCargando = false)
         }
@@ -283,7 +357,7 @@ class FamiliaViewModel @Inject constructor(
      */
     fun eliminarBloqueDe(caregiverIds: List<CaregiverId>, bloque: AvailabilityBlock) {
         val familyId = familyIdActual ?: return
-        viewModelScope.launch {
+        lanzarSeguro {
             val existentes = availabilityRepository.obtenerDisponibilidad(familyId, bloque.fecha, bloque.fecha)
                 .filter { it.caregiverId in caregiverIds && it.mismaOcupacionQue(bloque) }
             existentes.forEach { availabilityRepository.eliminarBloque(familyId, it.caregiverId, it.fecha, it.horaInicio) }
@@ -296,7 +370,7 @@ class FamiliaViewModel @Inject constructor(
         val familyId = familyIdActual ?: return
         val nombreLimpio = nombre.trim()
         if (nombreLimpio.isBlank()) return
-        viewModelScope.launch {
+        lanzarSeguro {
             turnoRepository.guardarTurno(
                 familyId, TurnoTrabajo(TurnoId(UUID.randomUUID().toString()), nombreLimpio, inicio, fin, categoriaId)
             )
@@ -313,7 +387,7 @@ class FamiliaViewModel @Inject constructor(
         val nombreLimpio = categoria.nombre.trim()
         if (nombreLimpio.isBlank()) return
         val conId = if (categoria.id.value.isBlank()) categoria.copy(id = CategoriaId(UUID.randomUUID().toString())) else categoria
-        viewModelScope.launch {
+        lanzarSeguro {
             categoriaRepository.guardarCategoria(familyId, conId.copy(nombre = nombreLimpio))
             cargarDatos(mostrarCargando = false)
         }
@@ -327,7 +401,7 @@ class FamiliaViewModel @Inject constructor(
      */
     fun eliminarCategoria(categoria: CategoriaDisponibilidad) {
         val familyId = familyIdActual ?: return
-        viewModelScope.launch {
+        lanzarSeguro {
             if (categoria.esBase) {
                 categoriaRepository.guardarCategoria(familyId, categoria.copy(eliminada = true))
             } else {
@@ -340,7 +414,7 @@ class FamiliaViewModel @Inject constructor(
     /** Vuelve a mostrar una categoría de serie que se había borrado, con sus valores de serie. */
     fun recuperarCategoria(categoria: CategoriaDisponibilidad) {
         val familyId = familyIdActual ?: return
-        viewModelScope.launch {
+        lanzarSeguro {
             categoriaRepository.eliminarCategoria(familyId, categoria.id)
             cargarDatos(mostrarCargando = false)
         }
@@ -349,9 +423,13 @@ class FamiliaViewModel @Inject constructor(
     /** Borra un turno de la lista. Los días ya marcados con ese turno no cambian. */
     fun eliminarTurno(turnoId: TurnoId) {
         val familyId = familyIdActual ?: return
-        viewModelScope.launch {
+        lanzarSeguro {
             turnoRepository.eliminarTurno(familyId, turnoId)
             cargarDatos(mostrarCargando = false)
         }
+    }
+
+    private companion object {
+        const val PREFS_FILTRO = "familia_filtro"
     }
 }

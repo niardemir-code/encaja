@@ -139,6 +139,7 @@ private fun ContenidoFamilia(estado: FamiliaUiState, viewModel: FamiliaViewModel
     // Casilla abierta: id (de persona o de unidad familiar, como texto) y fecha.
     var celdaEnEdicion by remember { mutableStateOf<Pair<String, LocalDate>?>(null) }
     val ocultos by viewModel.ocultos.collectAsState()
+    val filtroCompartido by viewModel.filtroCompartido.collectAsState()
     val cuidadoresVisibles = remember(estado.cuidadores, ocultos) {
         estado.cuidadores.filter { it.caregiver.id.value !in ocultos }
     }
@@ -167,6 +168,8 @@ private fun ContenidoFamilia(estado: FamiliaUiState, viewModel: FamiliaViewModel
             cuidadores = estado.cuidadores.map { it.caregiver },
             unidades = estado.unidades.map { it.unidad },
             ocultos = ocultos,
+            compartido = filtroCompartido,
+            onCompartido = { viewModel.fijarFiltroCompartido(it) },
             onAlternar = { viewModel.alternarVisibilidad(it) },
             onCerrar = { selectorAbierto = false }
         )
@@ -650,6 +653,8 @@ private fun DialogoMostrar(
     cuidadores: List<Caregiver>,
     unidades: List<FamilyUnit>,
     ocultos: Set<String>,
+    compartido: Boolean,
+    onCompartido: (Boolean) -> Unit,
     onAlternar: (String) -> Unit,
     onCerrar: () -> Unit
 ) {
@@ -659,10 +664,22 @@ private fun DialogoMostrar(
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 Text(
-                    "Solo para esta semana; las demás semanas tienen su propia selección.",
+                    if (compartido) "Selección compartida: la ven todos los usuarios en esta semana, y cualquier cambio lo verán también."
+                    else "Solo para ti y para esta semana; se mantiene hasta que la cambies, y cada semana tiene la suya.",
                     style = MaterialTheme.typography.bodySmall,
                     color = TINTA_SUAVE
                 )
+                Spacer(Modifier.height(4.dp))
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        "Aplicar a todos los usuarios",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = TINTA,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Switch(checked = compartido, onCheckedChange = onCompartido)
+                }
                 Spacer(Modifier.height(8.dp))
                 if (cuidadores.isNotEmpty()) {
                     Text("Personas", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = INDIGO)
