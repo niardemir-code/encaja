@@ -252,6 +252,22 @@ class SemaforoViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Refresca solo la lista de cuidadores y de responsables (personas + unidades), sin tocar la
+     * semana en pantalla. Se llama al abrir «Invitar a alguien» para que un cuidador recién
+     * creado en Ajustes aparezca sin tener que cerrar y abrir la app.
+     */
+    fun recargarCuidadores() {
+        val familyId = familyIdActual ?: return
+        lanzarSeguro(avisar = false) {
+            val caregivers = caregiverRepository.obtenerCuidadores(familyId)
+            val unidades = familyUnitRepository.obtenerUnidades(familyId)
+            _cuidadores.value = caregivers
+            _responsables.value = caregivers.map { Responsable.Persona(it) } +
+                unidades.map { Responsable.Unidad(it) }
+        }
+    }
+
     /** Publica un anuncio nuevo en el tablón, firmado con el nombre del cuidador actual. */
     fun publicarAnuncio(texto: String) {
         val textoLimpio = texto.trim()

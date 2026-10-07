@@ -571,7 +571,11 @@ fun BotonInvitar(viewModel: SemaforoViewModel) {
     val cuidadores by viewModel.cuidadores.collectAsState()
     val clipboard = LocalClipboardManager.current
 
-    BotonBarraSuperior(Icons.Default.PersonAdd, "Invitar a alguien") { mostrarSelector = true }
+    BotonBarraSuperior(Icons.Default.PersonAdd, "Invitar a alguien") {
+        // Lista al día: puede haberse creado un cuidador desde Ajustes desde la última carga.
+        viewModel.recargarCuidadores()
+        mostrarSelector = true
+    }
 
     if (mostrarSelector) {
         AlertDialog(
