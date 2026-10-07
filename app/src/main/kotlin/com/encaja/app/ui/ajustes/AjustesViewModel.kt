@@ -33,7 +33,9 @@ class AjustesViewModel @Inject constructor(
     private val caregiverRepository: CaregiverRepository,
     private val familyUnitRepository: FamilyUnitRepository,
     private val cambiosDeMembresia: com.encaja.app.ui.CambiosDeMembresia,
-    private val cuentaRepository: com.encaja.app.domain.repository.CuentaRepository
+    private val cuentaRepository: com.encaja.app.domain.repository.CuentaRepository,
+    private val coverageNeedRepository: com.encaja.app.domain.repository.CoverageNeedRepository,
+    private val assignmentRepository: com.encaja.app.domain.repository.AssignmentRepository
 ) : ViewModel() {
 
     private val _pantalla = MutableStateFlow<AjustesPantallaEstado>(AjustesPantallaEstado.Cargando)
@@ -154,6 +156,23 @@ class AjustesViewModel @Inject constructor(
     fun eliminarCuidador(caregiverId: CaregiverId) {
         val familyId = familyIdActual ?: return
         lanzarSeguro {
+            // 1) Si tenía una cuenta vinculada, se desvincula primero: así deja de tener acceso
+            //    a la familia aunque conserve su sesión abierta en otro dispositivo. Si no la
+            //    tenía (o quien borra no es administrador) la llamada falla y se sigue igual.
+            cuentaRepository.desvincularCuenta(caregiverId)
+
+            // 2) Las unidades familiares en las que figuraba se eliminan por completo.
+            val unidadesAfectadas = familyUnitRepository.obtenerUnidades(familyId)
+                .filter { caregiverId in it.miembros }
+            unidadesAfectadas.forEach { familyUnitRepository.eliminarUnidad(familyId, it.id) }
+
+            // 3) Las asignaciones a esa persona (y a esas unidades) quedan en blanco.
+            limpiarAsignaciones(
+                familyId,
+                setOf(caregiverId.value) + unidadesAfectadas.map { it.id.value },
+                setOf(caregiverId)
+            )
+
             caregiverRepository.eliminarCuidador(familyId, caregiverId)
             cargar()
         }
@@ -200,7 +219,45 @@ class AjustesViewModel @Inject constructor(
         val familyId = familyIdActual ?: return
         lanzarSeguro {
             familyUnitRepository.eliminarUnidad(familyId, unidadId)
+            limpiarAsignaciones(familyId, setOf(unidadId.value), emptySet())
             cargar()
         }
+    }
+
+    /**
+     * Deja en blanco las asignaciones que apuntaban a [idsAsignados] (cuidadores y/o unidades ya
+     * eliminados): quien lleva / quien recoge de las actividades y, para los cuidadores en
+     * [cuidadores], el patrón semanal y las anulaciones por fecha de Familia.
+     */
+    private suspend fun limpiarAsignaciones(
+        familyId: FamilyId,
+        idsAsignados: Set<String>,
+        cuidadores: Set<CaregiverId>
+    ) {
+        val afectadas = coverageNeedRepository.obtenerTodosLosNeeds(familyId).filter {
+            it.quienLlevaId in idsAsignados || it.quienRecogeId in idsAsignados
+        }
+        if (afectadas.isNotEmpty()) {
+            coverageNeedRepository.guardarNeeds(
+                familyId,
+                afectadas.map {
+                    it.copy(
+                        quienLlevaId = it.quienLlevaId.takeUnless { id -> id in idsAsignados },
+                        quienRecogeId = it.quienRecogeId.takeUnless { id -> id in idsAsignados }
+                    )
+                }
+            )
+        }
+        if (cuidadores.isEmpty()) return
+
+        assignmentRepository.obtenerPatrones(familyId)
+            .filter { it.caregiverId in cuidadores }
+            .forEach { assignmentRepository.eliminarPatron(familyId, it.diaSemana) }
+
+        val hoy = java.time.LocalDate.now()
+        assignmentRepository.obtenerAnulaciones(familyId, hoy.minusMonths(1), hoy.plusYears(2))
+            .filterValues { it in cuidadores }
+            .keys
+            .forEach { assignmentRepository.eliminarAnulacion(familyId, it) }
     }
 }

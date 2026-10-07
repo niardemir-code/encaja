@@ -1,0 +1,50 @@
+rules_version = '2';
+
+// Copia de las reglas que había publicadas antes de añadir los roles (para poder volver atrás).
+// No se despliega: firebase.json apunta a firestore.rules.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function autenticado() {
+      return request.auth != null;
+    }
+
+    function miMembresia() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function esMiembroDeFamilia(familyId) {
+      return autenticado()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && miMembresia().familyId == familyId;
+    }
+
+    match /users/{uid} {
+      allow read, write: if autenticado() && request.auth.uid == uid;
+
+      match /tokens/{token} {
+        allow read, write: if autenticado() && request.auth.uid == uid;
+      }
+    }
+
+    match /invites/{codigo} {
+      allow read: if autenticado();
+
+      allow create: if autenticado()
+        && esMiembroDeFamilia(request.resource.data.familyId)
+        && request.resource.data.usado == false;
+
+      allow update: if autenticado()
+        && resource.data.usado == false
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['usado'])
+        && request.resource.data.usado == true;
+
+      allow delete: if false;
+    }
+
+    match /families/{familyId}/{documento=**} {
+      allow read, write: if esMiembroDeFamilia(familyId);
+    }
+  }
+}

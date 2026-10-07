@@ -147,8 +147,10 @@ class SemaforoViewModel @Inject constructor(
                     caregiverId, nombreLimpio, apellido1.trim(), apellido2.trim(),
                     com.encaja.app.domain.model.CaregiverRole.ADMIN
                 )
-                caregiverRepository.guardarCuidadores(familyId, listOf(yo))
+                // Primero el vínculo (users/{uid}) y después la ficha: las reglas de Firestore
+                // solo dejan escribir en una familia a quien ya pertenece a ella.
                 familyMembershipRepository.vincularAFamilia(uid, FamilyMembership(familyId, caregiverId))
+                caregiverRepository.guardarCuidadores(familyId, listOf(yo))
                 cambiosDeMembresia.avisar()
                 cargar()
             } catch (e: Exception) {

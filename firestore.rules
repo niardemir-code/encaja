@@ -1,0 +1,130 @@
+rules_version = '2';
+
+// Reglas de seguridad de Encaja.
+//
+// Modelo de datos:
+//   users/{uid}                          -> { familyId, caregiverId }
+//   users/{uid}/tokens/{token}           -> tokens de notificaciones push
+//   invites/{codigo}                     -> { familyId, caregiverId, usado, caducaEn }
+//   families/{familyId}/caregivers/{id}  -> ficha del cuidador, con su "rol"
+//   families/{familyId}/caregiverLinks/{caregiverId} -> { uid } cuenta vinculada
+//   families/{familyId}/{children, familyUnits, coverageNeeds, availabilityBlocks,
+//                       categorias, patrones, anulaciones, turnos, menus, compra,
+//                       anuncios, filtrosFamilia}/...
+//
+// Roles (campo "rol" de la ficha del cuidador): ADMIN, CUIDADOR, SOLO_LECTURA.
+//   - SOLO_LECTURA: puede leer todo lo de su familia, pero no escribir.
+//   - CUIDADOR: lee y escribe los datos de la familia, pero no gestiona fichas de otros.
+//   - ADMIN: además gestiona las fichas de cuidadores y puede borrarlas.
+//
+// LIMITACIÓN CONOCIDA: cada usuario escribe su propio users/{uid}, y desde ahí se
+// determina a qué familia pertenece. Quien conociera el identificador de otra familia
+// podría escribirlo en su documento. Cerrarlo del todo exige que el canje de invitaciones
+// y el vínculo se hagan en una Cloud Function (hoja de ruta, fase E).
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function autenticado() {
+      return request.auth != null;
+    }
+
+    function miMembresia() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function esMiembroDeFamilia(familyId) {
+      return autenticado()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && miMembresia().familyId == familyId;
+    }
+
+    // Ficha del cuidador con el que estoy vinculado a la familia.
+    function rutaMiFicha(familyId) {
+      return /databases/$(database)/documents/families/$(familyId)/caregivers/$(miMembresia().caregiverId);
+    }
+
+    function tengoFicha(familyId) {
+      return exists(rutaMiFicha(familyId));
+    }
+
+    function soyAdmin(familyId) {
+      return esMiembroDeFamilia(familyId)
+        && tengoFicha(familyId)
+        && get(rutaMiFicha(familyId)).data.rol == 'ADMIN';
+    }
+
+    // Miembro con permiso de escritura: todos salvo SOLO_LECTURA. Si todavía no existe
+    // mi ficha (al crear una familia nueva, justo después de vincularme) se permite para
+    // poder crearla; el resto de reglas limitan qué puede hacerse en ese momento.
+    function puedoEscribir(familyId) {
+      return esMiembroDeFamilia(familyId)
+        && (!tengoFicha(familyId) || get(rutaMiFicha(familyId)).data.rol != 'SOLO_LECTURA');
+    }
+
+    // --- users/{uid}: la membresía de cada usuario ---
+    match /users/{uid} {
+      allow read, write: if autenticado() && request.auth.uid == uid;
+
+      match /tokens/{token} {
+        allow read, write: if autenticado() && request.auth.uid == uid;
+      }
+    }
+
+    // --- invites/{codigo}: códigos de invitación de un solo uso ---
+    match /invites/{codigo} {
+      // Hace falta poder leer un código para canjearlo, incluso antes de
+      // pertenecer a esa familia.
+      allow read: if autenticado();
+
+      // Solo un miembro con permiso de escritura puede generar invitaciones,
+      // y siempre sin usar todavía.
+      allow create: if autenticado()
+        && puedoEscribir(request.resource.data.familyId)
+        && request.resource.data.usado == false;
+
+      // Canjear un código solo puede cambiar "usado" de false a true.
+      allow update: if autenticado()
+        && resource.data.usado == false
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['usado'])
+        && request.resource.data.usado == true;
+
+      allow delete: if false;
+    }
+
+    // --- Fichas de cuidadores: el rol solo lo cambia un ADMIN ---
+    match /families/{familyId}/caregivers/{caregiverId} {
+      allow read: if esMiembroDeFamilia(familyId);
+
+      // Crear/editar: un ADMIN; o, al crear la familia, mi propia ficha como ADMIN.
+      allow create: if soyAdmin(familyId)
+        || (esMiembroDeFamilia(familyId)
+            && !tengoFicha(familyId)
+            && caregiverId == miMembresia().caregiverId
+            && request.resource.data.rol == 'ADMIN');
+
+      // Editar: un ADMIN, o yo mismo sin tocar mi rol.
+      allow update: if soyAdmin(familyId)
+        || (puedoEscribir(familyId)
+            && caregiverId == miMembresia().caregiverId
+            && request.resource.data.rol == resource.data.rol);
+
+      allow delete: if soyAdmin(familyId);
+    }
+
+    // --- Enlaces cuidador-cuenta: cada uno crea el suyo; un ADMIN gestiona los demás ---
+    match /families/{familyId}/caregiverLinks/{caregiverId} {
+      allow read: if esMiembroDeFamilia(familyId);
+      allow write: if soyAdmin(familyId)
+        || (esMiembroDeFamilia(familyId) && caregiverId == miMembresia().caregiverId);
+    }
+
+    // --- Resto de datos de la familia (niños, actividades, compra, menús...) ---
+    match /families/{familyId}/{coleccion}/{documento=**} {
+      allow read: if esMiembroDeFamilia(familyId);
+      allow write: if coleccion != 'caregivers'
+        && coleccion != 'caregiverLinks'
+        && puedoEscribir(familyId);
+    }
+  }
+}
