@@ -1,5 +1,6 @@
 package com.encaja.app.data.repository
 
+import com.encaja.app.data.firestore.getConFallback
 import com.encaja.app.data.firestore.ComidaDelDiaFirestoreMapper
 import com.encaja.app.data.local.ComidaDelDiaEntity
 import com.encaja.app.data.local.MenuDao
@@ -24,8 +25,7 @@ class MenuRepositoryImpl @Inject constructor(
             val snapshot = familia(familyId).collection("menus")
                 .whereGreaterThanOrEqualTo(FieldPath.documentId(), desde.toString())
                 .whereLessThanOrEqualTo(FieldPath.documentId(), hasta.toString())
-                .get()
-                .await()
+                .getConFallback()
 
             val dias = snapshot.documents.map { doc ->
                 ComidaDelDiaFirestoreMapper.desdeDocumento(LocalDate.parse(doc.id), doc.data ?: emptyMap())

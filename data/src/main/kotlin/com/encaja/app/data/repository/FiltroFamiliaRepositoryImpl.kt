@@ -1,5 +1,6 @@
 package com.encaja.app.data.repository
 
+import com.encaja.app.data.firestore.getConFallback
 import com.encaja.app.domain.model.FamilyId
 import com.encaja.app.domain.repository.FiltroFamiliaRepository
 import com.google.firebase.firestore.FirebaseFirestore
@@ -18,7 +19,7 @@ class FiltroFamiliaRepositoryImpl @Inject constructor(
             .collection("filtrosFamilia").document(lunes.toString())
 
     override suspend fun obtener(familyId: FamilyId, lunes: LocalDate): Set<String>? {
-        val snapshot = doc(familyId, lunes).get().await()
+        val snapshot = doc(familyId, lunes).getConFallback()
         if (!snapshot.exists()) return null
         val lista = snapshot.get("ocultos") as? List<*> ?: return emptySet()
         return lista.filterIsInstance<String>().toSet()

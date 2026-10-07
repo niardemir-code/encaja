@@ -352,8 +352,8 @@ private fun SeccionAhorroDeBateria() {
                 } else {
                     "El ahorro de batería del móvil puede impedir que lleguen los avisos cuando " +
                         "Encaja no está abierta en pantalla. Para evitarlo, quita las restricciones de batería: " +
-                        "se abrirá la lista de ajustes de batería; elige «Todas las aplicaciones», toca Encaja " +
-                        "y marca «No optimizar» (según el móvil, puede llamarse «Sin restricciones»)."
+                        "se abrirá la ficha de Encaja en los ajustes: entra en «Batería» y elige «Sin restricciones» " +
+                        "(según el móvil, puede llamarse «No optimizar»)."
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant

@@ -43,20 +43,25 @@ object AvisosBateria {
     }
 
     /**
-     * Abre la lista de ajustes de optimización de batería del sistema, donde el usuario marca
-     * Encaja como "No optimizar". No usa la petición directa (ACTION_REQUEST_IGNORE_BATTERY_
-     * OPTIMIZATIONS) porque exige un permiso que Google Play restringe. Si el móvil no tiene esa
-     * pantalla, abre la ficha de la app en los ajustes.
+     * Abre la ficha de Encaja en los ajustes del sistema, donde el usuario entra en «Batería» y
+     * elige «Sin restricciones» (o «No optimizar»). La lista general de optimización de batería
+     * (ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS) no sirve de primera opción: en muchos móviles
+     * solo muestra las apps ya exentas y Encaja no aparece. Tampoco se usa la petición directa
+     * (ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS), que exige un permiso que Google Play restringe.
      */
     fun abrirQuitarRestricciones(contexto: Context) {
         try {
-            contexto.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+            contexto.startActivity(
+                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                    data = Uri.fromParts("package", contexto.packageName, null)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+            )
         } catch (e: Exception) {
             try {
                 contexto.startActivity(
-                    Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                        data = Uri.fromParts("package", contexto.packageName, null)
-                    }
+                    Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 )
             } catch (e2: Exception) {
                 // Sin pantalla de ajustes disponible: no se puede hacer nada más.
@@ -79,8 +84,8 @@ fun DialogoAvisosBateria(onQuitar: () -> Unit, onAhoraNo: () -> Unit, onMasInfo:
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "Se abrirá la lista de ajustes de batería: elige «Todas las aplicaciones», toca Encaja " +
-                        "y marca «No optimizar» (según el móvil, puede llamarse «Sin restricciones»).",
+                    "Se abrirá la ficha de Encaja en los ajustes: entra en «Batería» y elige «Sin restricciones» " +
+                        "(según el móvil, puede llamarse «No optimizar» o «Permitir actividad en segundo plano»).",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

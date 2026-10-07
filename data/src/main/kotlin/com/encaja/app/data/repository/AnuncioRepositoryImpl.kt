@@ -1,5 +1,6 @@
 package com.encaja.app.data.repository
 
+import com.encaja.app.data.firestore.getConFallback
 import com.encaja.app.data.firestore.AnuncioFirestoreMapper
 import com.encaja.app.data.local.AnuncioDao
 import com.encaja.app.data.local.AnuncioEntity
@@ -23,7 +24,7 @@ class AnuncioRepositoryImpl @Inject constructor(
 
     override suspend fun obtenerAnuncios(familyId: FamilyId): List<Anuncio> {
         return try {
-            val snapshot = coleccion(familyId).get().await()
+            val snapshot = coleccion(familyId).getConFallback()
             val anuncios = snapshot.documents.mapNotNull { doc ->
                 AnuncioFirestoreMapper.desdeDocumento(doc.id, doc.data ?: emptyMap())
             }

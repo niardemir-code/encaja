@@ -1,5 +1,6 @@
 package com.encaja.app.data.repository
 
+import com.encaja.app.data.firestore.getConFallback
 import com.encaja.app.data.firestore.CoverageNeedFirestoreMapper
 import com.encaja.app.data.local.CoverageNeedDao
 import com.encaja.app.data.local.CoverageNeedEntity
@@ -24,8 +25,7 @@ class CoverageNeedRepositoryImpl @Inject constructor(
                 .collection("coverageNeeds")
                 .whereGreaterThanOrEqualTo("fecha", desde.toString())
                 .whereLessThanOrEqualTo("fecha", hasta.toString())
-                .get()
-                .await()
+                .getConFallback()
 
             val needs = snapshot.documents.mapNotNull { doc ->
                 CoverageNeedFirestoreMapper.desdeDocumento(doc.id, doc.data ?: emptyMap())
@@ -75,8 +75,7 @@ class CoverageNeedRepositoryImpl @Inject constructor(
             val snapshot = firestore
                 .collection("families").document(familyId.value)
                 .collection("coverageNeeds")
-                .get()
-                .await()
+                .getConFallback()
 
             val needs = snapshot.documents.mapNotNull { doc ->
                 CoverageNeedFirestoreMapper.desdeDocumento(doc.id, doc.data ?: emptyMap())
@@ -95,8 +94,7 @@ class CoverageNeedRepositoryImpl @Inject constructor(
                 .collection("families").document(familyId.value)
                 .collection("coverageNeeds")
                 .whereEqualTo("grupoRepeticionId", grupoRepeticionId)
-                .get()
-                .await()
+                .getConFallback()
 
             val needs = snapshot.documents.mapNotNull { doc ->
                 CoverageNeedFirestoreMapper.desdeDocumento(doc.id, doc.data ?: emptyMap())

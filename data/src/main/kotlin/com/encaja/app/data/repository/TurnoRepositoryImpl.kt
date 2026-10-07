@@ -1,5 +1,6 @@
 package com.encaja.app.data.repository
 
+import com.encaja.app.data.firestore.getConFallback
 import com.encaja.app.data.firestore.TurnoTrabajoFirestoreMapper
 import com.encaja.app.data.local.TurnoDao
 import com.encaja.app.data.local.TurnoTrabajoEntity
@@ -21,7 +22,7 @@ class TurnoRepositoryImpl @Inject constructor(
 
     override suspend fun obtenerTurnos(familyId: FamilyId): List<TurnoTrabajo> {
         return try {
-            val snapshot = coleccion(familyId).get().await()
+            val snapshot = coleccion(familyId).getConFallback()
             val turnos = snapshot.documents.mapNotNull { doc ->
                 TurnoTrabajoFirestoreMapper.desdeDocumento(doc.id, doc.data ?: emptyMap())
             }

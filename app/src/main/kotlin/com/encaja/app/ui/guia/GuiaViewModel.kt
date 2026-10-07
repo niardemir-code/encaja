@@ -15,6 +15,7 @@ import com.encaja.app.domain.repository.CaregiverRepository
 import com.encaja.app.domain.repository.ChildRepository
 import com.encaja.app.domain.repository.CoverageNeedRepository
 import com.encaja.app.domain.repository.FamilyMembershipRepository
+import com.encaja.app.domain.repository.ResultadoMembresia
 import com.encaja.app.domain.repository.FamilyUnitRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -85,13 +86,20 @@ class GuiaViewModel @Inject constructor(
                 return@lanzarSeguro
             }
 
-            val membresia = familyMembershipRepository.obtenerMembresia(uid)
-            if (membresia == null) {
+            val familyId = when (val resultado = familyMembershipRepository.consultarMembresia(uid)) {
+                is ResultadoMembresia.Tiene -> resultado.membresia.familyId
+                is ResultadoMembresia.NoTiene -> null
+                is ResultadoMembresia.Error -> familyIdActual ?: run {
+                    _pantalla.value = GuiaPantallaEstado.ErrorDeConexion
+                    return@lanzarSeguro
+                }
+            }
+            if (familyId == null) {
                 familyIdActual = null
                 _pantalla.value = GuiaPantallaEstado.SinFamilia
                 return@lanzarSeguro
             }
-            familyIdActual = membresia.familyId
+            familyIdActual = familyId
             cargarDia()
         }
     }

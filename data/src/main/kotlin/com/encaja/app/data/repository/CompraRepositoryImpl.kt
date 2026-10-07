@@ -1,5 +1,6 @@
 package com.encaja.app.data.repository
 
+import com.encaja.app.data.firestore.getConFallback
 import com.encaja.app.data.firestore.ArticuloCompraFirestoreMapper
 import com.encaja.app.data.local.ArticuloCompraEntity
 import com.encaja.app.data.local.CompraDao
@@ -8,6 +9,7 @@ import com.encaja.app.domain.model.ArticuloCompraId
 import com.encaja.app.domain.model.FamilyId
 import com.encaja.app.domain.repository.CompraRepository
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
@@ -21,12 +23,14 @@ class CompraRepositoryImpl @Inject constructor(
 
     override suspend fun obtenerArticulos(familyId: FamilyId): List<ArticuloCompra> {
         return try {
-            val snapshot = coleccion(familyId).get().await()
+            val snapshot = coleccion(familyId).getConFallback()
             val articulos = snapshot.documents.mapNotNull { doc ->
                 ArticuloCompraFirestoreMapper.desdeDocumento(doc.id, doc.data ?: emptyMap())
             }
             dao.guardarTodos(articulos.map { ArticuloCompraEntity.desdeDominio(familyId.value, it) })
             articulos
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             dao.obtener(familyId.value).map { it.aDominio() }
         }

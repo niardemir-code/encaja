@@ -97,6 +97,20 @@ fun CompraScreen(viewModel: CompraViewModel = hiltViewModel()) {
             }
         }
 
+        is CompraPantallaEstado.ErrorDeConexion -> {
+            Column(
+                modifier = Modifier.fillMaxSize().padding(24.dp),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text("No se pudo cargar la lista de la compra", fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center)
+                Spacer(Modifier.height(8.dp))
+                Text("Revisa la conexión a internet y vuelve a intentarlo.", textAlign = TextAlign.Center)
+                Spacer(Modifier.height(16.dp))
+                androidx.compose.material3.Button(onClick = { viewModel.recargar() }) { Text("Reintentar") }
+            }
+        }
+
         is CompraPantallaEstado.SinFamilia -> {
             Box(modifier = Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
                 Text(

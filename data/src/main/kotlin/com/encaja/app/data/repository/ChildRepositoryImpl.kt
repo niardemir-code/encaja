@@ -1,5 +1,6 @@
 package com.encaja.app.data.repository
 
+import com.encaja.app.data.firestore.getConFallback
 import com.encaja.app.data.firestore.ChildFirestoreMapper
 import com.encaja.app.data.local.ChildDao
 import com.encaja.app.data.local.ChildEntity
@@ -21,7 +22,7 @@ class ChildRepositoryImpl @Inject constructor(
 
     override suspend fun obtenerNinos(familyId: FamilyId): List<Child> {
         return try {
-            val snapshot = coleccion(familyId).get().await()
+            val snapshot = coleccion(familyId).getConFallback()
             val ninos = snapshot.documents.mapNotNull { doc ->
                 ChildFirestoreMapper.desdeDocumento(doc.id, doc.data ?: emptyMap())
             }

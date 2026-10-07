@@ -229,6 +229,20 @@ fun GuiaScreen(
                     }
                 }
 
+                is GuiaPantallaEstado.ErrorDeConexion -> {
+                    Column(
+                        modifier = Modifier.fillMaxSize().padding(24.dp),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text("No se pudo cargar la guía", fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center, color = TINTA)
+                        Spacer(Modifier.height(8.dp))
+                        Text("Revisa la conexión a internet y vuelve a intentarlo.", textAlign = TextAlign.Center, color = TINTA_SUAVE)
+                        Spacer(Modifier.height(16.dp))
+                        androidx.compose.material3.Button(onClick = { viewModel.recargar() }) { Text("Reintentar") }
+                    }
+                }
+
                 is GuiaPantallaEstado.SinFamilia -> {
                     Box(modifier = Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
                         Text(

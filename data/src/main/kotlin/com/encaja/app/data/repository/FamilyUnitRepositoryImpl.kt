@@ -1,5 +1,6 @@
 package com.encaja.app.data.repository
 
+import com.encaja.app.data.firestore.getConFallback
 import com.encaja.app.data.firestore.FamilyUnitFirestoreMapper
 import com.encaja.app.data.local.FamilyUnitDao
 import com.encaja.app.data.local.FamilyUnitEntity
@@ -21,8 +22,7 @@ class FamilyUnitRepositoryImpl @Inject constructor(
             val snapshot = firestore
                 .collection("families").document(familyId.value)
                 .collection("familyUnits")
-                .get()
-                .await()
+                .getConFallback()
 
             val unidades = snapshot.documents.mapNotNull { doc ->
                 FamilyUnitFirestoreMapper.desdeDocumento(doc.id, doc.data ?: emptyMap())

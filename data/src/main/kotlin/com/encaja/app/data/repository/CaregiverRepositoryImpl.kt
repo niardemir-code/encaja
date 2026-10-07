@@ -1,5 +1,6 @@
 package com.encaja.app.data.repository
 
+import com.encaja.app.data.firestore.getConFallback
 import com.encaja.app.data.firestore.CaregiverFirestoreMapper
 import com.encaja.app.data.local.CaregiverDao
 import com.encaja.app.data.local.CaregiverEntity
@@ -21,8 +22,7 @@ class CaregiverRepositoryImpl @Inject constructor(
             val snapshot = firestore
                 .collection("families").document(familyId.value)
                 .collection("caregivers")
-                .get()
-                .await()
+                .getConFallback()
 
             val caregivers = snapshot.documents.mapNotNull { doc ->
                 CaregiverFirestoreMapper.desdeDocumento(doc.id, doc.data ?: emptyMap())

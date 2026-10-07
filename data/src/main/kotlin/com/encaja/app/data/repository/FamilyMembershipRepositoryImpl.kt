@@ -1,5 +1,6 @@
 package com.encaja.app.data.repository
 
+import com.encaja.app.data.firestore.getConFallback
 import com.encaja.app.domain.model.CaregiverId
 import com.encaja.app.domain.model.FamilyId
 import com.encaja.app.domain.model.FamilyMembership
@@ -15,7 +16,7 @@ class FamilyMembershipRepositoryImpl @Inject constructor(
 
     override suspend fun consultarMembresia(uid: String): ResultadoMembresia {
         return try {
-            val doc = firestore.collection("users").document(uid).get().await()
+            val doc = firestore.collection("users").document(uid).getConFallback()
             val familyId = doc.getString("familyId")
             val caregiverId = doc.getString("caregiverId")
             if (familyId == null || caregiverId == null) {

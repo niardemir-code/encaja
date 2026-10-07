@@ -10,6 +10,7 @@ import com.encaja.app.domain.model.FamilyId
 import com.encaja.app.domain.repository.AuthRepository
 import com.encaja.app.domain.repository.CompraRepository
 import com.encaja.app.domain.repository.FamilyMembershipRepository
+import com.encaja.app.domain.repository.ResultadoMembresia
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -53,17 +54,35 @@ class CompraViewModel @Inject constructor(
                 return@lanzarSeguro
             }
 
-            val membresia = familyMembershipRepository.obtenerMembresia(uid)
-            if (membresia == null) {
+            val familyId = when (val resultado = familyMembershipRepository.consultarMembresia(uid)) {
+                is ResultadoMembresia.Tiene -> resultado.membresia.familyId
+                is ResultadoMembresia.NoTiene -> null
+                // Sin conexión: se usa la última familia conocida (la lista sale de la caché local).
+                is ResultadoMembresia.Error -> familyIdActual ?: run {
+                    _pantalla.value = CompraPantallaEstado.ErrorDeConexion
+                    return@lanzarSeguro
+                }
+            }
+            if (familyId == null) {
                 familyIdActual = null
                 _pantalla.value = CompraPantallaEstado.SinFamilia
                 return@lanzarSeguro
             }
-            familyIdActual = membresia.familyId
+            familyIdActual = familyId
 
-            val articulos = compraRepository.obtenerArticulos(membresia.familyId)
-            articulosActuales = articulos
-            _pantalla.value = CompraPantallaEstado.ConDatos(mapper.construir(articulos))
+            try {
+                val articulos = compraRepository.obtenerArticulos(familyId)
+                articulosActuales = articulos
+                _pantalla.value = CompraPantallaEstado.ConDatos(mapper.construir(articulos))
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // Que nunca se quede la rueda de carga para siempre.
+                if (_pantalla.value !is CompraPantallaEstado.ConDatos) {
+                    _pantalla.value = CompraPantallaEstado.ErrorDeConexion
+                }
+                throw e
+            }
         }
     }
 

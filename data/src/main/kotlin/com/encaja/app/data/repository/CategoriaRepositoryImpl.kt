@@ -1,5 +1,6 @@
 package com.encaja.app.data.repository
 
+import com.encaja.app.data.firestore.getConFallback
 import com.encaja.app.data.firestore.CategoriaFirestoreMapper
 import com.encaja.app.data.local.CategoriaDao
 import com.encaja.app.data.local.CategoriaEntity
@@ -21,7 +22,7 @@ class CategoriaRepositoryImpl @Inject constructor(
 
     override suspend fun obtenerCategorias(familyId: FamilyId): List<CategoriaDisponibilidad> {
         return try {
-            val snapshot = coleccion(familyId).get().await()
+            val snapshot = coleccion(familyId).getConFallback()
             val categorias = snapshot.documents.mapNotNull { doc ->
                 CategoriaFirestoreMapper.desdeDocumento(doc.id, doc.data ?: emptyMap())
             }

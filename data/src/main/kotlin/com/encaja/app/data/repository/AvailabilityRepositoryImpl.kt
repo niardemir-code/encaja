@@ -1,5 +1,6 @@
 package com.encaja.app.data.repository
 
+import com.encaja.app.data.firestore.getConFallback
 import com.encaja.app.data.firestore.AvailabilityBlockFirestoreMapper
 import com.encaja.app.data.local.AvailabilityBlockEntity
 import com.encaja.app.data.local.AvailabilityDao
@@ -43,8 +44,7 @@ class AvailabilityRepositoryImpl @Inject constructor(
             val snapshot = coleccion(familyId)
                 .whereGreaterThanOrEqualTo("fecha", desde.toString())
                 .whereLessThanOrEqualTo("fecha", hasta.toString())
-                .get()
-                .await()
+                .getConFallback()
 
             val bloques = snapshot.documents.mapNotNull { doc ->
                 AvailabilityBlockFirestoreMapper.desdeDocumento(doc.data ?: emptyMap())
@@ -61,8 +61,7 @@ class AvailabilityRepositoryImpl @Inject constructor(
         val bloques = try {
             val snapshot = coleccion(familyId)
                 .whereEqualTo("grupoRepeticionId", grupoRepeticionId)
-                .get()
-                .await()
+                .getConFallback()
             val remotos = snapshot.documents.mapNotNull { doc ->
                 AvailabilityBlockFirestoreMapper.desdeDocumento(doc.data ?: emptyMap())
             }

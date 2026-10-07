@@ -1,5 +1,6 @@
 package com.encaja.app.data.repository
 
+import com.encaja.app.data.firestore.getConFallback
 import com.encaja.app.data.firestore.PatronCuidadoFirestoreMapper
 import com.encaja.app.data.local.AnulacionEntity
 import com.encaja.app.data.local.AssignmentDao
@@ -25,7 +26,7 @@ class AssignmentRepositoryImpl @Inject constructor(
 
     override suspend fun obtenerPatrones(familyId: FamilyId): List<PatronCuidado> {
         return try {
-            val snapshot = familia(familyId).collection("patrones").get().await()
+            val snapshot = familia(familyId).collection("patrones").getConFallback()
             val patrones = snapshot.documents.mapNotNull { doc ->
                 PatronCuidadoFirestoreMapper.desdeDocumento(doc.data ?: emptyMap())
             }
@@ -41,8 +42,7 @@ class AssignmentRepositoryImpl @Inject constructor(
             val snapshot = familia(familyId).collection("anulaciones")
                 .whereGreaterThanOrEqualTo(FieldPath.documentId(), desde.toString())
                 .whereLessThanOrEqualTo(FieldPath.documentId(), hasta.toString())
-                .get()
-                .await()
+                .getConFallback()
 
             val anulaciones = snapshot.documents.mapNotNull { doc ->
                 val caregiverId = doc.getString("caregiverId") ?: return@mapNotNull null
