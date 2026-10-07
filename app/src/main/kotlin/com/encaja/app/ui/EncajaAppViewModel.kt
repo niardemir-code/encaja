@@ -17,7 +17,10 @@ import com.encaja.app.domain.repository.FamilyMembershipRepository
 import com.encaja.app.domain.repository.ResultadoMembresia
 import com.encaja.app.domain.usecase.actividadesAntiguas
 import com.encaja.app.ui.familia.calcularInicialesCuidadores
+import android.content.Context
+import com.encaja.app.ui.common.BajaDeDispositivo
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -40,7 +43,8 @@ class EncajaAppViewModel @Inject constructor(
     private val avisos: ProgramadorDeAvisos,
     private val sincronizador: SincronizadorDeAvisos,
     private val dispositivos: DispositivoRepository,
-    private val cambiosDeMembresia: CambiosDeMembresia
+    private val cambiosDeMembresia: CambiosDeMembresia,
+    @ApplicationContext private val contexto: Context
 ) : ViewModel() {
 
     private val _inicialesUsuario = MutableStateFlow("")
@@ -51,6 +55,7 @@ class EncajaAppViewModel @Inject constructor(
 
     private var cancelarEscucha: (() -> Unit)? = null
     private var teniaMembresia = false
+    private var ultimaFamilia: FamilyId? = null
 
     init {
         lanzarSeguro(avisar = false) { iniciar() }
@@ -77,14 +82,38 @@ class EncajaAppViewModel @Inject constructor(
         val uid = authRepository.sesionActual()?.uid ?: return
         cancelarEscucha = familyMembershipRepository.escucharMembresia(uid) { resultado ->
             when (resultado) {
-                is ResultadoMembresia.Tiene -> teniaMembresia = true
-                ResultadoMembresia.NoTiene -> if (teniaMembresia) {
+                is ResultadoMembresia.Tiene -> {
+                    teniaMembresia = true
+                    ultimaFamilia = resultado.membresia.familyId
+                    BajaDeDispositivo.recordarMembresia(contexto, uid)
+                }
+                // También si la baja ocurrió con la app cerrada: se recordó en un uso anterior.
+                ResultadoMembresia.NoTiene -> if (teniaMembresia || BajaDeDispositivo.tuvoMembresia(contexto, uid)) {
                     teniaMembresia = false
                     cambiosDeMembresia.avisarPerdida()
                     cambiosDeMembresia.avisar() // las pantallas vuelven a comprobar su familia
                 }
                 ResultadoMembresia.Error -> Unit
             }
+        }
+    }
+
+    /**
+     * Tras avisar al usuario de que su cuenta ha sido dada de baja: cancela los avisos
+     * programados y borra todos los datos de la app en este dispositivo. Cierra la app.
+     */
+    fun borrarDatosDelDispositivo() {
+        lanzarSeguro(avisar = false) {
+            runCatching {
+                val familyId = ultimaFamilia
+                if (familyId != null) {
+                    val hoy = java.time.LocalDate.now()
+                    // Sin permiso en el servidor, esta lectura sale de la copia local.
+                    coverageNeedRepository.obtenerNeeds(familyId, hoy.minusDays(1), hoy.plusDays(120))
+                        .forEach { avisos.cancelar(it.id) }
+                }
+            }
+            BajaDeDispositivo.borrarTodo(contexto)
         }
     }
 

@@ -184,16 +184,33 @@ fun EncajaApp(
         }
     }
 
-    // Un administrador ha desvinculado esta cuenta con la app abierta: se vuelve a Semana, que
-    // al comprobar la familia mostrará la pantalla de sin familia, y se explica por qué.
+    // Un administrador ha dado de baja esta cuenta: se avisa (sin poder cerrar el aviso) y, al
+    // aceptar, se borra todo rastro de la familia y de la cuenta en este dispositivo.
+    var bajaDetectada by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
-        viewModel.membresiaPerdida.collect {
-            navController.navigate(Destino.Semana.ruta) {
-                popUpTo(navController.graph.findStartDestination().id)
-                launchSingleTop = true
+        viewModel.membresiaPerdida.collect { bajaDetectada = true }
+    }
+    if (bajaDetectada) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = {},
+            properties = androidx.compose.ui.window.DialogProperties(
+                dismissOnBackPress = false,
+                dismissOnClickOutside = false
+            ),
+            title = { Text("Cuenta dada de baja") },
+            text = {
+                Text(
+                    "Un administrador ha dado de baja tu cuenta en esta familia. Por seguridad, se " +
+                        "borrarán todos los datos de Encaja de este dispositivo, incluidos los avisos " +
+                        "programados, y la aplicación se cerrará."
+                )
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = { viewModel.borrarDatosDelDispositivo() }) {
+                    Text("Entendido")
+                }
             }
-            snackbarHostState.showSnackbar("Tu cuenta ya no pertenece a esa familia.")
-        }
+        )
     }
 
     val backStackEntry by navController.currentBackStackEntryAsState()
