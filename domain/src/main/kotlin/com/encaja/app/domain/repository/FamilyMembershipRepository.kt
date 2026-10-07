@@ -26,4 +26,12 @@ interface FamilyMembershipRepository {
         (consultarMembresia(uid) as? ResultadoMembresia.Tiene)?.membresia
 
     suspend fun vincularAFamilia(uid: String, membership: FamilyMembership)
+
+    /**
+     * Avisa en tiempo real de los cambios en la vinculación de la cuenta. [alCambiar] recibe
+     * [ResultadoMembresia.Tiene] al estar vinculada y [ResultadoMembresia.NoTiene] SOLO cuando el
+     * servidor confirma que ya no lo está (por ejemplo, si otro administrador la desvincula): una
+     * lectura de la caché local sin conexión no cuenta. Devuelve la función que cancela la escucha.
+     */
+    fun escucharMembresia(uid: String, alCambiar: (ResultadoMembresia) -> Unit): () -> Unit = {}
 }

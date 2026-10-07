@@ -20,4 +20,13 @@ class CambiosDeMembresia @Inject constructor() {
     fun avisar() {
         _eventos.tryEmit(Unit)
     }
+
+    private val _perdidas = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
+    /** La cuenta ya no pertenece a su familia (otro administrador la desvinculó o la eliminó). */
+    val perdidas: SharedFlow<Unit> = _perdidas.asSharedFlow()
+
+    fun avisarPerdida() {
+        _perdidas.tryEmit(Unit)
+    }
 }

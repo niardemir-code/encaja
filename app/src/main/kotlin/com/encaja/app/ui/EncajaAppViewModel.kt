@@ -14,6 +14,7 @@ import com.encaja.app.domain.repository.AvailabilityRepository
 import com.encaja.app.domain.repository.CaregiverRepository
 import com.encaja.app.domain.repository.CoverageNeedRepository
 import com.encaja.app.domain.repository.FamilyMembershipRepository
+import com.encaja.app.domain.repository.ResultadoMembresia
 import com.encaja.app.domain.usecase.actividadesAntiguas
 import com.encaja.app.ui.familia.calcularInicialesCuidadores
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -45,11 +46,51 @@ class EncajaAppViewModel @Inject constructor(
     private val _inicialesUsuario = MutableStateFlow("")
     val inicialesUsuario: StateFlow<String> = _inicialesUsuario.asStateFlow()
 
+    /** Se emite cuando esta cuenta deja de pertenecer a su familia con la app abierta. */
+    val membresiaPerdida = cambiosDeMembresia.perdidas
+
+    private var cancelarEscucha: (() -> Unit)? = null
+    private var teniaMembresia = false
+
     init {
         lanzarSeguro(avisar = false) { iniciar() }
         // Al vincularse la cuenta a una familia (código de invitación, crear familia o
         // "Vincularme"), se repite todo esto sin esperar a reiniciar la app.
-        lanzarSeguro(avisar = false) { cambiosDeMembresia.eventos.collect { iniciar() } }
+        lanzarSeguro(avisar = false) {
+            cambiosDeMembresia.eventos.collect {
+                iniciar()
+                vigilarMembresia()
+            }
+        }
+        vigilarMembresia()
+    }
+
+    /**
+     * Escucha en tiempo real si esta cuenta sigue vinculada a su familia. Si un administrador la
+     * desvincula (o elimina a su cuidador) mientras la app está abierta, se avisa para llevar al
+     * usuario a la pantalla de sin familia en vez de dejarle seguir editando.
+     */
+    private fun vigilarMembresia() {
+        cancelarEscucha?.invoke()
+        cancelarEscucha = null
+        teniaMembresia = false
+        val uid = authRepository.sesionActual()?.uid ?: return
+        cancelarEscucha = familyMembershipRepository.escucharMembresia(uid) { resultado ->
+            when (resultado) {
+                is ResultadoMembresia.Tiene -> teniaMembresia = true
+                ResultadoMembresia.NoTiene -> if (teniaMembresia) {
+                    teniaMembresia = false
+                    cambiosDeMembresia.avisarPerdida()
+                    cambiosDeMembresia.avisar() // las pantallas vuelven a comprobar su familia
+                }
+                ResultadoMembresia.Error -> Unit
+            }
+        }
+    }
+
+    override fun onCleared() {
+        cancelarEscucha?.invoke()
+        super.onCleared()
     }
 
     private suspend fun iniciar() {

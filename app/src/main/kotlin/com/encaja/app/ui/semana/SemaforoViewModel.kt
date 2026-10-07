@@ -78,6 +78,11 @@ class SemaforoViewModel @Inject constructor(
 
     init {
         cargar()
+        // Si la cuenta pierde (o gana) su familia mientras la app está abierta, se vuelve a
+        // comprobar para mostrar la pantalla que corresponda.
+        lanzarSeguro(avisar = false) {
+            cambiosDeMembresia.eventos.collect { cargar(mostrarCargando = false) }
+        }
     }
 
     /** Recarga completa: vuelve a comprobar sesión y familia (por si han cambiado) y

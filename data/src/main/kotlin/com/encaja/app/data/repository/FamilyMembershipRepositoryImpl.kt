@@ -31,6 +31,22 @@ class FamilyMembershipRepositoryImpl @Inject constructor(
         }
     }
 
+    override fun escucharMembresia(uid: String, alCambiar: (ResultadoMembresia) -> Unit): () -> Unit {
+        val registro = firestore.collection("users").document(uid)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null || snapshot == null) return@addSnapshotListener
+                val familyId = snapshot.getString("familyId")
+                val caregiverId = snapshot.getString("caregiverId")
+                when {
+                    snapshot.exists() && familyId != null && caregiverId != null ->
+                        alCambiar(ResultadoMembresia.Tiene(FamilyMembership(FamilyId(familyId), CaregiverId(caregiverId))))
+                    // Que no exista solo cuenta si lo confirma el servidor, no la caché local.
+                    !snapshot.metadata.isFromCache -> alCambiar(ResultadoMembresia.NoTiene)
+                }
+            }
+        return { registro.remove() }
+    }
+
     override suspend fun vincularAFamilia(uid: String, membership: FamilyMembership) {
         firestore.collection("users").document(uid).set(
             mapOf(

@@ -184,6 +184,18 @@ fun EncajaApp(
         }
     }
 
+    // Un administrador ha desvinculado esta cuenta con la app abierta: se vuelve a Semana, que
+    // al comprobar la familia mostrará la pantalla de sin familia, y se explica por qué.
+    LaunchedEffect(Unit) {
+        viewModel.membresiaPerdida.collect {
+            navController.navigate(Destino.Semana.ruta) {
+                popUpTo(navController.graph.findStartDestination().id)
+                launchSingleTop = true
+            }
+            snackbarHostState.showSnackbar("Tu cuenta ya no pertenece a esa familia.")
+        }
+    }
+
     val backStackEntry by navController.currentBackStackEntryAsState()
     val rutaActual = backStackEntry?.destination?.hierarchy?.firstOrNull()?.route
     val inicialesUsuario by viewModel.inicialesUsuario.collectAsState()
