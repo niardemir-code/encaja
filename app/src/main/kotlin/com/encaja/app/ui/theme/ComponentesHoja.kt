@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
@@ -181,21 +182,30 @@ fun BotonVariosDisquetesHoja(
 
 /**
  * Confirmación al guardar cuando hay una serie: [titulo] dice qué se va a guardar
- * ("Guardar solo esta actividad" o "Guardar la serie completa de la actividad").
+ * ("Guardar solo esta actividad" o "Guardar la serie completa de la actividad"). Con
+ * [serie] el icono es el de varios disquetes; si no, el de un solo disquete.
  */
 @Composable
 fun ConfirmarGuardadoHoja(
     titulo: String,
     detalle: String,
     onConfirmar: () -> Unit,
-    onCancelar: () -> Unit
+    onCancelar: () -> Unit,
+    serie: Boolean = false
 ) {
-    AlertDialog(
-        onDismissRequest = onCancelar,
-        title = { Text(titulo) },
-        text = { Text(detalle) },
-        confirmButton = { TextButton(onClick = onConfirmar) { Text("Guardar", fontWeight = FontWeight.Bold) } },
-        dismissButton = { TextButton(onClick = onCancelar) { Text("Cancelar") } }
+    val iconoSerie: @Composable (Color) -> Unit = { tinta -> IconoVariosDisquetes(tinta) }
+    AvisoHoja(
+        icono = Icons.Default.Save,
+        iconoContenido = if (serie) iconoSerie else null,
+        titulo = titulo,
+        texto = detalle,
+        acciones = listOf(
+            AccionAvisoHoja("Cancelar", EstiloAccionAviso.BORDE) { onCancelar() },
+            AccionAvisoHoja("Guardar", EstiloAccionAviso.PRIMARIO) { onConfirmar() }
+        ),
+        onCerrar = onCancelar,
+        conX = true,
+        accionesEnFila = true
     )
 }
 
@@ -274,7 +284,7 @@ fun CampoTextoHoja(valor: String, onCambiar: (String) -> Unit, placeholder: Stri
 
 
 /** Cómo se pinta cada botón de [AvisoHoja]. */
-enum class EstiloAccionAviso { PELIGRO, SUAVE, BORDE }
+enum class EstiloAccionAviso { PELIGRO, SUAVE, BORDE, PRIMARIO }
 
 /** Un botón a todo el ancho de [AvisoHoja]; [icono] es opcional. */
 class AccionAvisoHoja(
@@ -296,7 +306,13 @@ fun AvisoHoja(
     texto: String,
     acciones: List<AccionAvisoHoja>,
     onCerrar: () -> Unit,
-    peligro: Boolean = true
+    peligro: Boolean = true,
+    /** Dibuja el icono a mano (p.ej. varios disquetes) en vez de [icono]; recibe su tinta. */
+    iconoContenido: (@Composable (Color) -> Unit)? = null,
+    /** Añade una X arriba a la derecha que cierra el aviso. */
+    conX: Boolean = false,
+    /** Pone los botones uno al lado del otro en vez de apilados. */
+    accionesEnFila: Boolean = false
 ) {
     val extra = LocalEncajaExtraColors.current
     val lavanda = MaterialTheme.colorScheme.primaryContainer
@@ -332,7 +348,11 @@ fun AvisoHoja(
                                 modifier = Modifier.size(84.dp).clip(CircleShape).background(fondoIcono),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(icono, contentDescription = null, tint = tintaIcono, modifier = Modifier.size(44.dp))
+                                if (iconoContenido != null) {
+                                    iconoContenido(tintaIcono)
+                                } else {
+                                    Icon(icono, contentDescription = null, tint = tintaIcono, modifier = Modifier.size(44.dp))
+                                }
                             }
                             Canvas(modifier = Modifier.matchParentSize()) {
                                 val color = extra.ambar
@@ -347,12 +367,32 @@ fun AvisoHoja(
                             style = MaterialTheme.typography.headlineMedium,
                             fontWeight = FontWeight.ExtraBold,
                             color = MaterialTheme.colorScheme.onBackground,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f).padding(end = if (conX) 36.dp else 0.dp)
                         )
                     }
                     Text(texto, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onBackground)
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        acciones.forEach { accion -> BotonAvisoHoja(accion) }
+                    if (accionesEnFila) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            acciones.forEach { accion -> BotonAvisoHoja(accion, Modifier.weight(1f)) }
+                        }
+                    } else {
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            acciones.forEach { accion -> BotonAvisoHoja(accion, Modifier.fillMaxWidth()) }
+                        }
+                    }
+                }
+                if (conX) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(14.dp)
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(lavanda)
+                            .clickable(onClick = onCerrar),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.Close, contentDescription = "Cerrar", tint = indigo, modifier = Modifier.size(22.dp))
                     }
                 }
             }
@@ -361,9 +401,9 @@ fun AvisoHoja(
 }
 
 @Composable
-private fun BotonAvisoHoja(accion: AccionAvisoHoja) {
+private fun BotonAvisoHoja(accion: AccionAvisoHoja, modifierBase: Modifier) {
     val forma = RoundedCornerShape(28.dp)
-    val modificador = Modifier.fillMaxWidth().height(56.dp)
+    val modificador = modifierBase.height(56.dp)
     val contenido: @Composable androidx.compose.foundation.layout.RowScope.(Color) -> Unit = { tinta ->
         if (accion.icono != null) {
             Icon(accion.icono, contentDescription = null, tint = tinta, modifier = Modifier.size(22.dp))
@@ -384,6 +424,13 @@ private fun BotonAvisoHoja(accion: AccionAvisoHoja) {
             Button(
                 onClick = accion.onClick, shape = forma, modifier = modificador,
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primaryContainer, contentColor = tinta)
+            ) { contenido(tinta) }
+        }
+        EstiloAccionAviso.PRIMARIO -> {
+            val tinta = onAcentoHoja
+            Button(
+                onClick = accion.onClick, shape = forma, modifier = modificador,
+                colors = ButtonDefaults.buttonColors(containerColor = acentoHoja, contentColor = tinta)
             ) { contenido(tinta) }
         }
         EstiloAccionAviso.BORDE -> {

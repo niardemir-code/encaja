@@ -263,6 +263,9 @@ fun DialogoDisponibilidad(
     }
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    // Hueco bajo los botones: la barra de navegación de Android (3 botones o gesto) si la
+    // hoja la informa, y como mínimo 48 dp, para no pulsar «atrás» al tocar Guardar o Borrar.
+    val margenBarraNavegacion = maxOf(WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding(), 48.dp)
 
     ModalBottomSheet(
         onDismissRequest = onCerrar,
@@ -280,8 +283,7 @@ fun DialogoDisponibilidad(
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 18.dp)
-                .padding(bottom = 20.dp)
-                .navigationBarsPadding()
+                .padding(bottom = 20.dp + margenBarraNavegacion)
                 .imePadding()
         ) {
             // ── Título ────────────────────────────────────────────────────────────
@@ -601,7 +603,8 @@ fun DialogoDisponibilidad(
                 if (porHoras) guardarHoras(serieCompleta) else guardarRango(serieCompleta)
                 onCerrar()
             },
-            onCancelar = { confirmarGuardadoSerie = null }
+            onCancelar = { confirmarGuardadoSerie = null },
+            serie = serieCompleta
         )
     }
 

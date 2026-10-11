@@ -229,6 +229,9 @@ fun DialogoActividad(
     }
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    // Hueco bajo los botones: la barra de navegación de Android (3 botones o gesto) si la
+    // hoja la informa, y como mínimo 48 dp, para no pulsar «atrás» al tocar Guardar o Borrar.
+    val margenBarraNavegacion = maxOf(WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding(), 48.dp)
 
     ModalBottomSheet(
         onDismissRequest = onCerrar,
@@ -246,8 +249,7 @@ fun DialogoActividad(
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 18.dp)
-                .padding(bottom = 20.dp)
-                .navigationBarsPadding()
+                .padding(bottom = 20.dp + margenBarraNavegacion)
                 .imePadding()
         ) {
             // ── Título ────────────────────────────────────────────────────────────
@@ -510,7 +512,8 @@ fun DialogoActividad(
             detalle = if (serieCompleta) "Los cambios se aplicarán a todas las veces que se repite esta actividad."
             else "Los cambios solo afectarán a esta actividad; el resto de la serie no se toca.",
             onConfirmar = { confirmarGuardadoSerie = null; guardar(serieCompleta); onCerrar() },
-            onCancelar = { confirmarGuardadoSerie = null }
+            onCancelar = { confirmarGuardadoSerie = null },
+            serie = serieCompleta
         )
     }
 
