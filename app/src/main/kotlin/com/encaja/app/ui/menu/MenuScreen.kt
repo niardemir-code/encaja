@@ -11,6 +11,7 @@ package com.encaja.app.ui.menu
 // Cena (icono sol/luna + texto + lápiz de edición), todo dentro de un
 // único recuadro para que quede bien delimitado y alineado.
 
+import com.encaja.app.ui.theme.SelectorFechaHoja
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -192,21 +193,12 @@ private fun CabeceraMenu(
     }
 
     if (calendarioAbierto) {
-        val estado = rememberDatePickerState(
-            initialSelectedDateMillis = fechaAMillisUtc(primerDia ?: LocalDate.now())
+        SelectorFechaHoja(
+            fecha = primerDia ?: LocalDate.now(),
+            confirmar = "Ir",
+            onElegir = onIrASemanaDe,
+            onCerrar = { calendarioAbierto = false }
         )
-        DatePickerDialog(
-            onDismissRequest = { calendarioAbierto = false },
-            confirmButton = {
-                TextButton(onClick = {
-                    estado.selectedDateMillis?.let { onIrASemanaDe(millisUtcAFecha(it)) }
-                    calendarioAbierto = false
-                }) { Text("Ir") }
-            },
-            dismissButton = { TextButton(onClick = { calendarioAbierto = false }) { Text("Cancelar") } }
-        ) {
-            DatePicker(state = estado)
-        }
     }
 }
 

@@ -20,6 +20,8 @@ package com.encaja.app.ui.guia
 // "serie": no hay que elegir si el cambio o el borrado afecta solo a esta
 // ocurrencia o también a las siguientes.
 
+import com.encaja.app.ui.theme.SelectorHoraHoja
+import com.encaja.app.ui.theme.SelectorFechaHoja
 import com.encaja.app.ui.common.formatearHora
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -655,10 +657,17 @@ private fun FilaResponsable(
     }
 
     if (abierto) {
-        AlertDialog(
-            onDismissRequest = { abierto = false },
-            title = { Text(titulo) },
-            text = {
+        AvisoHoja(
+            icono = Icons.Default.Person,
+            titulo = titulo,
+            texto = null,
+            peligro = false,
+            conX = true,
+            acciones = listOf(
+                AccionAvisoHoja("Cerrar", EstiloAccionAviso.BORDE) { abierto = false }
+            ),
+            onCerrar = { abierto = false },
+            contenido = {
                 Column {
                     Row(
                         modifier = Modifier.fillMaxWidth().clickable { onElegir(null); abierto = false }.padding(vertical = 6.dp),
@@ -677,8 +686,8 @@ private fun FilaResponsable(
                         }
                     }
                 }
-            },
-            confirmButton = { TextButton(onClick = { abierto = false }) { Text("Cerrar") } }
+            
+            }
         )
     }
 }
@@ -689,18 +698,11 @@ private fun CajaHoraActividad(titulo: String, hora: LocalTime, modifier: Modifie
     var abierto by remember { mutableStateOf(false) }
     CajaValorHoja(titulo, formatearHora(hora), Icons.Default.Schedule, modifier) { abierto = true }
     if (abierto) {
-        val estado = rememberTimePickerState(initialHour = hora.hour, initialMinute = hora.minute, is24Hour = true)
-        AlertDialog(
-            onDismissRequest = { abierto = false },
-            title = { Text(titulo) },
-            text = { TimePicker(state = estado) },
-            confirmButton = {
-                TextButton(onClick = {
-                    onCambiar(LocalTime.of(estado.hour, estado.minute))
-                    abierto = false
-                }) { Text("Aceptar") }
-            },
-            dismissButton = { TextButton(onClick = { abierto = false }) { Text("Cancelar") } }
+        SelectorHoraHoja(
+            titulo = titulo,
+            hora = hora,
+            onElegir = onCambiar,
+            onCerrar = { abierto = false }
         )
     }
 }
@@ -712,19 +714,11 @@ private fun CajaFechaActividad(titulo: String, fecha: LocalDate, modifier: Modif
     var abierto by remember { mutableStateOf(false) }
     CajaValorHoja(titulo, fechaCortaActividad(fecha), Icons.Default.CalendarMonth, modifier) { abierto = true }
     if (abierto) {
-        val estado = rememberDatePickerState(initialSelectedDateMillis = fechaAMillisUtcActividad(fecha))
-        DatePickerDialog(
-            onDismissRequest = { abierto = false },
-            confirmButton = {
-                TextButton(onClick = {
-                    estado.selectedDateMillis?.let { onCambiar(millisUtcAFechaActividad(it)) }
-                    abierto = false
-                }) { Text("Aceptar") }
-            },
-            dismissButton = { TextButton(onClick = { abierto = false }) { Text("Cancelar") } }
-        ) {
-            DatePicker(state = estado)
-        }
+        SelectorFechaHoja(
+            fecha = fecha,
+            onElegir = onCambiar,
+            onCerrar = { abierto = false }
+        )
     }
 }
 
@@ -891,10 +885,17 @@ private fun SelectorAviso(titulo: String, detalle: String, minutos: Int?, onEleg
         )
     }
     if (abierto) {
-        AlertDialog(
-            onDismissRequest = { abierto = false },
-            title = { Text(titulo) },
-            text = {
+        AvisoHoja(
+            icono = Icons.Default.Notifications,
+            titulo = titulo,
+            texto = null,
+            peligro = false,
+            conX = true,
+            acciones = listOf(
+                AccionAvisoHoja("Cerrar", EstiloAccionAviso.BORDE) { abierto = false }
+            ),
+            onCerrar = { abierto = false },
+            contenido = {
                 Column {
                     OPCIONES_AVISO.forEach { opcion ->
                         Row(
@@ -906,8 +907,8 @@ private fun SelectorAviso(titulo: String, detalle: String, minutos: Int?, onEleg
                         }
                     }
                 }
-            },
-            confirmButton = { TextButton(onClick = { abierto = false }) { Text("Cerrar") } }
+            
+            }
         )
     }
 }

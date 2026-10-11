@@ -13,6 +13,9 @@ package com.encaja.app.ui.familia
 // Los colores del diseño están aquí como constantes para no tocar el tema
 // del resto de pantallas.
 
+import androidx.compose.material.icons.filled.Category
+import androidx.compose.material.icons.filled.Visibility
+import com.encaja.app.ui.theme.SelectorFechaHoja
 import com.encaja.app.ui.theme.PaletaAvatarPersonas
 import com.encaja.app.ui.theme.ColorAvatarUnidad
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -345,19 +348,12 @@ private fun CabeceraFamilia(
     }
 
     if (calendarioAbierto) {
-        val estado = rememberDatePickerState(initialSelectedDateMillis = fechaAMillisUtc(lunes))
-        DatePickerDialog(
-            onDismissRequest = { calendarioAbierto = false },
-            confirmButton = {
-                TextButton(onClick = {
-                    estado.selectedDateMillis?.let { onElegirFecha(millisUtcAFecha(it)) }
-                    calendarioAbierto = false
-                }) { Text("Ir") }
-            },
-            dismissButton = { TextButton(onClick = { calendarioAbierto = false }) { Text("Cancelar") } }
-        ) {
-            DatePicker(state = estado)
-        }
+        SelectorFechaHoja(
+            fecha = lunes,
+            confirmar = "Ir",
+            onElegir = onElegirFecha,
+            onCerrar = { calendarioAbierto = false }
+        )
     }
 }
 
@@ -687,10 +683,17 @@ private fun DialogoMostrar(
     onAlternar: (String) -> Unit,
     onCerrar: () -> Unit
 ) {
-    AlertDialog(
-        onDismissRequest = onCerrar,
-        title = { Text("Cuidadores a mostrar") },
-        text = {
+    AvisoHoja(
+        icono = Icons.Default.Visibility,
+        titulo = "Cuidadores a mostrar",
+        texto = null,
+        peligro = false,
+        conX = true,
+        acciones = listOf(
+            AccionAvisoHoja("Cerrar", EstiloAccionAviso.BORDE) { onCerrar() }
+        ),
+        onCerrar = onCerrar,
+        contenido = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 Text(
                     if (compartido) "Selección compartida: la ven todos los usuarios en esta semana, y cualquier cambio lo verán también."
@@ -724,8 +727,8 @@ private fun DialogoMostrar(
                     }
                 }
             }
-        },
-        confirmButton = { TextButton(onClick = onCerrar) { Text("Cerrar") } }
+        
+        }
     )
 }
 
@@ -784,10 +787,17 @@ private fun DialogoListaCategorias(
     var enEdicion by remember { mutableStateOf<CategoriaDisponibilidad?>(null) }
     var creando by remember { mutableStateOf(false) }
 
-    AlertDialog(
-        onDismissRequest = onCerrar,
-        title = { Text("Categorías") },
-        text = {
+    AvisoHoja(
+        icono = Icons.Default.Category,
+        titulo = "Categorías",
+        texto = null,
+        peligro = false,
+        conX = true,
+        acciones = listOf(
+            AccionAvisoHoja("Cerrar", EstiloAccionAviso.BORDE) { onCerrar() }
+        ),
+        onCerrar = onCerrar,
+        contenido = {
             Column(modifier = Modifier.heightIn(max = 480.dp).verticalScroll(rememberScrollState())) {
                 Text(
                     "Toca una para cambiar su nombre, icono, color, si va por horas o por días y si ocupa a la persona.",
@@ -841,8 +851,8 @@ private fun DialogoListaCategorias(
                     }
                 }
             }
-        },
-        confirmButton = { TextButton(onClick = onCerrar) { Text("Cerrar") } }
+        
+        }
     )
 
     if (creando) {

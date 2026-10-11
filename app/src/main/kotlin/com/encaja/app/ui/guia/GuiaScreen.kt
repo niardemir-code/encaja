@@ -11,6 +11,7 @@ package com.encaja.app.ui.guia
 // se está viendo hoy), y debajo la lista "Actividades del día", una tarjeta por niño.
 // El botón "Ahora" (punto de disparo) vuelve a la hora actual (y al día de hoy).
 
+import com.encaja.app.ui.theme.SelectorFechaHoja
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -503,19 +504,12 @@ private fun TarjetaDia(
     }
 
     if (calendarioAbierto) {
-        val estado = rememberDatePickerState(initialSelectedDateMillis = fechaAMillisUtc(fecha))
-        DatePickerDialog(
-            onDismissRequest = { calendarioAbierto = false },
-            confirmButton = {
-                TextButton(onClick = {
-                    estado.selectedDateMillis?.let { onElegirFecha(millisUtcAFecha(it)) }
-                    calendarioAbierto = false
-                }) { Text("Ir") }
-            },
-            dismissButton = { TextButton(onClick = { calendarioAbierto = false }) { Text("Cancelar") } }
-        ) {
-            DatePicker(state = estado)
-        }
+        SelectorFechaHoja(
+            fecha = fecha,
+            confirmar = "Ir",
+            onElegir = onElegirFecha,
+            onCerrar = { calendarioAbierto = false }
+        )
     }
 }
 

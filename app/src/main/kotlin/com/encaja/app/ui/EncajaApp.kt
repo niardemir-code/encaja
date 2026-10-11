@@ -1,5 +1,9 @@
 package com.encaja.app.ui
 
+import androidx.compose.material.icons.filled.Info
+import com.encaja.app.ui.theme.EstiloAccionAviso
+import com.encaja.app.ui.theme.AccionAvisoHoja
+import com.encaja.app.ui.theme.AvisoHoja
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -200,25 +204,19 @@ fun EncajaApp(
         viewModel.membresiaPerdida.collect { bajaDetectada = true }
     }
     if (bajaDetectada) {
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = {},
-            properties = androidx.compose.ui.window.DialogProperties(
-                dismissOnBackPress = false,
-                dismissOnClickOutside = false
+        AvisoHoja(
+            icono = Icons.Default.Info,
+            titulo = "Cuenta dada de baja",
+            texto = "Un administrador ha dado de baja tu cuenta en esta familia. Por seguridad, se " +
+                "borrarán todos los datos de Encaja de este dispositivo, incluidos los avisos " +
+                "programados, y la aplicación se cerrará.",
+            peligro = false,
+            acciones = listOf(
+                AccionAvisoHoja("Entendido", EstiloAccionAviso.PRIMARIO) { viewModel.borrarDatosDelDispositivo() }
             ),
-            title = { Text("Cuenta dada de baja") },
-            text = {
-                Text(
-                    "Un administrador ha dado de baja tu cuenta en esta familia. Por seguridad, se " +
-                        "borrarán todos los datos de Encaja de este dispositivo, incluidos los avisos " +
-                        "programados, y la aplicación se cerrará."
-                )
-            },
-            confirmButton = {
-                androidx.compose.material3.TextButton(onClick = { viewModel.borrarDatosDelDispositivo() }) {
-                    Text("Entendido")
-                }
-            }
+            // Sin salida: la baja es definitiva y la app se cierra al pulsar "Entendido".
+            onCerrar = {},
+            bloquearCierre = true
         )
     }
 

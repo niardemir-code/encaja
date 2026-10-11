@@ -18,6 +18,8 @@ package com.encaja.app.ui.familia
 //    guarda ni se borra hasta pulsar uno de los dos.
 // Las categorías se editan desde la tarjeta "Categorías" de la pantalla.
 
+import com.encaja.app.ui.theme.SelectorHoraHoja
+import com.encaja.app.ui.theme.SelectorFechaHoja
 import com.encaja.app.ui.common.formatearHora
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -908,18 +910,11 @@ private fun CajaHora(titulo: String, hora: LocalTime, modifier: Modifier = Modif
     var abierto by remember { mutableStateOf(false) }
     CajaValor(titulo, formatearHora(hora), Icons.Default.Schedule, modifier) { abierto = true }
     if (abierto) {
-        val estado = rememberTimePickerState(initialHour = hora.hour, initialMinute = hora.minute, is24Hour = true)
-        AlertDialog(
-            onDismissRequest = { abierto = false },
-            title = { Text(titulo) },
-            text = { TimePicker(state = estado) },
-            confirmButton = {
-                TextButton(onClick = {
-                    onCambiar(LocalTime.of(estado.hour, estado.minute))
-                    abierto = false
-                }) { Text("Aceptar") }
-            },
-            dismissButton = { TextButton(onClick = { abierto = false }) { Text("Cancelar") } }
+        SelectorHoraHoja(
+            titulo = titulo,
+            hora = hora,
+            onElegir = onCambiar,
+            onCerrar = { abierto = false }
         )
     }
 }
@@ -930,19 +925,11 @@ private fun CajaFecha(titulo: String, fecha: LocalDate, modifier: Modifier = Mod
     var abierto by remember { mutableStateOf(false) }
     CajaValor(titulo, fechaCorta(fecha), Icons.Default.CalendarMonth, modifier) { abierto = true }
     if (abierto) {
-        val estado = rememberDatePickerState(initialSelectedDateMillis = fechaAMillisUtc(fecha))
-        DatePickerDialog(
-            onDismissRequest = { abierto = false },
-            confirmButton = {
-                TextButton(onClick = {
-                    estado.selectedDateMillis?.let { onCambiar(millisUtcAFecha(it)) }
-                    abierto = false
-                }) { Text("Aceptar") }
-            },
-            dismissButton = { TextButton(onClick = { abierto = false }) { Text("Cancelar") } }
-        ) {
-            DatePicker(state = estado)
-        }
+        SelectorFechaHoja(
+            fecha = fecha,
+            onElegir = onCambiar,
+            onCerrar = { abierto = false }
+        )
     }
 }
 

@@ -2,6 +2,10 @@ package com.encaja.app.ui.informacion
 
 // NOTA: depende de Android (PowerManager, Settings) y Compose; no compilado en este entorno.
 
+import androidx.compose.material.icons.filled.BatteryAlert
+import com.encaja.app.ui.theme.EstiloAccionAviso
+import com.encaja.app.ui.theme.AccionAvisoHoja
+import com.encaja.app.ui.theme.AvisoHoja
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -335,10 +339,17 @@ private val PASOS_POR_MARCA = listOf(
 @Composable
 fun DialogoMasInformacionBateria(onCerrar: () -> Unit) {
     val contexto = LocalContext.current
-    AlertDialog(
-        onDismissRequest = onCerrar,
-        title = { Text("Avisos con la app cerrada") },
-        text = {
+    AvisoHoja(
+        icono = Icons.Default.BatteryAlert,
+        titulo = "Avisos con la app cerrada",
+        texto = null,
+        peligro = false,
+        conX = true,
+        acciones = listOf(
+            AccionAvisoHoja("Cerrar", EstiloAccionAviso.BORDE) { onCerrar() }
+        ),
+        onCerrar = onCerrar,
+        contenido = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 Text(
                     "Además de quitar la restricción de batería de Android, muchos fabricantes añaden su " +
@@ -365,7 +376,7 @@ fun DialogoMasInformacionBateria(onCerrar: () -> Unit) {
                     } catch (e: Exception) { /* sin navegador */ }
                 }) { Text("Guía por marca (dontkillmyapp.com)") }
             }
-        },
-        confirmButton = { TextButton(onClick = onCerrar) { Text("Cerrar") } }
+        
+        }
     )
 }

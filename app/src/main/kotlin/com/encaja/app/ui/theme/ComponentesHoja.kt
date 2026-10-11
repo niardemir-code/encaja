@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -341,7 +342,11 @@ fun AvisoHoja(
     /** Añade una X arriba a la derecha que cierra el aviso. */
     conX: Boolean = false,
     /** Pone los botones uno al lado del otro en vez de apilados. */
-    accionesEnFila: Boolean = false
+    accionesEnFila: Boolean = false,
+    /** Ancho máximo fijo (para calendarios y relojes, que no se encogen); null = ancho normal. */
+    ancho: Dp? = null,
+    /** Impide cerrarlo con el botón atrás o tocando fuera (avisos sin salida alternativa). */
+    bloquearCierre: Boolean = false
 ) {
     val extra = LocalEncajaExtraColors.current
     val lavanda = MaterialTheme.colorScheme.primaryContainer
@@ -349,11 +354,22 @@ fun AvisoHoja(
     val fondoIcono = if (peligro) MaterialTheme.colorScheme.errorContainer else lavanda
     val tintaIcono = if (peligro) MaterialTheme.colorScheme.error else indigo
 
-    Dialog(onDismissRequest = onCerrar, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+    Dialog(
+        onDismissRequest = onCerrar,
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            dismissOnBackPress = !bloquearCierre,
+            dismissOnClickOutside = !bloquearCierre
+        )
+    ) {
         Surface(
             shape = RoundedCornerShape(36.dp),
             color = MaterialTheme.colorScheme.background,
-            modifier = Modifier.padding(horizontal = 20.dp).fillMaxWidth()
+            modifier = if (ancho != null) {
+                Modifier.padding(horizontal = 8.dp).widthIn(max = ancho).fillMaxWidth()
+            } else {
+                Modifier.padding(horizontal = 20.dp).fillMaxWidth()
+            }
         ) {
             Box {
                 // Mancha decorativa de fondo, igual que en el aviso de batería.
@@ -368,7 +384,7 @@ fun AvisoHoja(
                 Column(
                     modifier = Modifier
                         .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 24.dp, vertical = 24.dp),
+                        .padding(horizontal = if (ancho != null) 10.dp else 24.dp, vertical = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {

@@ -7,6 +7,10 @@ package com.encaja.app.ui.compra
 // un panel lavanda abajo para añadir artículos con "Artículo", "Tienda" y un botón "+".
 // Sin logotipos de comercio: el círculo lleva la inicial de la tienda.
 
+import androidx.compose.material.icons.filled.Store
+import com.encaja.app.ui.theme.EstiloAccionAviso
+import com.encaja.app.ui.theme.AccionAvisoHoja
+import com.encaja.app.ui.theme.AvisoHoja
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -421,10 +425,19 @@ private fun DialogoFiltroComercios(
     ocultas: MutableList<String>,
     onCerrar: () -> Unit
 ) {
-    AlertDialog(
-        onDismissRequest = onCerrar,
-        title = { Text("Comercios a mostrar") },
-        text = {
+    AvisoHoja(
+        icono = Icons.Default.Store,
+        titulo = "Comercios a mostrar",
+        texto = null,
+        peligro = false,
+        conX = true,
+        accionesEnFila = true,
+        acciones = listOf(
+            AccionAvisoHoja("Mostrar todos", EstiloAccionAviso.SUAVE) { ocultas.clear() },
+            AccionAvisoHoja("Listo", EstiloAccionAviso.PRIMARIO) { onCerrar() }
+        ),
+        onCerrar = onCerrar,
+        contenido = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 grupos.forEach { grupo ->
                     val visible = grupo.tienda !in ocultas
@@ -450,9 +463,8 @@ private fun DialogoFiltroComercios(
                     }
                 }
             }
-        },
-        dismissButton = { TextButton(onClick = { ocultas.clear() }) { Text("Mostrar todos") } },
-        confirmButton = { TextButton(onClick = onCerrar) { Text("Listo", fontWeight = FontWeight.Bold) } }
+        
+        }
     )
 }
 
@@ -473,10 +485,19 @@ private fun FilaArticulo(
     var nombreEditado by remember(articulo.nombre) { mutableStateOf(articulo.nombre) }
 
     if (editando) {
-        AlertDialog(
-            onDismissRequest = { editando = false },
-            title = { Text("Cambiar nombre") },
-            text = {
+        AvisoHoja(
+            icono = Icons.Default.Edit,
+            titulo = "Cambiar nombre",
+            texto = null,
+            peligro = false,
+            conX = true,
+            accionesEnFila = true,
+            acciones = listOf(
+                AccionAvisoHoja("Cancelar", EstiloAccionAviso.BORDE) { editando = false },
+                AccionAvisoHoja("Guardar", EstiloAccionAviso.PRIMARIO, habilitada = nombreEditado.isNotBlank()) { onRenombrar(nombreEditado); editando = false }
+            ),
+            onCerrar = { editando = false },
+            contenido = {
                 OutlinedTextField(
                     value = nombreEditado,
                     onValueChange = { nombreEditado = it },
@@ -488,14 +509,8 @@ private fun FilaArticulo(
                     }),
                     modifier = Modifier.fillMaxWidth()
                 )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = { onRenombrar(nombreEditado); editando = false },
-                    enabled = nombreEditado.isNotBlank()
-                ) { Text("Guardar") }
-            },
-            dismissButton = { TextButton(onClick = { editando = false }) { Text("Cancelar") } }
+            
+            }
         )
     }
 

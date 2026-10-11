@@ -8,6 +8,11 @@ package com.encaja.app.ui.familia
 // color e icono (galería de emojis). Las de serie (Trabajo, Médico...) también se
 // pueden borrar; quedan ocultas y se pueden recuperar desde la lista de categorías.
 
+import androidx.compose.material.icons.filled.EmojiEmotions
+import androidx.compose.material.icons.filled.Category
+import com.encaja.app.ui.theme.EstiloAccionAviso
+import com.encaja.app.ui.theme.AccionAvisoHoja
+import com.encaja.app.ui.theme.AvisoHoja
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -64,10 +69,30 @@ fun DialogoCategoria(
     val nombreRepetido = nombre.isNotBlank() && !nombreCategoriaValido(nombre, categorias, inicial?.id)
     val puedeGuardar = nombreCategoriaValido(nombre, categorias, inicial?.id)
 
-    AlertDialog(
-        onDismissRequest = onCerrar,
-        title = { Text(if (inicial == null) "Nueva categoría" else "Editar ${inicial.nombre}") },
-        text = {
+    AvisoHoja(
+        icono = Icons.Default.Category,
+        titulo = if (inicial == null) "Nueva categoría" else "Editar ${inicial.nombre}",
+        texto = null,
+        peligro = false,
+        conX = true,
+        accionesEnFila = true,
+        acciones = listOf(
+            AccionAvisoHoja("Cancelar", EstiloAccionAviso.BORDE) { onCerrar() },
+            AccionAvisoHoja("Guardar", EstiloAccionAviso.PRIMARIO, habilitada = puedeGuardar) {
+val guardada = CategoriaDisponibilidad(
+                        id = inicial?.id ?: idNueva,
+                        nombre = nombre.trim(),
+                        emoji = emoji,
+                        color = color,
+                        modo = modo,
+                        bloquea = bloquea,
+                        base = inicial?.base
+                    )
+                    onGuardar(guardada)
+            }
+        ),
+        onCerrar = onCerrar,
+        contenido = {
             Column(
                 modifier = Modifier
                     .heightIn(max = 520.dp)
@@ -210,25 +235,8 @@ fun DialogoCategoria(
                     }
                 }
             }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    val guardada = CategoriaDisponibilidad(
-                        id = inicial?.id ?: idNueva,
-                        nombre = nombre.trim(),
-                        emoji = emoji,
-                        color = color,
-                        modo = modo,
-                        bloquea = bloquea,
-                        base = inicial?.base
-                    )
-                    onGuardar(guardada)
-                },
-                enabled = puedeGuardar
-            ) { Text("Guardar") }
-        },
-        dismissButton = { TextButton(onClick = onCerrar) { Text("Cancelar") } }
+        
+        }
     )
 
     if (galeriaAbierta) {
@@ -240,21 +248,24 @@ fun DialogoCategoria(
     }
 
     if (confirmarBorrado && onEliminar != null) {
-        AlertDialog(
-            onDismissRequest = { confirmarBorrado = false },
-            title = { Text("¿Borrar \"${nombre.trim()}\"?") },
-            text = {
+        AvisoHoja(
+            icono = Icons.Default.Delete,
+            titulo = "¿Borrar \"${nombre.trim()}\"?",
+            texto = null,
+            conX = true,
+            accionesEnFila = true,
+            acciones = listOf(
+                AccionAvisoHoja("Cancelar", EstiloAccionAviso.BORDE) { confirmarBorrado = false },
+                AccionAvisoHoja("Borrar", EstiloAccionAviso.PELIGRO) { confirmarBorrado = false; onEliminar() }
+            ),
+            onCerrar = { confirmarBorrado = false },
+            contenido = {
                 Text(
                     if (esBase) "Se ocultará de la lista (podrás recuperarla desde \"Categorías\"). Los días ya apuntados con ella no se borran."
                     else "Los días ya apuntados con esta categoría no se borran: pasarán a verse como \"Otro\"."
                 )
-            },
-            confirmButton = {
-                TextButton(onClick = { confirmarBorrado = false; onEliminar() }) {
-                    Text("Borrar", color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = { TextButton(onClick = { confirmarBorrado = false }) { Text("Cancelar") } }
+            
+            }
         )
     }
 }
@@ -262,10 +273,17 @@ fun DialogoCategoria(
 /** Galería de emojis por temas; al tocar uno se elige y se cierra. */
 @Composable
 private fun DialogoGaleriaEmojis(seleccionado: String, onElegir: (String) -> Unit, onCerrar: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onCerrar,
-        title = { Text("Elige un icono") },
-        text = {
+    AvisoHoja(
+        icono = Icons.Default.EmojiEmotions,
+        titulo = "Elige un icono",
+        texto = null,
+        peligro = false,
+        conX = true,
+        acciones = listOf(
+            AccionAvisoHoja("Cerrar", EstiloAccionAviso.BORDE) { onCerrar() }
+        ),
+        onCerrar = onCerrar,
+        contenido = {
             Column(
                 modifier = Modifier
                     .heightIn(max = 460.dp)
@@ -297,7 +315,7 @@ private fun DialogoGaleriaEmojis(seleccionado: String, onElegir: (String) -> Uni
                     }
                 }
             }
-        },
-        confirmButton = { TextButton(onClick = onCerrar) { Text("Cerrar") } }
+        
+        }
     )
 }

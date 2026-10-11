@@ -9,6 +9,10 @@ package com.encaja.app.ui.semana
 // sin familia, con datos. El botón de invitar vive en la barra superior
 // (EncajaApp.kt), no aquí.
 
+import com.encaja.app.ui.theme.EstiloAccionAviso
+import com.encaja.app.ui.theme.AccionAvisoHoja
+import com.encaja.app.ui.theme.AvisoHoja
+import com.encaja.app.ui.theme.SelectorFechaHoja
 import com.encaja.app.ui.common.formatearHora
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -481,21 +485,12 @@ private fun TarjetaSemana(
     }
 
     if (calendarioAbierto) {
-        val estado = rememberDatePickerState(
-            initialSelectedDateMillis = fechaAMillisUtc(lunes ?: LocalDate.now())
+        SelectorFechaHoja(
+            fecha = lunes ?: LocalDate.now(),
+            confirmar = "Ir",
+            onElegir = onElegirFecha,
+            onCerrar = { calendarioAbierto = false }
         )
-        DatePickerDialog(
-            onDismissRequest = { calendarioAbierto = false },
-            confirmButton = {
-                TextButton(onClick = {
-                    estado.selectedDateMillis?.let { onElegirFecha(millisUtcAFecha(it)) }
-                    calendarioAbierto = false
-                }) { Text("Ir") }
-            },
-            dismissButton = { TextButton(onClick = { calendarioAbierto = false }) { Text("Cancelar") } }
-        ) {
-            DatePicker(state = estado)
-        }
     }
 }
 
@@ -557,15 +552,27 @@ fun BotonInvitar(viewModel: SemaforoViewModel) {
     }
 
     if (mostrarSelector) {
-        AlertDialog(
-            onDismissRequest = {
+        AvisoHoja(
+            icono = Icons.Default.PersonAdd,
+            titulo = if (codigoGenerado != null) "Código generado" else "Invitación para cuidadores",
+            texto = null,
+            peligro = false,
+            conX = true,
+            acciones = listOf(
+                AccionAvisoHoja("Cerrar", EstiloAccionAviso.BORDE) {
+mostrarSelector = false
+                    codigoGenerado = null
+                    errorInvitacion = null
+                    copiado = false
+                }
+            ),
+            onCerrar = {
                 mostrarSelector = false
                 codigoGenerado = null
                 errorInvitacion = null
                 copiado = false
             },
-            title = { Text(if (codigoGenerado != null) "Código generado" else "Invitación para cuidadores") },
-            text = {
+            contenido = {
                 Column {
                     when {
                         codigoGenerado != null -> {
@@ -611,16 +618,7 @@ fun BotonInvitar(viewModel: SemaforoViewModel) {
                         }
                     }
                 }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    mostrarSelector = false
-                    codigoGenerado = null
-                    errorInvitacion = null
-                    copiado = false
-                }) {
-                    Text("Cerrar")
-                }
+            
             }
         )
     }
@@ -976,10 +974,17 @@ private fun DialogoInfoDia(
     ninos: List<Child>,
     onCerrar: () -> Unit
 ) {
-    AlertDialog(
-        onDismissRequest = onCerrar,
-        title = { Text(formatearFechaHueco(dia.fecha)) },
-        text = {
+    AvisoHoja(
+        icono = Icons.Default.CalendarMonth,
+        titulo = formatearFechaHueco(dia.fecha),
+        texto = null,
+        peligro = false,
+        conX = true,
+        acciones = listOf(
+            AccionAvisoHoja("Cerrar", EstiloAccionAviso.BORDE) { onCerrar() }
+        ),
+        onCerrar = onCerrar,
+        contenido = {
             if (dia.needs.isEmpty()) {
                 Text("Ese día no hay ninguna actividad registrada.")
             } else {
@@ -1012,7 +1017,7 @@ private fun DialogoInfoDia(
                     }
                 }
             }
-        },
-        confirmButton = { TextButton(onClick = onCerrar) { Text("Cerrar") } }
+        
+        }
     )
 }
