@@ -20,6 +20,7 @@ package com.encaja.app.ui.guia
 // "serie": no hay que elegir si el cambio o el borrado afecta solo a esta
 // ocurrencia o también a las siguientes.
 
+import com.encaja.app.ui.common.formatearHora
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -65,7 +66,10 @@ import com.encaja.app.ui.theme.BotonCuadradoHoja
 import com.encaja.app.ui.theme.BotonRedondoSuaveHoja
 import com.encaja.app.ui.theme.BotonVariosDisquetesHoja
 import com.encaja.app.ui.theme.CajaValorHoja
+import com.encaja.app.ui.theme.AccionAvisoHoja
+import com.encaja.app.ui.theme.AvisoHoja
 import com.encaja.app.ui.theme.ConfirmarGuardadoHoja
+import com.encaja.app.ui.theme.EstiloAccionAviso
 import com.encaja.app.ui.theme.FilaConInterruptorHoja
 import com.encaja.app.ui.theme.IconoEnCirculoHoja
 import com.encaja.app.ui.theme.TarjetaSeccionHoja
@@ -92,24 +96,16 @@ private val ES = Locale("es")
 
 /**
  * [actividad] null = crear una nueva (con opción de repetición); si no, se edita esa
- * ocurrencia concreta. [diasSerieActual], [hastaSerieActual], [patronSerieCargando] y
- * [onActualizarSerie] ya no los usa este diálogo (la repetición dejó de tener el
- * concepto de "serie"), pero se mantienen en la firma porque Guía y Semana todavía
- * los pasan; el día en que dejen de hacerlo, se pueden quitar de aquí también.
+ * ocurrencia concreta.
  */
-@Suppress("UNUSED_PARAMETER")
 @Composable
 fun DialogoActividad(
     fecha: LocalDate,
     ninos: List<Child>,
     actividad: CoverageNeed?,
     responsables: List<Responsable> = emptyList(),
-    diasSerieActual: Set<DayOfWeek>? = null,
-    hastaSerieActual: LocalDate? = null,
-    patronSerieCargando: Boolean = false,
     onGuardar: (needs: List<CoverageNeed>, aplicarATodaLaSerie: Boolean) -> Unit,
     onEliminar: ((aplicarATodaLaSerie: Boolean) -> Unit)?,
-    onActualizarSerie: ((plantilla: CoverageNeed, nuevasFechas: List<LocalDate>) -> Unit)? = null,
     // Busca todas las veces que se repite la actividad que se edita (ella incluida): según
     // devuelva más de una, se ofrece "Guardar toda la serie". Null = sin series (creando).
     buscarOcurrencias: (suspend (CoverageNeed) -> List<CoverageNeed>)? = null,
@@ -384,14 +380,14 @@ fun DialogoActividad(
             TarjetaSeccionHoja(padding = 0.dp) {
                 SelectorAviso(
                     titulo = "Antes de empezar",
-                    detalle = "empieza a las ${formatearHoraActividad(inicio)}",
+                    detalle = "empieza a las ${formatearHora(inicio)}",
                     minutos = avisoLlevarMin,
                     onElegir = { avisoLlevarMin = it }
                 )
                 SeparadorHoja()
                 SelectorAviso(
                     titulo = "Antes de terminar",
-                    detalle = "termina a las ${formatearHoraActividad(fin)}",
+                    detalle = "termina a las ${formatearHora(fin)}",
                     minutos = avisoRecogerMin,
                     onElegir = { avisoRecogerMin = it }
                 )
@@ -519,16 +515,28 @@ fun DialogoActividad(
     }
 
     if (confirmarBorrado && onEliminar != null) {
-        AlertDialog(
-            onDismissRequest = { confirmarBorrado = false },
-            title = { Text("¿Borrar esta actividad?") },
-            text = { Text("No se puede deshacer.") },
-            confirmButton = {
-                TextButton(onClick = { confirmarBorrado = false; onEliminar(false); onCerrar() }) {
-                    Text("Borrar", color = MaterialTheme.colorScheme.error)
-                }
+        val borrar: (Boolean) -> Unit = { serie -> confirmarBorrado = false; onEliminar(serie); onCerrar() }
+        AvisoHoja(
+            icono = Icons.Default.Delete,
+            titulo = "¿Borrar esta actividad?",
+            texto = if (tieneSerie) {
+                "Se repite ${ocurrenciasSerie.size} veces. Puedes borrar solo esta o toda la serie. No se puede deshacer."
+            } else {
+                "No se puede deshacer."
             },
-            dismissButton = { TextButton(onClick = { confirmarBorrado = false }) { Text("Cancelar") } }
+            acciones = if (tieneSerie) {
+                listOf(
+                    AccionAvisoHoja("Borrar toda la serie (${ocurrenciasSerie.size})", EstiloAccionAviso.PELIGRO, Icons.Default.Delete) { borrar(true) },
+                    AccionAvisoHoja("Borrar solo esta", EstiloAccionAviso.SUAVE, Icons.Default.Delete) { borrar(false) },
+                    AccionAvisoHoja("Cancelar", EstiloAccionAviso.BORDE) { confirmarBorrado = false }
+                )
+            } else {
+                listOf(
+                    AccionAvisoHoja("Borrar", EstiloAccionAviso.PELIGRO, Icons.Default.Delete) { borrar(false) },
+                    AccionAvisoHoja("Cancelar", EstiloAccionAviso.BORDE) { confirmarBorrado = false }
+                )
+            },
+            onCerrar = { confirmarBorrado = false }
         )
     }
 }
@@ -674,7 +682,7 @@ private fun FilaResponsable(
 @Composable
 private fun CajaHoraActividad(titulo: String, hora: LocalTime, modifier: Modifier = Modifier, onCambiar: (LocalTime) -> Unit) {
     var abierto by remember { mutableStateOf(false) }
-    CajaValorHoja(titulo, formatearHoraActividad(hora), Icons.Default.Schedule, modifier) { abierto = true }
+    CajaValorHoja(titulo, formatearHora(hora), Icons.Default.Schedule, modifier) { abierto = true }
     if (abierto) {
         val estado = rememberTimePickerState(initialHour = hora.hour, initialMinute = hora.minute, is24Hour = true)
         AlertDialog(
@@ -853,9 +861,6 @@ private fun textoAviso(minutos: Int?): String = when {
     minutos % 60 == 0 -> if (minutos == 60) "1 hora antes" else "${minutos / 60} horas antes"
     else -> "${minutos / 60} h ${minutos % 60} min antes"
 }
-
-private fun formatearHoraActividad(hora: LocalTime): String =
-    "${hora.hour.toString().padStart(2, '0')}:${hora.minute.toString().padStart(2, '0')}"
 
 /**
  * Fila "Antes de llevar · empieza a las 17:00 — Sin aviso"; al tocarla se elige la

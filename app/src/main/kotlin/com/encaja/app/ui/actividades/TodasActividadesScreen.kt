@@ -39,7 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.encaja.app.domain.model.CoverageNeed
 import com.encaja.app.domain.model.CoverageNeedId
-import com.encaja.app.ui.familia.formatearHora
+import com.encaja.app.ui.common.formatearHora
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 

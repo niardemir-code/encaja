@@ -44,6 +44,19 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 
 /** Atajos a los colores del tema activo con los nombres del diseño (ver DialogoDisponibilidad). */
 val tintaHoja: Color @Composable get() = MaterialTheme.colorScheme.onBackground
@@ -257,4 +270,129 @@ fun CampoTextoHoja(valor: String, onCambiar: (String) -> Unit, placeholder: Stri
         ),
         modifier = modifier.fillMaxWidth()
     )
+}
+
+
+/** Cómo se pinta cada botón de [AvisoHoja]. */
+enum class EstiloAccionAviso { PELIGRO, SUAVE, BORDE }
+
+/** Un botón a todo el ancho de [AvisoHoja]; [icono] es opcional. */
+class AccionAvisoHoja(
+    val texto: String,
+    val estilo: EstiloAccionAviso,
+    val icono: ImageVector? = null,
+    val onClick: () -> Unit
+)
+
+/**
+ * Aviso de confirmación con el diseño de tarjeta grande de la app: icono en círculo con
+ * chispas, título, texto y una columna de botones a todo el ancho. [peligro] pinta el
+ * círculo del icono en rojo (acciones que no se pueden deshacer).
+ */
+@Composable
+fun AvisoHoja(
+    icono: ImageVector,
+    titulo: String,
+    texto: String,
+    acciones: List<AccionAvisoHoja>,
+    onCerrar: () -> Unit,
+    peligro: Boolean = true
+) {
+    val extra = LocalEncajaExtraColors.current
+    val lavanda = MaterialTheme.colorScheme.primaryContainer
+    val indigo = MaterialTheme.colorScheme.primary
+    val fondoIcono = if (peligro) MaterialTheme.colorScheme.errorContainer else lavanda
+    val tintaIcono = if (peligro) MaterialTheme.colorScheme.error else indigo
+
+    Dialog(onDismissRequest = onCerrar, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Surface(
+            shape = RoundedCornerShape(36.dp),
+            color = MaterialTheme.colorScheme.background,
+            modifier = Modifier.padding(horizontal = 20.dp).fillMaxWidth()
+        ) {
+            Box {
+                // Mancha decorativa de fondo, igual que en el aviso de batería.
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .offset(x = 36.dp, y = (-20).dp)
+                        .size(210.dp)
+                        .clip(CircleShape)
+                        .background(lavanda.copy(alpha = 0.35f))
+                )
+                Column(
+                    modifier = Modifier
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 24.dp, vertical = 24.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(modifier = Modifier.size(96.dp), contentAlignment = Alignment.Center) {
+                            Box(
+                                modifier = Modifier.size(84.dp).clip(CircleShape).background(fondoIcono),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(icono, contentDescription = null, tint = tintaIcono, modifier = Modifier.size(44.dp))
+                            }
+                            Canvas(modifier = Modifier.matchParentSize()) {
+                                val color = extra.ambar
+                                val trazo = 5.dp.toPx()
+                                drawLine(color, Offset(size.width * 0.02f, size.height * 0.28f), Offset(size.width * 0.17f, size.height * 0.35f), trazo, StrokeCap.Round)
+                                drawLine(color, Offset(size.width * 0.20f, size.height * 0.02f), Offset(size.width * 0.27f, size.height * 0.15f), trazo, StrokeCap.Round)
+                            }
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Text(
+                            titulo,
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.onBackground,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    Text(texto, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onBackground)
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        acciones.forEach { accion -> BotonAvisoHoja(accion) }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BotonAvisoHoja(accion: AccionAvisoHoja) {
+    val forma = RoundedCornerShape(28.dp)
+    val modificador = Modifier.fillMaxWidth().height(56.dp)
+    val contenido: @Composable androidx.compose.foundation.layout.RowScope.(Color) -> Unit = { tinta ->
+        if (accion.icono != null) {
+            Icon(accion.icono, contentDescription = null, tint = tinta, modifier = Modifier.size(22.dp))
+            Spacer(Modifier.width(12.dp))
+        }
+        Text(accion.texto, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = tinta)
+    }
+    when (accion.estilo) {
+        EstiloAccionAviso.PELIGRO -> {
+            val tinta = MaterialTheme.colorScheme.error
+            Button(
+                onClick = accion.onClick, shape = forma, modifier = modificador,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.errorContainer, contentColor = tinta)
+            ) { contenido(tinta) }
+        }
+        EstiloAccionAviso.SUAVE -> {
+            val tinta = MaterialTheme.colorScheme.primary
+            Button(
+                onClick = accion.onClick, shape = forma, modifier = modificador,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primaryContainer, contentColor = tinta)
+            ) { contenido(tinta) }
+        }
+        EstiloAccionAviso.BORDE -> {
+            val tinta = MaterialTheme.colorScheme.primary
+            OutlinedButton(
+                onClick = accion.onClick, shape = forma, modifier = modificador,
+                border = androidx.compose.foundation.BorderStroke(1.5.dp, MaterialTheme.colorScheme.primaryContainer),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = tinta)
+            ) { contenido(tinta) }
+        }
+    }
 }

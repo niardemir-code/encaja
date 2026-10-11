@@ -87,58 +87,18 @@ class EditorDeActividades @Inject constructor(
     }
 
     /**
-     * Borra una actividad. Si [aplicarATodaLaSerie] es true y pertenece a un grupo
-     * ([grupoRepeticionId]), borra también todas las ocurrencias posteriores (desde
-     * [fecha] en adelante) de esa misma serie.
+     * Borra una actividad. Si [serieCompleta] es true, borra todas las veces que se
+     * repite (las de su grupo, o las idénticas si es una serie anterior a los grupos;
+     * ver [ocurrenciasDeSerie]), antes y después de esta; si no, solo [need].
      */
-    suspend fun eliminar(
-        familyId: FamilyId,
-        id: CoverageNeedId,
-        grupoRepeticionId: String?,
-        fecha: LocalDate,
-        aplicarATodaLaSerie: Boolean
-    ) {
-        if (aplicarATodaLaSerie && grupoRepeticionId != null) {
-            val idsABorrar = coverageNeedRepository.obtenerNeedsDelGrupo(familyId, grupoRepeticionId)
-                .filter { !it.fecha.isBefore(fecha) }
-                .map { it.id }
-            coverageNeedRepository.eliminarNeeds(familyId, idsABorrar)
-            idsABorrar.forEach { avisos.cancelar(it) }
+    suspend fun eliminar(familyId: FamilyId, need: CoverageNeed, serieCompleta: Boolean) {
+        val ids = if (serieCompleta) {
+            (ocurrenciasDeSerie(familyId, need).map { it.id } + need.id).distinct()
         } else {
-            coverageNeedRepository.eliminarNeed(familyId, id)
-            avisos.cancelar(id)
+            listOf(need.id)
         }
-    }
-
-    /**
-     * El patrón real (días de la semana y última fecha) con el que se repite hoy la
-     * serie [grupoRepeticionId], mirando solo las ocurrencias a partir de [desde] — para
-     * preseleccionar el selector de días al abrir "Repetir" sobre una serie ya existente.
-     */
-    suspend fun patronDeSerie(familyId: FamilyId, grupoRepeticionId: String, desde: LocalDate): Pair<Set<DayOfWeek>, LocalDate?> {
-        val ocurrencias = coverageNeedRepository.obtenerNeedsDelGrupo(familyId, grupoRepeticionId)
-            .filter { !it.fecha.isBefore(desde) }
-        val dias = ocurrencias.map { it.fecha.dayOfWeek }.toSet()
-        val hasta = ocurrencias.maxByOrNull { it.fecha }?.fecha
-        return dias to hasta
-    }
-
-    /**
-     * Cambia el patrón semanal de la serie de [plantilla] a partir de su fecha: las
-     * ocurrencias de [nuevasFechas] que ya existían conservan su id, las nuevas se crean
-     * y las que ya no encajan en el patrón se borran (ver [diferenciaSerie]).
-     */
-    suspend fun actualizarSerie(familyId: FamilyId, plantillaOriginal: CoverageNeed, nuevasFechas: List<LocalDate>) {
-        val plantilla = sincronizador.sellarCreador(listOf(plantillaOriginal)).first()
-        val grupoId = plantilla.grupoRepeticionId ?: return
-        val existentesDesdeSuFecha = coverageNeedRepository.obtenerNeedsDelGrupo(familyId, grupoId)
-            .filter { !it.fecha.isBefore(plantilla.fecha) }
-        val (aGuardar, aBorrar) = diferenciaSerie(plantilla, existentesDesdeSuFecha, nuevasFechas) {
-            CoverageNeedId(UUID.randomUUID().toString())
-        }
-        if (aGuardar.isNotEmpty()) coverageNeedRepository.guardarNeeds(familyId, aGuardar)
-        if (aBorrar.isNotEmpty()) coverageNeedRepository.eliminarNeeds(familyId, aBorrar.map { it.id })
-        programarAvisos(familyId, aGuardar)
-        aBorrar.forEach { avisos.cancelar(it.id) }
+        if (ids.size > 1) coverageNeedRepository.eliminarNeeds(familyId, ids)
+        else coverageNeedRepository.eliminarNeed(familyId, ids.first())
+        ids.forEach { avisos.cancelar(it) }
     }
 }

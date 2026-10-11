@@ -18,6 +18,7 @@ package com.encaja.app.ui.familia
 //    guarda ni se borra hasta pulsar uno de los dos.
 // Las categorías se editan desde la tarjeta "Categorías" de la pantalla.
 
+import com.encaja.app.ui.common.formatearHora
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable

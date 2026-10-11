@@ -62,7 +62,7 @@ import com.encaja.app.domain.model.CaregiverId
 import com.encaja.app.domain.model.CoverageNeed
 import com.encaja.app.ui.familia.Responsable
 import com.encaja.app.ui.familia.fechaAMillisUtc
-import com.encaja.app.ui.familia.formatearHora
+import com.encaja.app.ui.common.formatearHora
 import com.encaja.app.ui.familia.millisUtcAFecha
 import com.encaja.app.ui.theme.LocalEncajaExtraColors
 import kotlinx.coroutines.flow.first
@@ -419,41 +419,18 @@ fun GuiaScreen(
                     }
 
                     actividadEnEdicion?.let { need ->
-                        // Patrón real de la serie (días de la semana y última fecha), para
-                        // preseleccionar el selector de días al abrir "Repetir" en vez de
-                        // partir de uno vacío. Se pide de nuevo cada vez que cambia la
-                        // actividad en edición.
-                        var diasSerieActual by remember(need.id) { mutableStateOf<Set<DayOfWeek>?>(null) }
-                        var hastaSerieActual by remember(need.id) { mutableStateOf<LocalDate?>(null) }
-                        var patronSerieCargando by remember(need.id) { mutableStateOf(need.grupoRepeticionId != null) }
-                        LaunchedEffect(need.id) {
-                            val grupoId = need.grupoRepeticionId
-                            if (grupoId != null) {
-                                val (dias, hasta) = viewModel.patronDeSerie(grupoId, need.fecha)
-                                diasSerieActual = dias
-                                hastaSerieActual = hasta
-                                patronSerieCargando = false
-                            }
-                        }
                         DialogoActividad(
                             fecha = need.fecha,
                             ninos = estadoActual.estado.filas.map { it.child },
                             actividad = need,
                             responsables = estadoActual.estado.responsables,
-                            diasSerieActual = diasSerieActual,
-                            hastaSerieActual = hastaSerieActual,
-                            patronSerieCargando = patronSerieCargando,
                             buscarOcurrencias = { viewModel.ocurrenciasDeSerie(it) },
                             onGuardar = { needs, aplicarATodaLaSerie ->
                                 viewModel.guardarActividades(needs, aplicarATodaLaSerie)
                                 cerrarEdicion()
                             },
                             onEliminar = { aplicarATodaLaSerie ->
-                                viewModel.eliminarActividad(need.id, need.grupoRepeticionId, need.fecha, aplicarATodaLaSerie)
-                                cerrarEdicion()
-                            },
-                            onActualizarSerie = { plantilla, nuevasFechas ->
-                                viewModel.actualizarSerie(plantilla, nuevasFechas)
+                                viewModel.eliminarActividad(need, aplicarATodaLaSerie)
                                 cerrarEdicion()
                             },
                             onCerrar = { cerrarEdicion() }

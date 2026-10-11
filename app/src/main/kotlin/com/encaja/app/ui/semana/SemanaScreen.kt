@@ -9,6 +9,7 @@ package com.encaja.app.ui.semana
 // sin familia, con datos. El botón de invitar vive en la barra superior
 // (EncajaApp.kt), no aquí.
 
+import com.encaja.app.ui.common.formatearHora
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -79,7 +80,6 @@ import kotlinx.coroutines.launch
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
-import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
 
@@ -361,39 +361,18 @@ fun SemanaScreen(
             }
 
             actividadEnEdicion?.let { need ->
-                // Igual que en la Guía: se pide el patrón real de la serie para
-                // preseleccionar los días al abrir "Repetir".
-                var diasSerieActual by remember(need.id) { mutableStateOf<Set<DayOfWeek>?>(null) }
-                var hastaSerieActual by remember(need.id) { mutableStateOf<LocalDate?>(null) }
-                var patronSerieCargando by remember(need.id) { mutableStateOf(need.grupoRepeticionId != null) }
-                LaunchedEffect(need.id) {
-                    val grupoId = need.grupoRepeticionId
-                    if (grupoId != null) {
-                        val (dias, hasta) = viewModel.patronDeSerie(grupoId, need.fecha)
-                        diasSerieActual = dias
-                        hastaSerieActual = hasta
-                        patronSerieCargando = false
-                    }
-                }
                 DialogoActividad(
                     fecha = need.fecha,
                     ninos = ninos,
                     actividad = need,
                     responsables = responsables,
-                    diasSerieActual = diasSerieActual,
-                    hastaSerieActual = hastaSerieActual,
-                    patronSerieCargando = patronSerieCargando,
                     buscarOcurrencias = { viewModel.ocurrenciasDeSerie(it) },
                     onGuardar = { needs, aplicarATodaLaSerie ->
                         viewModel.guardarActividades(needs, aplicarATodaLaSerie)
                         actividadEnEdicion = null
                     },
                     onEliminar = { aplicarATodaLaSerie ->
-                        viewModel.eliminarActividad(need.id, need.grupoRepeticionId, need.fecha, aplicarATodaLaSerie)
-                        actividadEnEdicion = null
-                    },
-                    onActualizarSerie = { plantilla, nuevasFechas ->
-                        viewModel.actualizarSerie(plantilla, nuevasFechas)
+                        viewModel.eliminarActividad(need, aplicarATodaLaSerie)
                         actividadEnEdicion = null
                     },
                     onCerrar = { actividadEnEdicion = null }
@@ -873,9 +852,6 @@ private fun formatearFechaHueco(fecha: LocalDate): String {
     return "$nombreDia ${fecha.dayOfMonth}"
 }
 
-/** "18:30" en vez del LocalTime en bruto (18:30:00 o 18:30). */
-private fun formatearHoraHueco(hora: LocalTime): String =
-    hora.format(DateTimeFormatter.ofPattern("HH:mm"))
 
 /**
  * Tarjeta de aviso con el estilo de la maqueta: fondo pálido, franja de color a la
@@ -952,7 +928,7 @@ private fun TarjetaHueco(hueco: Hueco, nombreNino: String?, onClick: () -> Unit)
     TarjetaAviso(
         titulo = tituloConNino(hueco.need.descripcion, nombreNino),
         chip = "Sin cubrir",
-        texto = "${formatearFechaHueco(hueco.need.fecha)} a las ${formatearHoraHueco(horaReferencia)}: " +
+        texto = "${formatearFechaHueco(hueco.need.fecha)} a las ${formatearHora(horaReferencia)}: " +
             "todavía no hay nadie asignado para $queFalta$quien.",
         fondo = LocalEncajaExtraColors.current.rosaHueco,
         franja = MaterialTheme.colorScheme.error,
@@ -1014,9 +990,9 @@ private fun DialogoInfoDia(
                             val nombreNino = ninos.firstOrNull { it.id == need.childId }?.nombre
                             Text(
                                 buildString {
-                                    append(formatearHoraHueco(need.horaInicio))
+                                    append(formatearHora(need.horaInicio))
                                     append(" – ")
-                                    append(formatearHoraHueco(need.horaFin))
+                                    append(formatearHora(need.horaFin))
                                     if (nombreNino != null) append(" · $nombreNino")
                                 },
                                 style = MaterialTheme.typography.bodyMedium,

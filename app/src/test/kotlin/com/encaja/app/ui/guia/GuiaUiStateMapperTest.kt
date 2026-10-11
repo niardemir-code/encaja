@@ -31,8 +31,8 @@ class GuiaUiStateMapperTest {
 
         assertEquals(1, filaJulia.bloques.size)
         assertTrue(filaJulia.bloques.first().cubierto)
-        assertEquals("Sílvia Izquierdo", filaJulia.bloques.first().quienLleva?.etiqueta)
-        assertEquals("Sílvia Izquierdo", filaJulia.bloques.first().quienRecoge?.etiqueta)
+        assertEquals("Sílvia Izquierdo Camps", filaJulia.bloques.first().quienLleva?.etiqueta)
+        assertEquals("Sílvia Izquierdo Camps", filaJulia.bloques.first().quienRecoge?.etiqueta)
     }
 
     @Test

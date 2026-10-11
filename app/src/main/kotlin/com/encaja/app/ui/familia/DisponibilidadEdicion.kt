@@ -1,5 +1,6 @@
 package com.encaja.app.ui.familia
 
+import com.encaja.app.ui.common.formatearHora
 import com.encaja.app.domain.model.AvailabilityBlock
 import com.encaja.app.domain.model.CategoriaDisponibilidad
 import com.encaja.app.domain.model.CategoriasBase
@@ -41,9 +42,6 @@ fun etiquetaMotivoCorta(motivo: MotivoNoDisponibilidad): String = when (motivo) 
     MotivoNoDisponibilidad.VACACIONES -> "Vacac."
     MotivoNoDisponibilidad.OTRO -> "Otro"
 }
-
-fun formatearHora(hora: LocalTime): String =
-    "${hora.hour.toString().padStart(2, '0')}:${hora.minute.toString().padStart(2, '0')}"
 
 /** "06:00 - 14:00", o "Todo el día". */
 fun textoHorario(bloque: AvailabilityBlock): String =

@@ -304,10 +304,10 @@ class SemaforoViewModel @Inject constructor(
         }
     }
 
-    fun eliminarActividad(id: CoverageNeedId, grupoRepeticionId: String?, fecha: LocalDate, aplicarATodaLaSerie: Boolean) {
+    fun eliminarActividad(need: CoverageNeed, aplicarATodaLaSerie: Boolean) {
         val familyId = familyIdActual ?: return
         lanzarSeguro {
-            editor.eliminar(familyId, id, grupoRepeticionId, fecha, aplicarATodaLaSerie)
+            editor.eliminar(familyId, need, aplicarATodaLaSerie)
             cargarSemana(mostrarCargando = false)
         }
     }
@@ -316,18 +316,5 @@ class SemaforoViewModel @Inject constructor(
     suspend fun ocurrenciasDeSerie(need: CoverageNeed): List<CoverageNeed> {
         val familyId = familyIdActual ?: return listOf(need)
         return editor.ocurrenciasDeSerie(familyId, need)
-    }
-
-    suspend fun patronDeSerie(grupoRepeticionId: String, desde: LocalDate): Pair<Set<DayOfWeek>, LocalDate?> {
-        val familyId = familyIdActual ?: return emptySet<DayOfWeek>() to null
-        return editor.patronDeSerie(familyId, grupoRepeticionId, desde)
-    }
-
-    fun actualizarSerie(plantilla: CoverageNeed, nuevasFechas: List<LocalDate>) {
-        val familyId = familyIdActual ?: return
-        lanzarSeguro {
-            editor.actualizarSerie(familyId, plantilla, nuevasFechas)
-            cargarSemana(mostrarCargando = false)
-        }
     }
 }
