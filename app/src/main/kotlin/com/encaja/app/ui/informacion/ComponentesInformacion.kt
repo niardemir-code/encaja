@@ -1,6 +1,17 @@
 package com.encaja.app.ui.informacion
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import com.encaja.app.ui.theme.bordeHoja
+import com.encaja.app.ui.theme.casillaHoja
+import com.encaja.app.ui.theme.indigoHoja
+import com.encaja.app.ui.theme.tintaHoja
+import com.encaja.app.ui.theme.tintaSuaveHoja
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -14,7 +25,6 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -34,10 +44,15 @@ fun TarjetaPlegable(
     contenido: @Composable ColumnScope.() -> Unit
 ) {
     var abierta by rememberSaveable { mutableStateOf(false) }
-    OutlinedCard(
-        onClick = { abierta = !abierta },
-        shape = RoundedCornerShape(12.dp),
-        modifier = Modifier.fillMaxWidth()
+    val forma = RoundedCornerShape(22.dp)
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(3.dp, forma, ambientColor = indigoHoja.copy(alpha = 0.10f), spotColor = indigoHoja.copy(alpha = 0.10f))
+            .clip(forma)
+            .background(casillaHoja)
+            .border(1.dp, bordeHoja.copy(alpha = 0.5f), forma)
+            .clickable { abierta = !abierta }
     ) {
         Column(Modifier.fillMaxWidth().padding(16.dp)) {
             Row(
@@ -46,18 +61,19 @@ fun TarjetaPlegable(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Column(Modifier.weight(1f)) {
-                    Text(titulo, style = MaterialTheme.typography.titleMedium)
+                    Text(titulo, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = tintaHoja)
                     if (subtitulo != null) {
                         Text(
                             subtitulo,
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = tintaSuaveHoja
                         )
                     }
                 }
                 Icon(
                     if (abierta) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                    contentDescription = if (abierta) "Plegar" else "Desplegar"
+                    contentDescription = if (abierta) "Plegar" else "Desplegar",
+                    tint = tintaSuaveHoja
                 )
             }
             if (abierta) {

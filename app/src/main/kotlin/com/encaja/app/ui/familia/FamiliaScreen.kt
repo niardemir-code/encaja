@@ -13,6 +13,8 @@ package com.encaja.app.ui.familia
 // Los colores del diseño están aquí como constantes para no tocar el tema
 // del resto de pantallas.
 
+import com.encaja.app.ui.theme.PaletaAvatarPersonas
+import com.encaja.app.ui.theme.ColorAvatarUnidad
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -85,18 +87,7 @@ private val FONDO_FILA: Color
  * pastel también en modo Nocturno y con letra clara no se leía. */
 private val TINTA_CELDA = Color(0xFF26224A)
 
-/** Fondo y color de letra del avatar de cada persona, por orden de la lista. */
-/** Avatar de las unidades familiares: gris azulado, distinto de la paleta de personas. */
-private val COLOR_AVATAR_UNIDAD = Color(0xFFDDE3EE) to Color(0xFF3A4A6B)
-
-private val COLORES_AVATAR = listOf(
-    Color(0xFFE4E2FA) to Color(0xFF3B3597),
-    Color(0xFFD6F1E3) to Color(0xFF1E6B45),
-    Color(0xFFE6DEFA) to Color(0xFF4A3B9A),
-    Color(0xFFFBDDE4) to Color(0xFF9A2A45),
-    Color(0xFFDCEAFA) to Color(0xFF1E5A8C),
-    Color(0xFFFCE4D6) to Color(0xFF9A3D1C)
-)
+// Paletas de los avatares: compartidas con Ajustes (ver ui/theme/ComponentesPantalla.kt).
 
 // Medidas de la cuadrícula: la semana entera cabe siempre en el ancho de la pantalla.
 private val ALTO_CABECERA = 40.dp
@@ -498,7 +489,7 @@ private fun LazyListScope.cuadriculaDisponibilidad(
             BloqueFila(
                 nombre = cuidadorSemana.caregiver.nombreCompleto,
                 iniciales = iniciales[cuidadorSemana.caregiver.id] ?: "",
-                colores = COLORES_AVATAR[indice % COLORES_AVATAR.size],
+                colores = PaletaAvatarPersonas[indice % PaletaAvatarPersonas.size],
                 dias = cuidadorSemana.dias,
                 categorias = categorias,
                 onClickDia = { fecha -> onClickDia(cuidadorSemana.caregiver.id.value, fecha) }
@@ -513,7 +504,7 @@ private fun LazyListScope.cuadriculaDisponibilidad(
             BloqueFila(
                 nombre = unidadSemana.unidad.nombre,
                 iniciales = unidadSemana.unidad.codigo.take(2).uppercase(),
-                colores = COLOR_AVATAR_UNIDAD,
+                colores = ColorAvatarUnidad,
                 dias = unidadSemana.dias,
                 categorias = categorias,
                 esUnidad = true,
@@ -878,7 +869,7 @@ private fun DialogoListaCategorias(
 
 /** Pide el nombre y los apellidos del cuidador nuevo; "Crear" se activa cuando hay nombre. */
 @Composable
-private fun DialogoNuevoCuidador(onCrear: (nombre: String, apellido1: String, apellido2: String) -> Unit, onCerrar: () -> Unit) {
+internal fun DialogoNuevoCuidador(onCrear: (nombre: String, apellido1: String, apellido2: String) -> Unit, onCerrar: () -> Unit) {
     var nombre by remember { mutableStateOf("") }
     var apellido1 by remember { mutableStateOf("") }
     var apellido2 by remember { mutableStateOf("") }

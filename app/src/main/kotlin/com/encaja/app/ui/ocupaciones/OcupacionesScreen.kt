@@ -9,6 +9,7 @@ package com.encaja.app.ui.ocupaciones
 // que "Todas las actividades".
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -17,7 +18,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FilterAlt
-import androidx.compose.material3.*
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,6 +34,21 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.encaja.app.ui.familia.textoHorario
+import com.encaja.app.ui.theme.AccionAvisoHoja
+import com.encaja.app.ui.theme.AvisoHoja
+import com.encaja.app.ui.theme.BotonPildoraHoja
+import com.encaja.app.ui.theme.CabeceraPantalla
+import com.encaja.app.ui.theme.CampoTextoConIconoHoja
+import com.encaja.app.ui.theme.CasillaRedondaHoja
+import com.encaja.app.ui.theme.EstiloAccionAviso
+import com.encaja.app.ui.theme.FondoPantalla
+import com.encaja.app.ui.theme.MensajePantalla
+import com.encaja.app.ui.theme.TarjetaFilaHoja
+import com.encaja.app.ui.theme.acentoHoja
+import com.encaja.app.ui.theme.bordeHoja
+import com.encaja.app.ui.theme.casillaHoja
+import com.encaja.app.ui.theme.tintaHoja
+import com.encaja.app.ui.theme.tintaSuaveHoja
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -45,152 +66,171 @@ fun OcupacionesScreen(viewModel: OcupacionesViewModel = hiltViewModel()) {
 
     LaunchedEffect(Unit) { viewModel.recargar() }
 
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text("Ocupaciones", style = MaterialTheme.typography.headlineSmall)
-        Spacer(Modifier.height(8.dp))
+    FondoPantalla {
+        Column(modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
+            CabeceraPantalla("Ocupaciones")
 
-        when (val estadoActual = pantalla) {
-            is OcupacionesPantallaEstado.Cargando -> CircularProgressIndicator()
+            when (val estadoActual = pantalla) {
+                is OcupacionesPantallaEstado.Cargando -> CircularProgressIndicator()
 
-            is OcupacionesPantallaEstado.SinFamilia -> Text(
-                "Vincúlate a una familia desde la pestaña Semana para ver esta pantalla.",
-                style = MaterialTheme.typography.bodyMedium
-            )
+                is OcupacionesPantallaEstado.SinFamilia ->
+                    MensajePantalla("Vincúlate a una familia desde la pestaña Semana para ver esta pantalla.")
 
-            is OcupacionesPantallaEstado.ConDatos -> {
-                // Filtro por quién (Todos, cada persona, cada unidad): un solo botón que
-                // muestra la elección actual y abre una ventana para cambiarla, para no
-                // comerle sitio al listado. Al lado, el buscador por texto.
-                val opciones = listOf(OpcionFiltro(null, "Todos")) +
-                    estadoActual.cuidadores.map { OpcionFiltro(it.id.value, it.nombre) } +
-                    estadoActual.unidades.map { OpcionFiltro(it.id.value, it.nombre) }
-                val etiquetaFiltro = opciones.firstOrNull { it.idTexto == filtroQuien }?.etiqueta ?: "Todos"
-                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    OutlinedTextField(
-                        value = filtroTexto,
-                        onValueChange = { filtroTexto = it },
-                        placeholder = { Text("Buscar…") },
-                        singleLine = true,
-                        modifier = Modifier.weight(1f)
+                is OcupacionesPantallaEstado.ConDatos -> {
+                    // Filtro por quién (Todos, cada persona, cada unidad): un solo botón que
+                    // muestra la elección actual y abre una ventana para cambiarla, para no
+                    // comerle sitio al listado. Encima, el buscador por texto.
+                    val opciones = listOf(OpcionFiltro(null, "Todos")) +
+                        estadoActual.cuidadores.map { OpcionFiltro(it.id.value, it.nombre) } +
+                        estadoActual.unidades.map { OpcionFiltro(it.id.value, it.nombre) }
+                    val etiquetaFiltro = opciones.firstOrNull { it.idTexto == filtroQuien }?.etiqueta ?: "Todos"
+
+                    CampoTextoConIconoHoja(
+                        filtroTexto,
+                        { filtroTexto = it },
+                        "Buscar…",
+                        Icons.Default.Search,
+                        modifier = Modifier.fillMaxWidth()
                     )
-                    Spacer(Modifier.width(8.dp))
-                    FilterChip(
-                        selected = filtroQuien != null,
-                        onClick = { selectorAbierto = true },
-                        label = { Text(etiquetaFiltro) },
-                        leadingIcon = { Icon(Icons.Default.FilterAlt, contentDescription = null, modifier = Modifier.size(18.dp)) }
-                    )
-                }
-                Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(10.dp))
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(casillaHoja)
+                            .border(1.dp, if (filtroQuien != null) acentoHoja else bordeHoja, RoundedCornerShape(20.dp))
+                            .clickable { selectorAbierto = true }
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.FilterAlt, contentDescription = null, tint = acentoHoja, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(etiquetaFiltro, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = tintaHoja)
+                    }
 
-                if (selectorAbierto) {
-                    AlertDialog(
-                        onDismissRequest = { selectorAbierto = false },
-                        title = { Text("Mostrar ocupaciones de") },
-                        text = {
-                            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                                opciones.forEachIndexed { indice, opcion ->
-                                    if (indice == 1 && estadoActual.cuidadores.isNotEmpty()) {
-                                        Text("Personas", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                                    }
-                                    if (indice == 1 + estadoActual.cuidadores.size && estadoActual.unidades.isNotEmpty()) {
-                                        Spacer(Modifier.height(6.dp))
-                                        Text("Unidades familiares", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                                    }
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clip(RoundedCornerShape(10.dp))
-                                            .clickable { filtroQuien = opcion.idTexto; selectorAbierto = false }
-                                            .padding(vertical = 2.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        RadioButton(
-                                            selected = filtroQuien == opcion.idTexto,
-                                            onClick = { filtroQuien = opcion.idTexto; selectorAbierto = false }
-                                        )
-                                        Text(opcion.etiqueta, style = MaterialTheme.typography.bodyLarge)
+                    if (selectorAbierto) {
+                        AvisoHoja(
+                            icono = Icons.Default.FilterAlt,
+                            titulo = "Mostrar ocupaciones de",
+                            texto = null,
+                            peligro = false,
+                            conX = true,
+                            acciones = listOf(
+                                AccionAvisoHoja("Cerrar", EstiloAccionAviso.BORDE) { selectorAbierto = false }
+                            ),
+                            onCerrar = { selectorAbierto = false },
+                            contenido = {
+                                Column(
+                                    modifier = Modifier
+                                        .heightIn(max = 300.dp)
+                                        .verticalScroll(rememberScrollState())
+                                ) {
+                                    opciones.forEachIndexed { indice, opcion ->
+                                        if (indice == 1 && estadoActual.cuidadores.isNotEmpty()) {
+                                            Text(
+                                                "Personas",
+                                                style = MaterialTheme.typography.labelLarge,
+                                                fontWeight = FontWeight.Bold,
+                                                color = acentoHoja,
+                                                modifier = Modifier.padding(top = 8.dp, bottom = 2.dp)
+                                            )
+                                        }
+                                        if (indice == 1 + estadoActual.cuidadores.size && estadoActual.unidades.isNotEmpty()) {
+                                            Text(
+                                                "Unidades familiares",
+                                                style = MaterialTheme.typography.labelLarge,
+                                                fontWeight = FontWeight.Bold,
+                                                color = acentoHoja,
+                                                modifier = Modifier.padding(top = 12.dp, bottom = 2.dp)
+                                            )
+                                        }
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clip(RoundedCornerShape(12.dp))
+                                                .clickable { filtroQuien = opcion.idTexto; selectorAbierto = false }
+                                                .padding(vertical = 10.dp, horizontal = 4.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            CasillaRedondaHoja(filtroQuien == opcion.idTexto)
+                                            Spacer(Modifier.width(12.dp))
+                                            Text(opcion.etiqueta, style = MaterialTheme.typography.bodyLarge, color = tintaHoja)
+                                        }
                                     }
                                 }
                             }
-                        },
-                        confirmButton = { TextButton(onClick = { selectorAbierto = false }) { Text("Cerrar") } }
-                    )
-                }
-
-                val visibles = estadoActual.ocupaciones.filter { ocupacion ->
-                    (filtroQuien == null || filtroQuien in ocupacion.idsFiltro) &&
-                        (filtroTexto.isBlank() ||
-                            ocupacion.categoria.nombre.contains(filtroTexto, ignoreCase = true) ||
-                            ocupacion.representante.etiqueta.orEmpty().contains(filtroTexto, ignoreCase = true) ||
-                            ocupacion.quien.contains(filtroTexto, ignoreCase = true))
-                }
-                val visiblesClaves = visibles.map { it.clave }.toSet()
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("${seleccionadas.size} seleccionada(s)", style = MaterialTheme.typography.labelMedium)
-                    Row {
-                        TextButton(onClick = { seleccionadas = visiblesClaves }, enabled = visibles.isNotEmpty()) { Text("Marcar todo") }
-                        TextButton(onClick = { seleccionadas = emptySet() }, enabled = seleccionadas.isNotEmpty()) { Text("Ninguna") }
-                    }
-                }
-                Spacer(Modifier.height(4.dp))
-
-                Column(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState())) {
-                    if (visibles.isEmpty()) {
-                        Text(
-                            if (estadoActual.ocupaciones.isEmpty()) "Todavía no hay ninguna ocupación apuntada."
-                            else "Ninguna ocupación coincide con el filtro.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    visibles.forEach { ocupacion ->
-                        FilaOcupacion(
-                            ocupacion = ocupacion,
-                            marcada = ocupacion.clave in seleccionadas,
-                            onMarcar = { marcada ->
-                                seleccionadas = if (marcada) seleccionadas + ocupacion.clave else seleccionadas - ocupacion.clave
+
+                    val visibles = estadoActual.ocupaciones.filter { ocupacion ->
+                        (filtroQuien == null || filtroQuien in ocupacion.idsFiltro) &&
+                            (filtroTexto.isBlank() ||
+                                ocupacion.categoria.nombre.contains(filtroTexto, ignoreCase = true) ||
+                                ocupacion.representante.etiqueta.orEmpty().contains(filtroTexto, ignoreCase = true) ||
+                                ocupacion.quien.contains(filtroTexto, ignoreCase = true))
+                    }
+                    val visiblesClaves = visibles.map { it.clave }.toSet()
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("${seleccionadas.size} seleccionada(s)", style = MaterialTheme.typography.labelLarge, color = tintaSuaveHoja)
+                        Row {
+                            TextButton(onClick = { seleccionadas = visiblesClaves }, enabled = visibles.isNotEmpty()) {
+                                Text("Marcar todo", color = acentoHoja, fontWeight = FontWeight.Bold)
                             }
+                            TextButton(onClick = { seleccionadas = emptySet() }, enabled = seleccionadas.isNotEmpty()) {
+                                Text("Ninguna", color = acentoHoja, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+
+                    Column(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+                        if (visibles.isEmpty()) {
+                            MensajePantalla(
+                                if (estadoActual.ocupaciones.isEmpty()) "Todavía no hay ninguna ocupación apuntada."
+                                else "Ninguna ocupación coincide con el filtro."
+                            )
+                        }
+                        visibles.forEach { ocupacion ->
+                            FilaOcupacion(
+                                ocupacion = ocupacion,
+                                marcada = ocupacion.clave in seleccionadas,
+                                onMarcar = { marcada ->
+                                    seleccionadas = if (marcada) seleccionadas + ocupacion.clave else seleccionadas - ocupacion.clave
+                                }
+                            )
+                            Spacer(Modifier.height(8.dp))
+                        }
+                    }
+
+                    Spacer(Modifier.height(10.dp))
+                    BotonPildoraHoja(
+                        texto = "Borrar ${seleccionadas.size} ocupación(es)",
+                        onClick = { confirmarBorrado = true },
+                        icono = Icons.Default.Delete,
+                        habilitado = seleccionadas.isNotEmpty(),
+                        peligro = true
+                    )
+                    Spacer(Modifier.height(16.dp))
+
+                    if (confirmarBorrado) {
+                        AvisoHoja(
+                            icono = Icons.Default.Delete,
+                            titulo = "¿Borrar ${seleccionadas.size} ocupación(es)?",
+                            texto = "Se quitan de todas las personas que las tengan. No se puede deshacer.",
+                            acciones = listOf(
+                                AccionAvisoHoja("Borrar", EstiloAccionAviso.PELIGRO) {
+                                    viewModel.eliminar(estadoActual.ocupaciones.filter { it.clave in seleccionadas })
+                                    seleccionadas = emptySet()
+                                    confirmarBorrado = false
+                                },
+                                AccionAvisoHoja("Cancelar", EstiloAccionAviso.BORDE) { confirmarBorrado = false }
+                            ),
+                            onCerrar = { confirmarBorrado = false }
                         )
                     }
-                }
-
-                Spacer(Modifier.height(8.dp))
-                Button(
-                    onClick = { confirmarBorrado = true },
-                    enabled = seleccionadas.isNotEmpty(),
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error,
-                        contentColor = MaterialTheme.colorScheme.onError
-                    )
-                ) {
-                    Icon(Icons.Default.Delete, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Borrar ${seleccionadas.size} ocupación(es)")
-                }
-
-                if (confirmarBorrado) {
-                    AlertDialog(
-                        onDismissRequest = { confirmarBorrado = false },
-                        title = { Text("¿Borrar ${seleccionadas.size} ocupación(es)?") },
-                        text = { Text("Se quitan de todas las personas que las tengan. No se puede deshacer.") },
-                        confirmButton = {
-                            TextButton(onClick = {
-                                viewModel.eliminar(estadoActual.ocupaciones.filter { it.clave in seleccionadas })
-                                seleccionadas = emptySet()
-                                confirmarBorrado = false
-                            }) {
-                                Text("Borrar", color = MaterialTheme.colorScheme.error)
-                            }
-                        },
-                        dismissButton = { TextButton(onClick = { confirmarBorrado = false }) { Text("Cancelar") } }
-                    )
                 }
             }
         }
@@ -201,26 +241,22 @@ fun OcupacionesScreen(viewModel: OcupacionesViewModel = hiltViewModel()) {
 private fun FilaOcupacion(ocupacion: Ocupacion, marcada: Boolean, onMarcar: (Boolean) -> Unit) {
     val bloque = ocupacion.representante
     val categoria = ocupacion.categoria
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onMarcar(!marcada) }
-            .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Checkbox(checked = marcada, onCheckedChange = onMarcar)
+    TarjetaFilaHoja(onClick = { onMarcar(!marcada) }) {
+        CasillaRedondaHoja(marcada)
+        Spacer(Modifier.width(12.dp))
         Box(
-            modifier = Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(Color(categoria.color)),
+            modifier = Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(Color(categoria.color)),
             contentAlignment = Alignment.Center
         ) {
-            Text(categoria.emoji, fontSize = 18.sp)
+            Text(categoria.emoji, fontSize = 20.sp)
         }
-        Spacer(Modifier.width(10.dp))
+        Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 "${categoria.nombre} · ${textoHorario(bloque)}",
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = tintaHoja
             )
             Text(
                 listOfNotNull(
@@ -228,8 +264,8 @@ private fun FilaOcupacion(ocupacion: Ocupacion, marcada: Boolean, onMarcar: (Boo
                     ocupacion.quien,
                     bloque.etiqueta?.takeIf { it.isNotBlank() }
                 ).joinToString(" · "),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                style = MaterialTheme.typography.bodySmall,
+                color = tintaSuaveHoja
             )
         }
     }

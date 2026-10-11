@@ -16,6 +16,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -31,15 +36,12 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Mail
 import androidx.compose.material.icons.filled.QuestionMark
-import androidx.compose.material3.Button
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,6 +56,26 @@ import com.encaja.app.ui.informacion.AvisosBateria
 import com.encaja.app.ui.informacion.DialogoMasInformacionBateria
 import com.encaja.app.ui.theme.PreferenciaTema
 import com.encaja.app.ui.theme.TemaPreferido
+import com.encaja.app.ui.theme.AccionAvisoHoja
+import com.encaja.app.ui.theme.AvisoHoja
+import com.encaja.app.ui.theme.BotonPildoraBordeHoja
+import com.encaja.app.ui.theme.BotonPildoraHoja
+import com.encaja.app.ui.theme.CabeceraPantalla
+import com.encaja.app.ui.theme.EstiloAccionAviso
+import com.encaja.app.ui.theme.FondoPantalla
+import com.encaja.app.ui.theme.IconoEnCirculoHoja
+import com.encaja.app.ui.theme.RotuloSeccionPantalla
+import com.encaja.app.ui.theme.TarjetaFilaHoja
+import com.encaja.app.ui.theme.acentoHoja
+import com.encaja.app.ui.theme.bordeHoja
+import com.encaja.app.ui.theme.casillaHoja
+import com.encaja.app.ui.theme.lavandaHoja
+import com.encaja.app.ui.theme.indigoHoja
+import com.encaja.app.ui.theme.onAcentoHoja
+import com.encaja.app.ui.theme.tintaHoja
+import com.encaja.app.ui.theme.tintaSuaveHoja
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Logout
 
 /**
  * Menú raíz de Ajustes: solo enlaces a cada bloque (Niños, Cuidadores —que incluye
@@ -74,22 +96,18 @@ fun AjustesScreen(
 ) {
     // Con scroll: con las tarjetas de avisos (alarma exacta, batería) ya no cabe todo en
     // una pantalla y, si no, el tema y "Cerrar sesión" quedaban cortados por abajo.
+    FondoPantalla {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(24.dp)
+            .padding(horizontal = 20.dp)
+            .padding(bottom = 32.dp)
     ) {
-        Text("Ajustes", style = MaterialTheme.typography.headlineSmall)
-        viewModel.emailUsuarioActual?.let { email ->
-            Spacer(Modifier.height(4.dp))
-            Text(
-                "Sesión iniciada como: $email",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        Spacer(Modifier.height(24.dp))
+        CabeceraPantalla(
+            "Ajustes",
+            viewModel.emailUsuarioActual?.let { "Sesión iniciada como: $it" }
+        )
 
         FilaAjuste(
             icono = Icons.Default.ChildCare,
@@ -165,9 +183,7 @@ fun AjustesScreen(
         SeccionTema()
 
         Spacer(Modifier.height(32.dp))
-        OutlinedButton(onClick = onCerrarSesion, modifier = Modifier.fillMaxWidth()) {
-            Text("Cerrar sesión")
-        }
+        BotonPildoraBordeHoja("Cerrar sesión", onClick = onCerrarSesion, icono = Icons.Default.Logout)
 
         // Darse de baja: desvincula la cuenta de la familia y elimina el acceso con Google.
         var confirmandoBaja by remember { mutableStateOf(false) }
@@ -176,12 +192,12 @@ fun AjustesScreen(
         var codigoParaVolver by remember { mutableStateOf<String?>(null) }
         var cuentaBorrada by remember { mutableStateOf(false) }
         Spacer(Modifier.height(12.dp))
-        androidx.compose.material3.TextButton(
+        TextButton(
             onClick = { errorBaja = null; confirmandoBaja = true },
             enabled = !borrando,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Borrar mi cuenta", color = MaterialTheme.colorScheme.error)
+            Text("Borrar mi cuenta", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
         }
         errorBaja?.let {
             Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
@@ -189,38 +205,30 @@ fun AjustesScreen(
         // Cuenta ya borrada: si era la última de la familia, se enseña el código para que quien
         // llegue después pueda retomar a este cuidador con todo su historial.
         if (cuentaBorrada) {
-            androidx.compose.material3.AlertDialog(
-                onDismissRequest = {},
-                title = { Text("Cuenta borrada") },
-                text = {
-                    if (codigoParaVolver != null) {
-                        Text(
-                            "Eras la última persona con cuenta en esta familia. Su información sigue " +
-                                "guardada. Apunta este código: quien lo introduzca al crear su cuenta se " +
-                                "vinculará a tu persona y seguirá con todo.\n\n${codigoParaVolver}"
-                        )
-                    } else {
-                        Text("Tu cuenta se ha eliminado. La información de la familia sigue guardada.")
-                    }
+            AvisoHoja(
+                icono = Icons.Default.CheckCircle,
+                titulo = "Cuenta borrada",
+                texto = if (codigoParaVolver != null) {
+                    "Eras la última persona con cuenta en esta familia. Su información sigue " +
+                        "guardada. Apunta este código: quien lo introduzca al crear su cuenta se " +
+                        "vinculará a tu persona y seguirá con todo.\n\n${codigoParaVolver}"
+                } else {
+                    "Tu cuenta se ha eliminado. La información de la familia sigue guardada."
                 },
-                confirmButton = {
-                    androidx.compose.material3.TextButton(onClick = { onCerrarSesion() }) { Text("Entendido") }
-                }
+                peligro = false,
+                acciones = listOf(AccionAvisoHoja("Entendido", EstiloAccionAviso.PRIMARIO) { onCerrarSesion() }),
+                onCerrar = {}
             )
         }
         if (confirmandoBaja) {
-            androidx.compose.material3.AlertDialog(
-                onDismissRequest = { confirmandoBaja = false },
-                title = { Text("¿Borrar tu cuenta?") },
-                text = {
-                    Text(
-                        "Se eliminará tu cuenta de la app y dejarás de tener acceso a esta familia y de " +
-                            "recibir avisos. Tu persona y todo su historial se quedan en la familia, y podrán " +
-                            "volver a vincular a alguien con ella. No se puede deshacer."
-                    )
-                },
-                confirmButton = {
-                    androidx.compose.material3.TextButton(onClick = {
+            AvisoHoja(
+                icono = Icons.Default.Delete,
+                titulo = "¿Borrar tu cuenta?",
+                texto = "Se eliminará tu cuenta de la app y dejarás de tener acceso a esta familia y de " +
+                    "recibir avisos. Tu persona y todo su historial se quedan en la familia, y podrán " +
+                    "volver a vincular a alguien con ella. No se puede deshacer.",
+                acciones = listOf(
+                    AccionAvisoHoja("Borrar", EstiloAccionAviso.PELIGRO) {
                         confirmandoBaja = false
                         borrando = true
                         viewModel.borrarMiCuenta(
@@ -231,13 +239,13 @@ fun AjustesScreen(
                             },
                             alFallar = { borrando = false; errorBaja = it }
                         )
-                    }) { Text("Borrar", color = MaterialTheme.colorScheme.error) }
-                },
-                dismissButton = {
-                    androidx.compose.material3.TextButton(onClick = { confirmandoBaja = false }) { Text("Cancelar") }
-                }
+                    },
+                    AccionAvisoHoja("Cancelar", EstiloAccionAviso.BORDE) { confirmandoBaja = false }
+                ),
+                onCerrar = { confirmandoBaja = false }
             )
         }
+    }
     }
 }
 
@@ -272,33 +280,33 @@ private fun SeccionAlarmasExactas() {
 
     if (concedido) return
 
-    OutlinedCard(shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp)) {
+    TarjetaAviso {
+        Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Alarm, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                IconoEnCirculoHoja(Icons.Default.Alarm, MaterialTheme.colorScheme.errorContainer, MaterialTheme.colorScheme.error)
                 Text(
                     "Los avisos pueden llegar tarde",
                     style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = tintaHoja,
                     modifier = Modifier.padding(start = 12.dp)
                 )
             }
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(8.dp))
             Text(
                 "Encaja no tiene permiso para programar alarmas a una hora exacta, así que el móvil " +
                     "puede retrasar los avisos de las actividades bastantes minutos. Para que salten justo " +
                     "a la hora elegida, activa \"Alarmas y recordatorios\" para Encaja.",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = tintaSuaveHoja
             )
-            Spacer(Modifier.height(12.dp))
-            Button(onClick = {
+            Spacer(Modifier.height(14.dp))
+            BotonPildoraHoja("Activar", onClick = {
                 val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
                     data = Uri.fromParts("package", contexto.packageName, null)
                 }
                 contexto.startActivity(intent)
-            }) {
-                Text("Activar")
-            }
+            })
         }
     }
 }
@@ -330,21 +338,23 @@ private fun SeccionAhorroDeBateria() {
 
     if (masInfoAbierta) DialogoMasInformacionBateria(onCerrar = { masInfoAbierta = false })
 
-    OutlinedCard(shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp)) {
+    TarjetaAviso {
+        Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
+                IconoEnCirculoHoja(
                     if (exenta) Icons.Default.CheckCircle else Icons.Default.BatteryAlert,
-                    contentDescription = null,
-                    tint = if (exenta) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                    if (exenta) lavandaHoja else MaterialTheme.colorScheme.errorContainer,
+                    if (exenta) indigoHoja else MaterialTheme.colorScheme.error
                 )
                 Text(
                     "Avisos con la app cerrada",
                     style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = tintaHoja,
                     modifier = Modifier.padding(start = 12.dp)
                 )
             }
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(8.dp))
             Text(
                 if (exenta) {
                     "Encaja no tiene restricciones de batería. Si aun así no te llegan los avisos con la app cerrada, " +
@@ -356,20 +366,32 @@ private fun SeccionAhorroDeBateria() {
                         "(según el móvil, puede llamarse «No optimizar»)."
                 },
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = tintaSuaveHoja
             )
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(14.dp))
             if (!exenta) {
-                Button(onClick = { AvisosBateria.abrirQuitarRestricciones(contexto) }) {
-                    Text("Quitar restricciones")
-                }
+                BotonPildoraHoja("Quitar restricciones", onClick = { AvisosBateria.abrirQuitarRestricciones(contexto) })
                 Spacer(Modifier.height(4.dp))
             }
             TextButton(onClick = { masInfoAbierta = true }) {
-                Text("Más información (Xiaomi, Oppo, Huawei…)")
+                Text("Más información (Xiaomi, Oppo, Huawei…)", color = acentoHoja, fontWeight = FontWeight.Bold)
             }
         }
     }
+}
+
+/** Tarjeta blanca redondeada para los avisos (alarmas exactas, batería). */
+@Composable
+private fun TarjetaAviso(contenido: @Composable () -> Unit) {
+    val forma = RoundedCornerShape(22.dp)
+    androidx.compose.foundation.layout.Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(forma)
+            .background(casillaHoja)
+            .border(1.dp, bordeHoja.copy(alpha = 0.5f), forma)
+            .padding(16.dp)
+    ) { contenido() }
 }
 
 /** Elegir entre seguir el tema del teléfono o forzar el claro/oscuro de la app. */
@@ -378,22 +400,40 @@ private fun SeccionTema() {
     val contexto = LocalContext.current
     val temaActual by PreferenciaTema.actual
 
-    Text("Tema", style = MaterialTheme.typography.titleMedium)
-    Spacer(Modifier.height(8.dp))
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        OpcionTema("Sistema", TemaPreferido.SISTEMA, temaActual, contexto)
-        OpcionTema("Claro", TemaPreferido.CLARO, temaActual, contexto)
-        OpcionTema("Oscuro", TemaPreferido.OSCURO, temaActual, contexto)
+    RotuloSeccionPantalla("Tema")
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+        OpcionTema("Sistema", TemaPreferido.SISTEMA, temaActual, contexto, Modifier.weight(1f))
+        OpcionTema("Claro", TemaPreferido.CLARO, temaActual, contexto, Modifier.weight(1f))
+        OpcionTema("Oscuro", TemaPreferido.OSCURO, temaActual, contexto, Modifier.weight(1f))
     }
 }
 
 @Composable
-private fun OpcionTema(etiqueta: String, valor: TemaPreferido, actual: TemaPreferido, contexto: android.content.Context) {
-    FilterChip(
-        selected = actual == valor,
-        onClick = { PreferenciaTema.elegir(contexto, valor) },
-        label = { Text(etiqueta) }
-    )
+private fun OpcionTema(
+    etiqueta: String,
+    valor: TemaPreferido,
+    actual: TemaPreferido,
+    contexto: android.content.Context,
+    modifier: Modifier = Modifier
+) {
+    val elegido = actual == valor
+    val forma = RoundedCornerShape(24.dp)
+    androidx.compose.foundation.layout.Box(
+        modifier = modifier
+            .height(48.dp)
+            .clip(forma)
+            .background(if (elegido) acentoHoja else casillaHoja)
+            .border(1.dp, if (elegido) acentoHoja else bordeHoja, forma)
+            .clickable { PreferenciaTema.elegir(contexto, valor) },
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            etiqueta,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Bold,
+            color = if (elegido) onAcentoHoja else tintaHoja
+        )
+    }
 }
 
 @Composable
@@ -403,29 +443,12 @@ private fun FilaAjuste(
     subtitulo: String,
     onClick: () -> Unit
 ) {
-    OutlinedCard(
-        onClick = onClick,
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.outlinedCardColors(),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(icono, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                Column(modifier = Modifier.padding(start = 16.dp)) {
-                    Text(titulo, style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        subtitulo,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-            Icon(Icons.Default.ChevronRight, contentDescription = null)
+    TarjetaFilaHoja(onClick = onClick) {
+        IconoEnCirculoHoja(icono, lavandaHoja, indigoHoja, tamano = 46.dp)
+        Column(modifier = Modifier.weight(1f).padding(start = 14.dp)) {
+            Text(titulo, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = tintaHoja)
+            Text(subtitulo, style = MaterialTheme.typography.bodySmall, color = tintaSuaveHoja)
         }
+        Icon(Icons.Default.ChevronRight, contentDescription = null, tint = tintaSuaveHoja)
     }
 }

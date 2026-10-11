@@ -2,62 +2,67 @@ package com.encaja.app.ui.ajustes
 
 // NOTA: depende de Jetpack Compose y Hilt, no compilado en este entorno.
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ChildCare
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.encaja.app.domain.model.Child
 import com.encaja.app.domain.model.ChildId
+import com.encaja.app.ui.theme.AccionAvisoHoja
+import com.encaja.app.ui.theme.AvisoHoja
+import com.encaja.app.ui.theme.BotonPildoraHoja
+import com.encaja.app.ui.theme.BotonRedondoSuaveHoja
+import com.encaja.app.ui.theme.CabeceraPantalla
+import com.encaja.app.ui.theme.CampoTextoConIconoHoja
+import com.encaja.app.ui.theme.EstiloAccionAviso
+import com.encaja.app.ui.theme.FondoPantalla
+import com.encaja.app.ui.theme.MensajePantalla
+import com.encaja.app.ui.theme.TarjetaFilaHoja
+import com.encaja.app.ui.theme.tintaHoja
 
-/** Pantalla de Ajustes > Niños: solo el alta y baja de niños de la familia. */
+/** Pantalla de Ajustes > Niños: solo el alta y baja de niños de la familia (solo el nombre). */
 @Composable
 fun AjustesNinosScreen(viewModel: AjustesViewModel = hiltViewModel()) {
     val pantalla by viewModel.pantalla.collectAsState()
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp)
-    ) {
-        Text("Niños", style = MaterialTheme.typography.headlineSmall)
-        Spacer(Modifier.height(24.dp))
+    FondoPantalla {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 32.dp)
+        ) {
+            CabeceraPantalla("Niños", "Los niños de la familia, para organizar sus actividades.")
 
-        when (val estadoActual = pantalla) {
-            is AjustesPantallaEstado.Cargando -> CircularProgressIndicator()
-            is AjustesPantallaEstado.SinFamilia -> {
-                Text(
-                    "Vincúlate a una familia desde la pestaña Semana para gestionar sus datos.",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
-            is AjustesPantallaEstado.ConDatos -> {
-                SeccionNinos(
-                    ninos = estadoActual.ninos,
-                    onAgregar = { nombre -> viewModel.agregarNino(nombre) },
-                    onEliminar = { childId -> viewModel.eliminarNino(childId) }
-                )
+            when (val estadoActual = pantalla) {
+                is AjustesPantallaEstado.Cargando -> CircularProgressIndicator()
+                is AjustesPantallaEstado.SinFamilia -> {
+                    MensajePantalla("Vincúlate a una familia desde la pestaña Semana para gestionar sus datos.")
+                }
+                is AjustesPantallaEstado.ConDatos -> {
+                    SeccionNinos(
+                        ninos = estadoActual.ninos,
+                        onAgregar = { nombre -> viewModel.agregarNino(nombre) },
+                        onEliminar = { childId -> viewModel.eliminarNino(childId) }
+                    )
+                }
             }
         }
     }
@@ -69,49 +74,82 @@ private fun SeccionNinos(
     onAgregar: (String) -> Unit,
     onEliminar: (ChildId) -> Unit
 ) {
-    var nombreNuevo by remember { mutableStateOf("") }
+    var nuevoAbierto by remember { mutableStateOf(false) }
+    var ninoAEliminar by remember { mutableStateOf<Child?>(null) }
+
+    if (nuevoAbierto) {
+        DialogoNuevoNino(
+            onCrear = { nombre ->
+                onAgregar(nombre)
+                nuevoAbierto = false
+            },
+            onCerrar = { nuevoAbierto = false }
+        )
+    }
+
+    ninoAEliminar?.let { nino ->
+        AvisoHoja(
+            icono = Icons.Default.Delete,
+            titulo = "¿Eliminar a ${nino.nombre}?",
+            texto = "Se quitará de la lista de niños de la familia. No se puede deshacer.",
+            acciones = listOf(
+                AccionAvisoHoja("Eliminar", EstiloAccionAviso.PELIGRO) {
+                    onEliminar(nino.id)
+                    ninoAEliminar = null
+                },
+                AccionAvisoHoja("Cancelar", EstiloAccionAviso.BORDE) { ninoAEliminar = null }
+            ),
+            onCerrar = { ninoAEliminar = null }
+        )
+    }
 
     Column(modifier = Modifier.fillMaxWidth()) {
         if (ninos.isEmpty()) {
-            Text(
-                "Todavía no has añadido ningún niño.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(Modifier.height(12.dp))
-        } else {
-            ninos.forEach { nino ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(nino.nombre, style = MaterialTheme.typography.bodyLarge)
-                    IconButton(onClick = { onEliminar(nino.id) }) {
-                        Icon(Icons.Default.Delete, contentDescription = "Eliminar a ${nino.nombre}")
-                    }
-                }
-            }
-            Spacer(Modifier.height(12.dp))
+            MensajePantalla("Todavía no has añadido ningún niño.")
         }
-
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            OutlinedTextField(
-                value = nombreNuevo,
-                onValueChange = { nombreNuevo = it },
-                label = { Text("Nombre del niño") },
-                singleLine = true,
-                modifier = Modifier.weight(1f)
-            )
-            Spacer(Modifier.width(8.dp))
-            IconButton(onClick = {
-                if (nombreNuevo.isNotBlank()) {
-                    onAgregar(nombreNuevo)
-                    nombreNuevo = ""
-                }
-            }) {
-                Icon(Icons.Default.Add, contentDescription = "Añadir niño")
+        ninos.forEach { nino ->
+            TarjetaFilaHoja {
+                Text(
+                    nino.nombre,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = tintaHoja,
+                    modifier = Modifier.weight(1f).padding(start = 4.dp)
+                )
+                BotonRedondoSuaveHoja(
+                    Icons.Default.Delete,
+                    "Eliminar a ${nino.nombre}",
+                    { ninoAEliminar = nino },
+                    tinta = MaterialTheme.colorScheme.error
+                )
             }
+            Spacer(Modifier.height(10.dp))
         }
+        Spacer(Modifier.height(6.dp))
+        BotonPildoraHoja("Nuevo niño", onClick = { nuevoAbierto = true }, icono = Icons.Default.Add)
     }
+}
+
+/** Pide solo el nombre del niño nuevo; "Crear" se activa cuando hay nombre. */
+@Composable
+private fun DialogoNuevoNino(onCrear: (String) -> Unit, onCerrar: () -> Unit) {
+    var nombre by remember { mutableStateOf("") }
+    AvisoHoja(
+        icono = Icons.Default.ChildCare,
+        titulo = "Añadir un niño",
+        texto = null,
+        peligro = false,
+        conX = true,
+        accionesEnFila = true,
+        acciones = listOf(
+            AccionAvisoHoja("Cancelar", EstiloAccionAviso.BORDE) { onCerrar() },
+            AccionAvisoHoja("Añadir", EstiloAccionAviso.PRIMARIO, habilitada = nombre.isNotBlank()) {
+                onCrear(nombre.trim())
+            }
+        ),
+        onCerrar = onCerrar,
+        contenido = {
+            CampoTextoConIconoHoja(nombre, { nombre = it }, "Nombre del niño", Icons.Default.ChildCare)
+        }
+    )
 }

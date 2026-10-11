@@ -62,5 +62,20 @@ class FamilyMembershipRepositoryImpl @Inject constructor(
             .collection("caregiverLinks").document(membership.caregiverId.value)
             .set(mapOf("uid" to uid))
             .await()
+
+        // Una cuenta solo puede estar vinculada a un cuidador: si antes lo estaba a otro
+        // (p.ej. se probó el botón de vincular en otra persona y luego se volvió a la propia),
+        // se borran esos documentos espejo antiguos; si no, aparecían como "cuenta vinculada".
+        try {
+            val enlaces = firestore.collection("families").document(membership.familyId.value)
+                .collection("caregiverLinks").whereEqualTo("uid", uid).get().await()
+            enlaces.documents
+                .filter { it.id != membership.caregiverId.value }
+                .forEach { it.reference.delete().await() }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Limpieza de mejor esfuerzo: el vínculo principal ya está guardado.
+        }
     }
 }

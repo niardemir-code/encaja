@@ -12,37 +12,39 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.encaja.app.ui.theme.CabeceraPantalla
+import com.encaja.app.ui.theme.FondoPantalla
+import com.encaja.app.ui.theme.tintaSuaveHoja
 
 /** Ajustes > Privacidad y legal: política de privacidad, aviso legal y condiciones de uso. */
 @Composable
 fun LegalScreen() {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp)
-    ) {
-        Text("Privacidad y legal", style = MaterialTheme.typography.headlineSmall)
-        Spacer(Modifier.height(4.dp))
-        Text(
-            "Cómo tratamos tus datos y las condiciones de uso. Toca un apartado para leerlo.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Spacer(Modifier.height(20.dp))
+    FondoPantalla {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 32.dp)
+        ) {
+            CabeceraPantalla(
+                "Privacidad y legal",
+                "Cómo tratamos tus datos y las condiciones de uso. Toca un apartado para leerlo."
+            )
 
-        DOCUMENTOS_LEGALES.forEach { documento ->
-            TarjetaPlegable(titulo = documento.titulo, subtitulo = documento.resumen) {
-                documento.apartados.forEach { ContenidoApartadoLegal(it) }
+            DOCUMENTOS_LEGALES.forEach { documento ->
+                TarjetaPlegable(titulo = documento.titulo, subtitulo = documento.resumen) {
+                    documento.apartados.forEach { ContenidoApartadoLegal(it) }
+                }
+                Spacer(Modifier.height(10.dp))
             }
-            Spacer(Modifier.height(8.dp))
-        }
 
-        Spacer(Modifier.height(12.dp))
-        Text(
-            "¿Dudas sobre tus datos o quieres ejercer tus derechos? Escríbenos a ${DatosLegales.EMAIL_CONTACTO}.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+            Spacer(Modifier.height(12.dp))
+            Text(
+                "¿Dudas sobre tus datos o quieres ejercer tus derechos? Escríbenos a ${DatosLegales.EMAIL_CONTACTO}.",
+                style = MaterialTheme.typography.bodySmall,
+                color = tintaSuaveHoja
+            )
+        }
     }
 }
