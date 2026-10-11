@@ -229,9 +229,11 @@ fun DialogoActividad(
     }
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    // Hueco bajo los botones: la barra de navegación de Android (3 botones o gesto) si la
-    // hoja la informa, y como mínimo 48 dp, para no pulsar «atrás» al tocar Guardar o Borrar.
-    val margenBarraNavegacion = maxOf(WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding(), 48.dp)
+    // Hueco bajo los botones para que no queden sobre la barra de navegación de Android (3
+    // botones o gesto) y no se pulse «atrás» al tocar Guardar o Borrar. La hoja no siempre
+    // informa de la altura de esa barra, así que se garantizan 48 dp (lo que mide la de 3
+    // botones) más un margen de 28 dp, además de los 20 dp de relleno del final.
+    val margenBarraNavegacion = maxOf(WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding(), 48.dp) + 28.dp
 
     ModalBottomSheet(
         onDismissRequest = onCerrar,
