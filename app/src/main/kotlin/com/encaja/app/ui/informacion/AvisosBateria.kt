@@ -21,6 +21,42 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import com.encaja.app.ui.theme.LocalEncajaExtraColors
 
 /**
  * Ayudas para que los avisos lleguen con la app cerrada: quitar la restricción de batería de
@@ -70,32 +106,198 @@ object AvisosBateria {
     }
 }
 
-/** Aviso de primera vez: ofrece quitar las restricciones de batería. */
+/**
+ * Aviso de primera vez: ofrece quitar las restricciones de batería. Diseño de tarjeta grande con
+ * campana, panel con la ilustración del móvil, enlace de «Más información» y dos botones.
+ */
 @Composable
 fun DialogoAvisosBateria(onQuitar: () -> Unit, onAhoraNo: () -> Unit, onMasInfo: () -> Unit) {
-    AlertDialog(
+    val extra = LocalEncajaExtraColors.current
+    val lavanda = MaterialTheme.colorScheme.primaryContainer
+    val indigo = MaterialTheme.colorScheme.primary
+    val suave = lavanda.copy(alpha = 0.55f)
+
+    Dialog(
         onDismissRequest = onAhoraNo,
-        title = { Text("Avisos de tu familia") },
-        text = {
-            Column {
-                Text(
-                    "¿Quieres recibir los avisos de los integrantes de tu familia aunque la app esté cerrada? " +
-                        "Quita las restricciones de batería para Encaja."
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            shape = RoundedCornerShape(36.dp),
+            color = MaterialTheme.colorScheme.background,
+            modifier = Modifier.padding(horizontal = 20.dp).fillMaxWidth()
+        ) {
+            Box {
+                // Mancha decorativa de fondo, a la derecha, detrás del texto.
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .offset(x = 36.dp, y = (-20).dp)
+                        .size(210.dp)
+                        .clip(CircleShape)
+                        .background(lavanda.copy(alpha = 0.35f))
                 )
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    "Se abrirá la ficha de Encaja en los ajustes: entra en «Batería» y elige «Sin restricciones» " +
-                        "(según el móvil, puede llamarse «No optimizar» o «Permitir actividad en segundo plano»).",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(Modifier.height(4.dp))
-                TextButton(onClick = onMasInfo) { Text("Más información (Xiaomi, Oppo, Huawei…)") }
+                Column(
+                    modifier = Modifier
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 24.dp, vertical = 24.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Cabecera: campana con chispas y título; a la derecha, la X.
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(modifier = Modifier.size(96.dp), contentAlignment = Alignment.Center) {
+                            Box(
+                                modifier = Modifier.size(84.dp).clip(CircleShape).background(lavanda),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.Notifications, contentDescription = null, tint = indigo, modifier = Modifier.size(44.dp))
+                            }
+                            Canvas(modifier = Modifier.matchParentSize()) {
+                                val color = extra.ambar
+                                val trazo = 5.dp.toPx()
+                                drawLine(color, Offset(size.width * 0.02f, size.height * 0.28f), Offset(size.width * 0.17f, size.height * 0.35f), trazo, StrokeCap.Round)
+                                drawLine(color, Offset(size.width * 0.20f, size.height * 0.02f), Offset(size.width * 0.27f, size.height * 0.15f), trazo, StrokeCap.Round)
+                            }
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Text(
+                            "Avisos de tu familia",
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.onBackground,
+                            modifier = Modifier.weight(1f).padding(end = 36.dp)
+                        )
+                    }
+
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            "¿Quieres recibir los avisos de los integrantes de tu familia aunque la app esté cerrada?",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                        Text(
+                            "Quita las restricciones de batería para Encaja.",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = indigo
+                        )
+                    }
+
+                    // Panel con la ilustración del móvil y las instrucciones.
+                    Surface(shape = RoundedCornerShape(24.dp), color = suave, modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            IlustracionMovilBateria()
+                            Text(
+                                "Se abrirá la ficha de Encaja en los ajustes: entra en «Batería» y elige " +
+                                    "«Sin restricciones» (según el móvil, puede llamarse «No optimizar» o " +
+                                    "«Permitir actividad en segundo plano»).",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onBackground,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+
+                    // Enlace a la ayuda por marca.
+                    Surface(
+                        shape = RoundedCornerShape(20.dp),
+                        color = suave,
+                        modifier = Modifier.fillMaxWidth().clickable(onClick = onMasInfo)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, tint = indigo, modifier = Modifier.size(22.dp))
+                            Spacer(Modifier.width(14.dp))
+                            Text(
+                                "Más información (Xiaomi, Oppo, Huawei…)",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onBackground,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = indigo)
+                        }
+                    }
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        OutlinedButton(
+                            onClick = onAhoraNo,
+                            shape = RoundedCornerShape(28.dp),
+                            border = BorderStroke(1.5.dp, lavanda),
+                            modifier = Modifier.weight(1f).height(56.dp)
+                        ) {
+                            Text("Ahora no", fontWeight = FontWeight.ExtraBold, color = indigo)
+                        }
+                        Button(
+                            onClick = onQuitar,
+                            shape = RoundedCornerShape(28.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = extra.acento, contentColor = extra.onAcento),
+                            modifier = Modifier.weight(1.3f).height(56.dp)
+                        ) {
+                            Text("Quitar restricciones", fontWeight = FontWeight.ExtraBold, maxLines = 1)
+                        }
+                    }
+                }
+
+                // La X de arriba a la derecha equivale a «Ahora no».
+                IconButton(
+                    onClick = onAhoraNo,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(16.dp)
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(lavanda)
+                ) {
+                    Icon(Icons.Default.Close, contentDescription = "Cerrar", tint = indigo, modifier = Modifier.size(22.dp))
+                }
             }
-        },
-        confirmButton = { TextButton(onClick = onQuitar) { Text("Quitar restricciones") } },
-        dismissButton = { TextButton(onClick = onAhoraNo) { Text("Ahora no") } }
-    )
+        }
+    }
+}
+
+/** Móvil inclinado con un engranaje y una batería verde, con unas chispas al lado. */
+@Composable
+private fun IlustracionMovilBateria() {
+    val extra = LocalEncajaExtraColors.current
+    val indigo = MaterialTheme.colorScheme.primary
+    val marco = extra.acento.copy(alpha = 0.85f)
+    Box(modifier = Modifier.size(width = 92.dp, height = 112.dp), contentAlignment = Alignment.Center) {
+        Box(
+            modifier = Modifier
+                .size(width = 64.dp, height = 104.dp)
+                .rotate(-8f)
+                .clip(RoundedCornerShape(16.dp))
+                .background(Color.White)
+                .border(5.dp, marco, RoundedCornerShape(16.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Icon(Icons.Default.Settings, contentDescription = null, tint = indigo, modifier = Modifier.size(32.dp))
+                Box(
+                    modifier = Modifier
+                        .size(width = 24.dp, height = 32.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(Color(0xFF3FBF6B)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Box(Modifier.size(width = 12.dp, height = 3.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.85f)))
+                        Box(Modifier.size(width = 12.dp, height = 3.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.85f)))
+                    }
+                }
+            }
+        }
+        Canvas(modifier = Modifier.matchParentSize()) {
+            val trazo = 3.dp.toPx()
+            drawLine(marco, Offset(size.width * 0.80f, size.height * 0.20f), Offset(size.width * 0.93f, size.height * 0.27f), trazo, StrokeCap.Round)
+            drawLine(marco, Offset(size.width * 0.84f, size.height * 0.34f), Offset(size.width * 0.98f, size.height * 0.37f), trazo, StrokeCap.Round)
+            drawLine(marco, Offset(size.width * 0.80f, size.height * 0.08f), Offset(size.width * 0.85f, size.height * 0.15f), trazo, StrokeCap.Round)
+        }
+    }
 }
 
 private data class PasosMarca(val marca: String, val pasos: String)

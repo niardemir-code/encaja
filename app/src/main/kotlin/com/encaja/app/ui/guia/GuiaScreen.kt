@@ -97,7 +97,9 @@ private fun anchoMinutoDeNivel(nivel: Int): Dp = ESCALAS_DP_POR_MINUTO[nivel.coe
 private fun textoNivelEscala(nivel: Int): String =
     "${(ESCALAS_DP_POR_MINUTO[nivel.coerceIn(0, ESCALAS_DP_POR_MINUTO.lastIndex)] / 2f * 100).roundToInt()} %"
 
-private fun margenDeAncho(anchoMinuto: Dp): Dp = anchoMinuto * 30
+// Al menos lo que ocupa un icono de quién lleva/recoge (que se dibuja fuera del bloque), para que
+// una actividad a las 00:00 o hasta las 24:00 no lo deje cortado, ni siquiera con el zoom mínimo.
+private fun margenDeAncho(anchoMinuto: Dp): Dp = maxOf(anchoMinuto * 30, 34.dp)
 
 /** Ancho por minuto vigente para la línea de tiempo (lo fija GuiaScreen con el zoom). */
 /** Hora actual (refrescada cada 20 s) si se está viendo hoy; null en cualquier otro día. Sirve
@@ -806,8 +808,8 @@ private fun Modifier.bordeDiscontinuo(color: Color, forma: RoundedCornerShape): 
  * Un bloque de actividad en la línea de tiempo: icono en círculo, nombre y horario. El
  * contenido se mantiene visible mientras el bloque avanza por la pantalla (se desplaza
  * dentro del propio bloque a medida que se hace scroll), siempre que quepa entero en su
- * ancho; si no cabe, se queda al principio, dejando hueco a los lados para no quedar
- * tapado por los iconos de quién lleva (inicio) y quién recoge (fin), si se han elegido.
+ * ancho; si no cabe, se queda al principio. Los iconos de quién lleva (antes del inicio) y
+ * quién recoge (después del fin) se dibujan fuera de la tarjeta, sin ocupar tiempo.
  */
 @Composable
 private fun BloqueActividad(
@@ -827,16 +829,11 @@ private fun BloqueActividad(
     val fondo = if (bloque.cubierto) VERDE else ROJO
     val tinta = if (bloque.cubierto) ON_VERDE else ON_ROJO
 
-    // Hueco a cada lado para los iconos de quién lleva/recoge, que ahora se dibujan
-    // fuera de la tarjeta de color (en el margen del propio bloque) en vez de
-    // superpuestos sobre ella.
-    val gutterInicio = if (bloque.quienLleva != null) ANCHO_ICONO_RESPONSABLE + 4.dp else 0.dp
-    val gutterFin = if (bloque.quienRecoge != null) ANCHO_ICONO_RESPONSABLE + 4.dp else 0.dp
-    val gutterInicioPx = with(density) { gutterInicio.toPx() }
-    val gutterFinPx = with(density) { gutterFin.toPx() }
-
+    // La tarjeta de color ocupa exactamente el tramo de la actividad (de su hora de inicio a
+    // su hora de fin). Los iconos de quién lleva/recoge se dibujan FUERA de ese tramo, justo
+    // antes del inicio y justo después del fin, para no comerse tiempo en el gráfico.
     var anchoContenidoPx by remember { mutableStateOf(0f) }
-    val anchoTarjetaPx = (anchoBloquePx - gutterInicioPx - gutterFinPx).coerceAtLeast(0f)
+    val anchoTarjetaPx = anchoBloquePx.coerceAtLeast(0f)
     val margenMaximoPx = (anchoTarjetaPx - anchoContenidoPx).coerceAtLeast(0f)
 
     Box(
@@ -848,8 +845,7 @@ private fun BloqueActividad(
     ) {
         Box(
             modifier = Modifier
-                .padding(start = gutterInicio, end = gutterFin, top = 2.dp, bottom = 2.dp)
-                .padding(horizontal = 1.dp)
+                .padding(vertical = 2.dp)
                 .fillMaxSize()
                 .clip(RoundedCornerShape(16.dp))
                 .background(fondo)
@@ -869,7 +865,7 @@ private fun BloqueActividad(
                         // Se lee el scroll aquí (fase de layout), no en composición: así al
                         // desplazar no se recomponen todos los bloques.
                         IntOffset(
-                            (scrollState.value - inicioPx - gutterInicioPx).coerceIn(0f, margenMaximoPx).roundToInt(),
+                            (scrollState.value - inicioPx).coerceIn(0f, margenMaximoPx).roundToInt(),
                             0
                         )
                     }
@@ -894,12 +890,19 @@ private fun BloqueActividad(
                 }
             }
         }
-        // Fuera de la tarjeta de color, en el hueco reservado a cada lado del bloque.
+        // Fuera de la tarjeta de color: el de quien lleva, pegado antes del inicio; el de quien
+        // recoge, pegado después del fin. Se salen del bloque a propósito (no recortan nada).
         bloque.quienLleva?.let { responsable ->
-            IconoResponsable(responsable, iniciales, modifier = Modifier.align(Alignment.CenterStart))
+            IconoResponsable(
+                responsable, iniciales,
+                modifier = Modifier.align(Alignment.CenterStart).offset(x = -(ANCHO_ICONO_RESPONSABLE + 3.dp))
+            )
         }
         bloque.quienRecoge?.let { responsable ->
-            IconoResponsable(responsable, iniciales, modifier = Modifier.align(Alignment.CenterEnd))
+            IconoResponsable(
+                responsable, iniciales,
+                modifier = Modifier.align(Alignment.CenterEnd).offset(x = ANCHO_ICONO_RESPONSABLE + 3.dp)
+            )
         }
     }
 }
