@@ -115,6 +115,30 @@ private fun SeccionCuidadores(
     var apellido2Nuevo by remember { mutableStateOf("") }
     var vinculadoAId by remember { mutableStateOf<CaregiverId?>(null) }
     var cuidadorADesvincular by remember { mutableStateOf<Caregiver?>(null) }
+    var cuidadorAEliminar by remember { mutableStateOf<Caregiver?>(null) }
+
+    cuidadorAEliminar?.let { cuidador ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { cuidadorAEliminar = null },
+            title = { Text("¿Eliminar a ${cuidador.nombreCompleto}?") },
+            text = {
+                Text(
+                    "Se eliminará de la lista, su cuenta perderá el acceso, se borrarán las unidades " +
+                        "familiares en las que esté y sus actividades asignadas quedarán sin responsable. " +
+                        "No se puede deshacer."
+                )
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    onEliminar(cuidador.id)
+                    cuidadorAEliminar = null
+                }) { Text("Eliminar", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { cuidadorAEliminar = null }) { Text("Cancelar") }
+            }
+        )
+    }
 
     cuidadorADesvincular?.let { cuidador ->
         androidx.compose.material3.AlertDialog(
@@ -193,7 +217,7 @@ private fun SeccionCuidadores(
                             }) {
                                 Icon(Icons.Default.Person, contentDescription = "Vincularme a ${cuidador.nombreCompleto}")
                             }
-                            IconButton(onClick = { onEliminar(cuidador.id) }) {
+                            IconButton(onClick = { cuidadorAEliminar = cuidador }) {
                                 Icon(Icons.Default.Delete, contentDescription = "Eliminar a ${cuidador.nombreCompleto}")
                             }
                         }
