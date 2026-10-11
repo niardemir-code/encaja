@@ -343,7 +343,7 @@ private fun TarjetaTienda(
                     .clip(RoundedCornerShape(20.dp))
                     .background(MaterialTheme.colorScheme.surface)
                     .padding(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 grupo.articulos.forEach { articulo ->
                     FilaArticulo(
@@ -520,7 +520,7 @@ private fun FilaArticulo(
             .clip(RoundedCornerShape(16.dp))
             .background(MaterialTheme.colorScheme.background)
             .clickable { onMarcarComprado(!articulo.comprado) }
-            .padding(start = 14.dp, top = 6.dp, bottom = 6.dp, end = 2.dp),
+            .padding(start = 14.dp, top = 2.dp, bottom = 2.dp, end = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         CasillaCompra(marcada = articulo.comprado)
@@ -530,22 +530,27 @@ private fun FilaArticulo(
             style = MaterialTheme.typography.bodyLarge,
             textDecoration = if (articulo.comprado) TextDecoration.LineThrough else null,
             color = if (articulo.comprado) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.weight(1f).padding(vertical = 8.dp)
+            modifier = Modifier.weight(1f).padding(vertical = 4.dp)
         )
-        IconButton(onClick = { nombreEditado = articulo.nombre; editando = true }) {
-            Icon(
-                Icons.Default.Edit,
-                contentDescription = "Cambiar nombre de ${articulo.nombre}",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+        BotonCompactoCompra(Icons.Default.Edit, "Cambiar nombre de ${articulo.nombre}", MaterialTheme.colorScheme.onSurfaceVariant) {
+            nombreEditado = articulo.nombre
+            editando = true
         }
-        IconButton(onClick = onEliminar) {
-            Icon(
-                Icons.Default.Delete,
-                contentDescription = "Eliminar ${articulo.nombre}",
-                tint = MaterialTheme.colorScheme.onSurface
-            )
-        }
+        BotonCompactoCompra(Icons.Default.Delete, "Eliminar ${articulo.nombre}", MaterialTheme.colorScheme.onSurface, onEliminar)
+    }
+}
+
+/** Botón de icono de 36 dp (los IconButton normales miden 48 dp y alargan cada línea). */
+@Composable
+private fun BotonCompactoCompra(icono: androidx.compose.ui.graphics.vector.ImageVector, descripcion: String, tinta: Color, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .size(36.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(icono, contentDescription = descripcion, tint = tinta, modifier = Modifier.size(20.dp))
     }
 }
 
