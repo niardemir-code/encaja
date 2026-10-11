@@ -187,6 +187,15 @@ fun EncajaApp(
     // Un administrador ha dado de baja esta cuenta: se avisa (sin poder cerrar el aviso) y, al
     // aceptar, se borra todo rastro de la familia y de la cuenta en este dispositivo.
     var bajaDetectada by remember { mutableStateOf(false) }
+    // Al volver a la app (desde segundo plano o con la pantalla apagada) se comprueba en el servidor.
+    val propietarioCicloVida = androidx.compose.ui.platform.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(propietarioCicloVida) {
+        val observador = androidx.lifecycle.LifecycleEventObserver { _, evento ->
+            if (evento == androidx.lifecycle.Lifecycle.Event.ON_RESUME) viewModel.comprobarBaja()
+        }
+        propietarioCicloVida.lifecycle.addObserver(observador)
+        onDispose { propietarioCicloVida.lifecycle.removeObserver(observador) }
+    }
     LaunchedEffect(Unit) {
         viewModel.membresiaPerdida.collect { bajaDetectada = true }
     }

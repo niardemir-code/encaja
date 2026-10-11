@@ -80,21 +80,34 @@ class EncajaAppViewModel @Inject constructor(
         cancelarEscucha = null
         teniaMembresia = false
         val uid = authRepository.sesionActual()?.uid ?: return
-        cancelarEscucha = familyMembershipRepository.escucharMembresia(uid) { resultado ->
-            when (resultado) {
-                is ResultadoMembresia.Tiene -> {
-                    teniaMembresia = true
-                    ultimaFamilia = resultado.membresia.familyId
-                    BajaDeDispositivo.recordarMembresia(contexto, uid)
-                }
-                // También si la baja ocurrió con la app cerrada: se recordó en un uso anterior.
-                ResultadoMembresia.NoTiene -> if (teniaMembresia || BajaDeDispositivo.tuvoMembresia(contexto, uid)) {
-                    teniaMembresia = false
-                    cambiosDeMembresia.avisarPerdida()
-                    cambiosDeMembresia.avisar() // las pantallas vuelven a comprobar su familia
-                }
-                ResultadoMembresia.Error -> Unit
+        android.util.Log.d("Encaja", "Baja: escuchando la membresía de $uid")
+        cancelarEscucha = familyMembershipRepository.escucharMembresia(uid) { resultado -> procesarMembresia(uid, resultado) }
+    }
+
+    private fun procesarMembresia(uid: String, resultado: ResultadoMembresia) {
+        android.util.Log.d("Encaja", "Baja: membresía recibida = $resultado (tenía=$teniaMembresia)")
+        when (resultado) {
+            is ResultadoMembresia.Tiene -> {
+                teniaMembresia = true
+                ultimaFamilia = resultado.membresia.familyId
+                BajaDeDispositivo.recordarMembresia(contexto, uid)
             }
+            // También si la baja ocurrió con la app cerrada: se recordó en un uso anterior.
+            ResultadoMembresia.NoTiene -> if (teniaMembresia || BajaDeDispositivo.tuvoMembresia(contexto, uid)) {
+                teniaMembresia = false
+                android.util.Log.d("Encaja", "Baja: cuenta dada de baja, se avisa al usuario")
+                cambiosDeMembresia.avisarPerdida()
+                cambiosDeMembresia.avisar() // las pantallas vuelven a comprobar su familia
+            }
+            ResultadoMembresia.Error -> Unit
+        }
+    }
+
+    /** Comprobación puntual contra el servidor (al volver a la app), por si la escucha en directo no llegó. */
+    fun comprobarBaja() {
+        lanzarSeguro(avisar = false) {
+            val uid = authRepository.sesionActual()?.uid ?: return@lanzarSeguro
+            procesarMembresia(uid, familyMembershipRepository.consultarMembresia(uid))
         }
     }
 
