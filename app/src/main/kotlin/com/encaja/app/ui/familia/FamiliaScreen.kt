@@ -33,6 +33,8 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FilterAlt
+import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material3.*
@@ -54,6 +56,10 @@ import com.encaja.app.domain.model.CategoriaDisponibilidad
 import com.encaja.app.domain.model.FamilyUnit
 import com.encaja.app.domain.model.ModoCategoria
 import com.encaja.app.domain.model.categoriaEn
+import com.encaja.app.ui.theme.AccionAvisoHoja
+import com.encaja.app.ui.theme.AvisoHoja
+import com.encaja.app.ui.theme.CampoTextoConIconoHoja
+import com.encaja.app.ui.theme.EstiloAccionAviso
 import com.encaja.app.ui.theme.LocalEncajaExtraColors
 import java.time.LocalDate
 import java.time.format.TextStyle
@@ -876,30 +882,26 @@ private fun DialogoNuevoCuidador(onCrear: (nombre: String, apellido1: String, ap
     var nombre by remember { mutableStateOf("") }
     var apellido1 by remember { mutableStateOf("") }
     var apellido2 by remember { mutableStateOf("") }
-    AlertDialog(
-        onDismissRequest = onCerrar,
-        title = { Text("Crear un nuevo cuidador") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    value = nombre, onValueChange = { nombre = it },
-                    label = { Text("Nombre") }, singleLine = true, modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = apellido1, onValueChange = { apellido1 = it },
-                    label = { Text("Primer apellido") }, singleLine = true, modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = apellido2, onValueChange = { apellido2 = it },
-                    label = { Text("Segundo apellido") }, singleLine = true, modifier = Modifier.fillMaxWidth()
-                )
+    AvisoHoja(
+        icono = Icons.Default.Group,
+        titulo = "Crear un nuevo cuidador",
+        texto = null,
+        peligro = false,
+        conX = true,
+        accionesEnFila = true,
+        acciones = listOf(
+            AccionAvisoHoja("Cancelar", EstiloAccionAviso.BORDE) { onCerrar() },
+            AccionAvisoHoja("Crear", EstiloAccionAviso.PRIMARIO, habilitada = nombre.isNotBlank()) {
+                onCrear(nombre, apellido1, apellido2)
             }
-        },
-        confirmButton = {
-            TextButton(onClick = { onCrear(nombre, apellido1, apellido2) }, enabled = nombre.isNotBlank()) {
-                Text("Crear", fontWeight = FontWeight.Bold)
+        ),
+        onCerrar = onCerrar,
+        contenido = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                CampoTextoConIconoHoja(nombre, { nombre = it }, "Nombre", Icons.Default.Person)
+                CampoTextoConIconoHoja(apellido1, { apellido1 = it }, "Primer apellido", Icons.Default.Person)
+                CampoTextoConIconoHoja(apellido2, { apellido2 = it }, "Segundo apellido", Icons.Default.Person)
             }
-        },
-        dismissButton = { TextButton(onClick = onCerrar) { Text("Cancelar") } }
+        }
     )
 }

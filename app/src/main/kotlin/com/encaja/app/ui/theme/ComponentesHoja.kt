@@ -264,6 +264,32 @@ fun CajaValorHoja(titulo: String, valor: String, icono: ImageVector, modifier: M
     }
 }
 
+/** Campo de texto con un icono a la izquierda y el texto de ayuda dentro, para formularios. */
+@Composable
+fun CampoTextoConIconoHoja(
+    valor: String,
+    onCambiar: (String) -> Unit,
+    placeholder: String,
+    icono: ImageVector,
+    modifier: Modifier = Modifier
+) {
+    OutlinedTextField(
+        value = valor,
+        onValueChange = onCambiar,
+        placeholder = { Text(placeholder, color = tintaSuaveHoja) },
+        leadingIcon = { Icon(icono, contentDescription = null, tint = indigoHoja) },
+        singleLine = true,
+        shape = RoundedCornerShape(16.dp),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedContainerColor = casillaHoja,
+            unfocusedContainerColor = casillaHoja,
+            focusedBorderColor = acentoHoja,
+            unfocusedBorderColor = lavandaHoja
+        ),
+        modifier = modifier.fillMaxWidth()
+    )
+}
+
 @Composable
 fun CampoTextoHoja(valor: String, onCambiar: (String) -> Unit, placeholder: String, modifier: Modifier = Modifier) {
     OutlinedTextField(
@@ -291,6 +317,7 @@ class AccionAvisoHoja(
     val texto: String,
     val estilo: EstiloAccionAviso,
     val icono: ImageVector? = null,
+    val habilitada: Boolean = true,
     val onClick: () -> Unit
 )
 
@@ -303,10 +330,12 @@ class AccionAvisoHoja(
 fun AvisoHoja(
     icono: ImageVector,
     titulo: String,
-    texto: String,
+    texto: String?,
     acciones: List<AccionAvisoHoja>,
     onCerrar: () -> Unit,
     peligro: Boolean = true,
+    /** Contenido propio entre el texto y los botones (p.ej. campos de un formulario). */
+    contenido: (@Composable ColumnScope.() -> Unit)? = null,
     /** Dibuja el icono a mano (p.ej. varios disquetes) en vez de [icono]; recibe su tinta. */
     iconoContenido: (@Composable (Color) -> Unit)? = null,
     /** Añade una X arriba a la derecha que cierra el aviso. */
@@ -370,7 +399,10 @@ fun AvisoHoja(
                             modifier = Modifier.weight(1f).padding(end = if (conX) 36.dp else 0.dp)
                         )
                     }
-                    Text(texto, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onBackground)
+                    if (texto != null) {
+                        Text(texto, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onBackground)
+                    }
+                    contenido?.invoke(this)
                     if (accionesEnFila) {
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             acciones.forEach { accion -> BotonAvisoHoja(accion, Modifier.weight(1f)) }
@@ -415,28 +447,31 @@ private fun BotonAvisoHoja(accion: AccionAvisoHoja, modifierBase: Modifier) {
         EstiloAccionAviso.PELIGRO -> {
             val tinta = MaterialTheme.colorScheme.error
             Button(
-                onClick = accion.onClick, shape = forma, modifier = modificador,
+                onClick = accion.onClick, enabled = accion.habilitada, shape = forma, modifier = modificador,
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.errorContainer, contentColor = tinta)
             ) { contenido(tinta) }
         }
         EstiloAccionAviso.SUAVE -> {
             val tinta = MaterialTheme.colorScheme.primary
             Button(
-                onClick = accion.onClick, shape = forma, modifier = modificador,
+                onClick = accion.onClick, enabled = accion.habilitada, shape = forma, modifier = modificador,
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primaryContainer, contentColor = tinta)
             ) { contenido(tinta) }
         }
         EstiloAccionAviso.PRIMARIO -> {
             val tinta = onAcentoHoja
             Button(
-                onClick = accion.onClick, shape = forma, modifier = modificador,
-                colors = ButtonDefaults.buttonColors(containerColor = acentoHoja, contentColor = tinta)
+                onClick = accion.onClick, enabled = accion.habilitada, shape = forma, modifier = modificador,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = acentoHoja, contentColor = tinta,
+                    disabledContainerColor = acentoHoja.copy(alpha = 0.35f), disabledContentColor = tinta.copy(alpha = 0.7f)
+                )
             ) { contenido(tinta) }
         }
         EstiloAccionAviso.BORDE -> {
             val tinta = MaterialTheme.colorScheme.primary
             OutlinedButton(
-                onClick = accion.onClick, shape = forma, modifier = modificador,
+                onClick = accion.onClick, enabled = accion.habilitada, shape = forma, modifier = modificador,
                 border = androidx.compose.foundation.BorderStroke(1.5.dp, MaterialTheme.colorScheme.primaryContainer),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = tinta)
             ) { contenido(tinta) }
