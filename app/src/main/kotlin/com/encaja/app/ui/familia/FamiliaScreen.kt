@@ -694,7 +694,7 @@ private fun DialogoMostrar(
         ),
         onCerrar = onCerrar,
         contenido = {
-            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+            Column {
                 Text(
                     if (compartido) "Selección compartida: la ven todos los usuarios en esta semana, y cualquier cambio lo verán también."
                     else "Solo para ti y para esta semana; se mantiene hasta que la cambies, y cada semana tiene la suya.",

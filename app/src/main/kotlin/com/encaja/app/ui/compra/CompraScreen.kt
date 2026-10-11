@@ -438,7 +438,7 @@ private fun DialogoFiltroComercios(
         ),
         onCerrar = onCerrar,
         contenido = {
-            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+            Column {
                 grupos.forEach { grupo ->
                     val visible = grupo.tienda !in ocultas
                     val pendientes = grupo.articulos.count { !it.comprado }

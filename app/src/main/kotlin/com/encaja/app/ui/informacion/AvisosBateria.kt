@@ -350,7 +350,7 @@ fun DialogoMasInformacionBateria(onCerrar: () -> Unit) {
         ),
         onCerrar = onCerrar,
         contenido = {
-            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+            Column {
                 Text(
                     "Además de quitar la restricción de batería de Android, muchos fabricantes añaden su " +
                         "propio ahorro de energía, que puede cerrar la app y evitar que lleguen los avisos. " +
