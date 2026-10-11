@@ -162,20 +162,20 @@ private fun ContenidoCompra(
         val gruposVisibles = estado.grupos.filter { it.tienda !in tiendasOcultas }
 
         Row(
-            modifier = Modifier.padding(start = 20.dp, end = 12.dp, top = 12.dp, bottom = 12.dp),
+            modifier = Modifier.padding(start = 16.dp, end = 12.dp, top = 4.dp, bottom = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     "Compra",
-                    style = MaterialTheme.typography.displaySmall,
+                    style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.ExtraBold,
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
                     if (hayFiltro) "Mostrando ${gruposVisibles.size} de ${estado.grupos.size} comercios"
                     else "Lista de la compra familiar",
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = if (hayFiltro) LocalEncajaExtraColors.current.acento else MaterialTheme.colorScheme.onSurfaceVariant,
                     fontWeight = if (hayFiltro) FontWeight.Bold else null
                 )
@@ -184,7 +184,7 @@ private fun ContenidoCompra(
                 val extra = LocalEncajaExtraColors.current
                 Box(
                     modifier = Modifier
-                        .size(48.dp)
+                        .size(40.dp)
                         .clip(CircleShape)
                         .background(if (hayFiltro) extra.acento else MaterialTheme.colorScheme.primaryContainer)
                         .clickable { filtroAbierto = true },
@@ -233,8 +233,8 @@ private fun ContenidoCompra(
         } else {
             LazyColumn(
                 modifier = Modifier.weight(1f),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 12.dp, end = 12.dp, top = 2.dp, bottom = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(gruposVisibles, key = { it.tienda }) { grupo ->
                     TarjetaTienda(
@@ -295,25 +295,25 @@ private fun TarjetaTienda(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onAlternarPlegada)
-                .padding(horizontal = 14.dp, vertical = 14.dp),
+                .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
-                modifier = Modifier.size(48.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surface),
+                modifier = Modifier.size(38.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surface),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     grupo.tienda.trim().take(1).uppercase(),
                     color = MaterialTheme.colorScheme.primary,
-                    fontSize = 22.sp,
+                    fontSize = 18.sp,
                     fontWeight = FontWeight.ExtraBold
                 )
             }
-            Spacer(Modifier.width(14.dp))
+            Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     grupo.tienda,
-                    style = MaterialTheme.typography.titleLarge,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.ExtraBold,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
@@ -323,7 +323,7 @@ private fun TarjetaTienda(
                 val total = grupo.articulos.size
                 Text(
                     textoArticulos(total, pendientes),
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -342,7 +342,7 @@ private fun TarjetaTienda(
                     .padding(start = 6.dp, end = 6.dp, bottom = 6.dp)
                     .clip(RoundedCornerShape(20.dp))
                     .background(MaterialTheme.colorScheme.surface)
-                    .padding(8.dp),
+                    .padding(horizontal = 6.dp, vertical = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 grupo.articulos.forEach { articulo ->
@@ -381,11 +381,11 @@ private fun FilaNuevoArticuloEnTienda(onAgregar: (String) -> Unit) {
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(16.dp))
                 .clickable { abierta = true }
-                .padding(horizontal = 14.dp, vertical = 10.dp),
+                .padding(horizontal = 14.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
-                modifier = Modifier.size(26.dp).clip(CircleShape).background(acento),
+                modifier = Modifier.size(24.dp).clip(CircleShape).background(acento),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(Icons.Default.Add, contentDescription = null, tint = LocalEncajaExtraColors.current.onAcento, modifier = Modifier.size(18.dp))
@@ -602,10 +602,10 @@ private fun PanelNuevoArticulo(tiendas: List<String>, onAgregar: (String, String
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 8.dp)
+            .padding(horizontal = 10.dp, vertical = 4.dp)
             .clip(RoundedCornerShape(24.dp))
             .background(extra.tarjetaSuave)
-            .padding(12.dp),
+            .padding(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         CampoPanel(
@@ -630,7 +630,7 @@ private fun PanelNuevoArticulo(tiendas: List<String>, onAgregar: (String, String
         Spacer(Modifier.width(8.dp))
         Box(
             modifier = Modifier
-                .size(56.dp)
+                .size(48.dp)
                 .clip(CircleShape)
                 .background(if (puedeAgregar) extra.acento else extra.acento.copy(alpha = 0.4f))
                 .clickable(enabled = puedeAgregar, onClick = { agregar() }),

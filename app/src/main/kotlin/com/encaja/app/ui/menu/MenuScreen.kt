@@ -13,6 +13,7 @@ package com.encaja.app.ui.menu
 
 import com.encaja.app.ui.theme.SelectorFechaHoja
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -106,8 +107,8 @@ private fun ContenidoMenuSemanal(
     onIrASemanaDe: (LocalDate) -> Unit
 ) {
     LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         item {
             CabeceraMenu(
@@ -154,7 +155,7 @@ private fun CabeceraMenu(
         Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
             Text(
                 "Menú semanal",
-                style = MaterialTheme.typography.headlineMedium,
+                style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -162,7 +163,7 @@ private fun CabeceraMenu(
             Spacer(Modifier.height(2.dp))
             Text(
                 "Planifica, organiza y disfruta",
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -222,7 +223,7 @@ private fun TarjetaDia(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxHeight()
-                .padding(vertical = 14.dp, horizontal = 14.dp)
+                .padding(vertical = 6.dp, horizontal = 12.dp)
         ) {
             FilaComida(
                 icono = Icons.Default.WbSunny,
@@ -230,7 +231,7 @@ private fun TarjetaDia(
                 valorActual = dia.comida,
                 onGuardar = onGuardarComida
             )
-            HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp))
+            HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
             FilaComida(
                 icono = Icons.Default.NightsStay,
                 etiqueta = "Cena",
@@ -250,17 +251,17 @@ private fun PanelDelDia(fecha: LocalDate, color: Color) {
 
     Column(
         modifier = Modifier
-            .width(76.dp)
+            .width(60.dp)
             .fillMaxHeight()
             .background(color, shape = RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp))
-            .padding(vertical = 16.dp, horizontal = 8.dp),
+            .padding(vertical = 8.dp, horizontal = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         Text(nombreDia, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
-        Spacer(Modifier.height(4.dp))
-        Text(fecha.dayOfMonth.toString(), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(2.dp))
+        Text(fecha.dayOfMonth.toString(), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(1.dp))
         Text(nombreMes, style = MaterialTheme.typography.labelSmall)
     }
 }
@@ -278,7 +279,7 @@ private fun FilaComida(
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
         Box(
             modifier = Modifier
-                .size(32.dp)
+                .size(28.dp)
                 .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.surface),
             contentAlignment = Alignment.Center
@@ -295,11 +296,9 @@ private fun FilaComida(
                 modifier = Modifier.weight(1f)
             )
             Spacer(Modifier.width(4.dp))
-            IconButton(onClick = {
+            BotonCompactoMenu(Icons.Default.Check, "Confirmar $etiqueta", 24) {
                 onGuardar(texto.ifBlank { null })
                 editando = false
-            }) {
-                Icon(Icons.Default.Check, contentDescription = "Confirmar $etiqueta")
             }
         } else {
             Column(modifier = Modifier.weight(1f)) {
@@ -309,9 +308,26 @@ private fun FilaComida(
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
-            IconButton(onClick = { editando = true }) {
-                Icon(Icons.Default.Edit, contentDescription = "Editar $etiqueta", modifier = Modifier.size(18.dp))
-            }
+            BotonCompactoMenu(Icons.Default.Edit, "Editar $etiqueta", 18) { editando = true }
         }
+    }
+}
+
+/** Botón de icono de 36 dp (los IconButton normales miden 48 dp y alargan cada fila). */
+@Composable
+private fun BotonCompactoMenu(
+    icono: androidx.compose.ui.graphics.vector.ImageVector,
+    descripcion: String,
+    tamanoIcono: Int,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .size(36.dp)
+            .clip(CircleShape)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(icono, contentDescription = descripcion, modifier = Modifier.size(tamanoIcono.dp))
     }
 }
