@@ -6,7 +6,10 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import com.encaja.app.ui.common.lanzarSeguro
 import com.encaja.app.domain.model.AvailabilityBlock
+import com.encaja.app.domain.model.Caregiver
 import com.encaja.app.domain.model.CaregiverId
+import com.encaja.app.domain.model.CaregiverRole
+import com.encaja.app.ui.ajustes.generarCaregiverIdDesdeNombre
 import com.encaja.app.domain.model.CategoriaDisponibilidad
 import com.encaja.app.domain.model.CategoriaId
 import com.encaja.app.domain.model.CategoriasBase
@@ -337,6 +340,23 @@ class FamiliaViewModel @Inject constructor(
     private fun esDeLaCategoria(bloque: AvailabilityBlock, categoria: CategoriaDisponibilidad): Boolean =
         if (categoria.base != null) bloque.categoriaId == null && bloque.motivo == categoria.base
         else bloque.categoriaId == categoria.id
+
+    /** Crea un cuidador nuevo (sin cuenta vinculada) desde la propia pantalla de Familia. */
+    fun agregarCuidador(nombre: String, apellido1: String, apellido2: String) {
+        val familyId = familyIdActual ?: return
+        val nombreLimpio = nombre.trim()
+        if (nombreLimpio.isBlank()) return
+        val ap1 = apellido1.trim()
+        val ap2 = apellido2.trim()
+        lanzarSeguro {
+            // Se parte de la lista completa (también quienes están ocultos por el filtro).
+            val actuales = caregiverRepository.obtenerCuidadores(familyId)
+            val id = generarCaregiverIdDesdeNombre(nombreLimpio, ap1, ap2, actuales.map { it.id })
+            val nuevo = Caregiver(id, nombreLimpio, ap1, ap2, CaregiverRole.CUIDADOR)
+            caregiverRepository.guardarCuidadores(familyId, actuales + nuevo)
+            cargarDatos(mostrarCargando = false)
+        }
+    }
 
     /** Guarda bloques sueltos (una cita médica, los días de un viaje...). */
     fun guardarBloques(bloques: List<AvailabilityBlock>) {

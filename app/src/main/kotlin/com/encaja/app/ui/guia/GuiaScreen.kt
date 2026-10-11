@@ -77,10 +77,11 @@ import kotlin.math.roundToInt
 
 private val ES = Locale("es")
 
-// La franja horaria que se representa en la guía: de 7:00 a 22:00.
+// La franja horaria que se representa en la guía: de 7:00 a 00:00 (el final del día).
 private val INICIO_FRANJA: LocalTime = LocalTime.of(7, 0)
-private val FIN_FRANJA: LocalTime = LocalTime.of(22, 0)
-private val MINUTOS_FRANJA = java.time.Duration.between(INICIO_FRANJA, FIN_FRANJA).toMinutes().toInt()
+private const val HORA_INICIO_FRANJA = 7
+private const val HORA_FIN_FRANJA = 24 // 24 = las 00:00 del día siguiente
+private const val MINUTOS_FRANJA = (HORA_FIN_FRANJA - HORA_INICIO_FRANJA) * 60
 
 // Escala de la línea de tiempo: cada minuto ocupa un ancho real (no se comprime para caber
 // en pantalla), por eso hace falta scroll horizontal para ver todo el día. El ancho por
@@ -107,10 +108,11 @@ private fun margenDeAncho(anchoMinuto: Dp): Dp = maxOf(anchoMinuto * 30, 34.dp)
 private val LocalAhora = compositionLocalOf<LocalTime?> { null }
 
 private fun estaEnCurso(need: CoverageNeed, ahora: LocalTime?): Boolean =
-    ahora != null && !ahora.isBefore(need.horaInicio) && ahora.isBefore(need.horaFin)
+    ahora != null && !ahora.isBefore(need.horaInicio) &&
+        (need.horaFin == LocalTime.MIDNIGHT || ahora.isBefore(need.horaFin))
 
 private fun yaHaPasado(need: CoverageNeed, ahora: LocalTime?): Boolean =
-    ahora != null && !ahora.isBefore(need.horaFin)
+    ahora != null && need.horaFin != LocalTime.MIDNIGHT && !ahora.isBefore(need.horaFin)
 
 private val LocalAnchoMinuto = compositionLocalOf { anchoMinutoDeNivel(NIVEL_ESCALA_NORMAL) }
 
@@ -686,9 +688,9 @@ private fun NombreDeCarril(nombre: String, scrollState: ScrollState) {
 private fun ReglaHoras() {
     val anchoHora = LocalAnchoMinuto.current * 60
     Box(modifier = Modifier.width(ANCHO_LIENZO).height(ALTO_REGLA)) {
-        var hora = INICIO_FRANJA
-        while (!hora.isAfter(FIN_FRANJA)) {
-            val minutos = minutosDesdeInicioFranja(hora)
+        for (h in HORA_INICIO_FRANJA..HORA_FIN_FRANJA) {
+            val hora = LocalTime.of(h % 24, 0)
+            val minutos = (h - HORA_INICIO_FRANJA) * 60
             Box(
                 modifier = Modifier
                     .offset(x = xDeMinutos(minutos) - anchoHora / 2)
@@ -703,8 +705,6 @@ private fun ReglaHoras() {
                     color = TINTA_SUAVE
                 )
             }
-            if (hora == FIN_FRANJA) break
-            hora = hora.plusHours(1)
         }
     }
 }
@@ -798,7 +798,7 @@ private fun BloqueActividad(
 ) {
     val density = LocalDensity.current
     val inicioMin = minutosDesdeInicioFranja(bloque.need.horaInicio)
-    val finMin = minutosDesdeInicioFranja(bloque.need.horaFin).coerceAtLeast(inicioMin + 20)
+    val finMin = minutosFinDesdeInicioFranja(bloque.need.horaFin).coerceAtLeast(inicioMin + 20)
     val inicioPx = with(density) { xDeMinutos(inicioMin).toPx() }
     val anchoMinutoBloque = LocalAnchoMinuto.current
     val anchoBloquePx = with(density) { (anchoMinutoBloque * (finMin - inicioMin)).toPx() }
@@ -1104,11 +1104,15 @@ private fun SinActividadesEnLista() {
     }
 }
 
-/** Minutos transcurridos desde INICIO_FRANJA, recortados a la propia franja (7:00–22:00). */
+/** Minutos transcurridos desde INICIO_FRANJA, recortados a la propia franja (7:00–00:00). */
 private fun minutosDesdeInicioFranja(hora: LocalTime): Int {
     val minutos = java.time.Duration.between(INICIO_FRANJA, hora).toMinutes().toInt()
     return minutos.coerceIn(0, MINUTOS_FRANJA)
 }
+
+/** Como [minutosDesdeInicioFranja] para la hora de FIN de una actividad: las 00:00 son el final del día. */
+private fun minutosFinDesdeInicioFranja(hora: LocalTime): Int =
+    if (hora == LocalTime.MIDNIGHT) MINUTOS_FRANJA else minutosDesdeInicioFranja(hora)
 
 /** "15 min antes de llevar · 1 h antes de recoger", o null si la actividad no tiene avisos. */
 private fun textoAvisos(need: CoverageNeed): String? {

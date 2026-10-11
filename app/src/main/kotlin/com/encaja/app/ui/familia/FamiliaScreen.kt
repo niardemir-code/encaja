@@ -150,7 +150,18 @@ private fun ContenidoFamilia(estado: FamiliaUiState, viewModel: FamiliaViewModel
     val filasVisibles = cuidadoresVisibles.size + unidadesVisibles.size
     var selectorAbierto by remember { mutableStateOf(false) }
     var categoriasAbiertas by remember { mutableStateOf(false) }
+    var nuevoCuidadorAbierto by remember { mutableStateOf(false) }
     val nombres = remember(estado.cuidadores) { estado.cuidadores.associate { it.caregiver.id to it.caregiver.nombre } }
+
+    if (nuevoCuidadorAbierto) {
+        DialogoNuevoCuidador(
+            onCrear = { nombre, apellido1, apellido2 ->
+                viewModel.agregarCuidador(nombre, apellido1, apellido2)
+                nuevoCuidadorAbierto = false
+            },
+            onCerrar = { nuevoCuidadorAbierto = false }
+        )
+    }
 
     if (categoriasAbiertas) {
         DialogoListaCategorias(
@@ -257,6 +268,7 @@ private fun ContenidoFamilia(estado: FamiliaUiState, viewModel: FamiliaViewModel
                     iniciales = iniciales,
                     onClickDia = { idTexto, fecha -> celdaEnEdicion = idTexto to fecha },
                     hayOcultosPorFiltro = totalFilas > 0 && filasVisibles == 0,
+                    onCrearCuidador = { nuevoCuidadorAbierto = true },
                     cabecera = {
                         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             CabeceraTarjeta(
@@ -429,6 +441,7 @@ private fun LazyListScope.cuadriculaDisponibilidad(
     iniciales: Map<CaregiverId, String>,
     onClickDia: (idTexto: String, LocalDate) -> Unit,
     hayOcultosPorFiltro: Boolean = false,
+    onCrearCuidador: () -> Unit = {},
     cabecera: @Composable () -> Unit = {}
 ) {
     val fechas = (0..6).map { lunes.plusDays(it.toLong()) }
@@ -460,15 +473,13 @@ private fun LazyListScope.cuadriculaDisponibilidad(
         }
     }
 
-    if (cuidadores.isEmpty() && unidades.isEmpty()) {
+    // Solo se explica algo cuando el filtro ha ocultado a todo el mundo; si no hay nadie
+    // todavía, el botón de crear cuidador (más abajo) ocupa el lugar de la cuadrícula.
+    if (hayOcultosPorFiltro) {
         item(key = "cuadricula-vacia") {
             Box(modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface).padding(horizontal = 18.dp, vertical = 8.dp)) {
                 Text(
-                    if (hayOcultosPorFiltro) {
-                        "Has ocultado a todo el mundo; usa el botón Cuidadores para volver a verlos."
-                    } else {
-                        "Añade personas en Ajustes para ver aquí su disponibilidad."
-                    },
+                    "Has ocultado a todo el mundo; usa el botón Cuidadores para volver a verlos.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = TINTA_SUAVE
                 )
@@ -502,6 +513,27 @@ private fun LazyListScope.cuadriculaDisponibilidad(
                 esUnidad = true,
                 onClickDia = { fecha -> onClickDia(unidadSemana.unidad.id.value, fecha) }
             )
+        }
+    }
+
+    // Botón para crear un cuidador: tras el último cuidador o unidad familiar, o justo
+    // debajo de los días de la semana si todavía no hay nadie.
+    item(key = "cuadricula-nuevo-cuidador") {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surface)
+                .padding(horizontal = 14.dp, vertical = 8.dp)
+        ) {
+            OutlinedButton(
+                onClick = onCrearCuidador,
+                modifier = Modifier.fillMaxWidth().height(48.dp),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Icon(Icons.Default.Add, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Crear un nuevo cuidador", fontWeight = FontWeight.Bold)
+            }
         }
     }
 
@@ -835,4 +867,39 @@ private fun DialogoListaCategorias(
             onCerrar = { enEdicion = null }
         )
     }
+}
+
+
+/** Pide el nombre y los apellidos del cuidador nuevo; "Crear" se activa cuando hay nombre. */
+@Composable
+private fun DialogoNuevoCuidador(onCrear: (nombre: String, apellido1: String, apellido2: String) -> Unit, onCerrar: () -> Unit) {
+    var nombre by remember { mutableStateOf("") }
+    var apellido1 by remember { mutableStateOf("") }
+    var apellido2 by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onCerrar,
+        title = { Text("Crear un nuevo cuidador") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = nombre, onValueChange = { nombre = it },
+                    label = { Text("Nombre") }, singleLine = true, modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = apellido1, onValueChange = { apellido1 = it },
+                    label = { Text("Primer apellido") }, singleLine = true, modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = apellido2, onValueChange = { apellido2 = it },
+                    label = { Text("Segundo apellido") }, singleLine = true, modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onCrear(nombre, apellido1, apellido2) }, enabled = nombre.isNotBlank()) {
+                Text("Crear", fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = { TextButton(onClick = onCerrar) { Text("Cancelar") } }
+    )
 }
