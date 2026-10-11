@@ -433,7 +433,7 @@ private fun DialogoFiltroComercios(
         conX = true,
         accionesEnFila = true,
         acciones = listOf(
-            AccionAvisoHoja("Mostrar todos", EstiloAccionAviso.SUAVE) { ocultas.clear() },
+            AccionAvisoHoja("Todos", EstiloAccionAviso.SUAVE) { ocultas.clear() },
             AccionAvisoHoja("Listo", EstiloAccionAviso.PRIMARIO) { onCerrar() }
         ),
         onCerrar = onCerrar,
@@ -454,11 +454,17 @@ private fun DialogoFiltroComercios(
                             checked = visible,
                             onCheckedChange = { marcada -> if (marcada) ocultas.remove(grupo.tienda) else ocultas.add(grupo.tienda) }
                         )
-                        Text(grupo.tienda, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), maxLines = 1)
+                        Text(
+                            grupo.tienda,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.weight(1f),
+                            maxLines = 1
+                        )
                         Text(
                             if (pendientes == 1) "1 por comprar" else "$pendientes por comprar",
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            style = MaterialTheme.typography.bodySmall
+                            style = MaterialTheme.typography.labelSmall
                         )
                     }
                 }
