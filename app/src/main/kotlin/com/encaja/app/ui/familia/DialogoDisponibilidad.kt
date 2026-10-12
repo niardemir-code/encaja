@@ -18,6 +18,29 @@ package com.encaja.app.ui.familia
 //    guarda ni se borra hasta pulsar uno de los dos.
 // Las categorías se editan desde la tarjeta "Categorías" de la pantalla.
 
+import com.encaja.app.ui.theme.BotonCuadradoHoja
+import com.encaja.app.ui.theme.BotonRedondoSuaveHoja
+import com.encaja.app.ui.theme.CajaFechaHoja
+import com.encaja.app.ui.theme.CajaHoraHoja
+import com.encaja.app.ui.theme.CalendarioMultipleHoja
+import com.encaja.app.ui.theme.CampoTextoHoja
+import com.encaja.app.ui.theme.FilaConInterruptorHoja
+import com.encaja.app.ui.theme.IconoEnCirculoHoja
+import com.encaja.app.ui.theme.NotaSeccionHoja
+import com.encaja.app.ui.theme.SelectorDiasSemanaHoja
+import com.encaja.app.ui.theme.SeparadorHoja
+import com.encaja.app.ui.theme.TarjetaSeccionHoja
+import com.encaja.app.ui.theme.TituloSeccionHoja
+import com.encaja.app.ui.theme.acentoHoja
+import com.encaja.app.ui.theme.bordeHoja
+import com.encaja.app.ui.theme.casillaHoja
+import com.encaja.app.ui.theme.fechasParaDiaSemanaHoja
+import com.encaja.app.ui.theme.indigoHoja
+import com.encaja.app.ui.theme.lavandaHoja
+import com.encaja.app.ui.theme.onAcentoHoja
+import com.encaja.app.ui.theme.tarjetaHoja
+import com.encaja.app.ui.theme.tintaHoja
+import com.encaja.app.ui.theme.tintaSuaveHoja
 import com.encaja.app.ui.theme.SelectorHoraHoja
 import com.encaja.app.ui.theme.SelectorFechaHoja
 import com.encaja.app.ui.common.formatearHora
@@ -83,22 +106,8 @@ import java.util.Locale
 
 private val ES = Locale("es")
 
-// Atajos a los colores del tema activo con los nombres del diseño.
-private val TINTA: Color @Composable get() = MaterialTheme.colorScheme.onBackground
-private val TINTA_SUAVE: Color @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
-private val TARJETA: Color @Composable get() = LocalEncajaExtraColors.current.tarjetaSuave
-private val CASILLA: Color @Composable get() = MaterialTheme.colorScheme.surface
-private val BORDE: Color @Composable get() = MaterialTheme.colorScheme.outlineVariant
-private val ACENTO: Color @Composable get() = LocalEncajaExtraColors.current.acento
-private val ON_ACENTO: Color @Composable get() = LocalEncajaExtraColors.current.onAcento
-private val LAVANDA: Color @Composable get() = MaterialTheme.colorScheme.primaryContainer
-private val INDIGO: Color @Composable get() = MaterialTheme.colorScheme.primary
-
 private fun nombreDia(fecha: LocalDate): String =
     fecha.dayOfWeek.getDisplayName(TextStyle.FULL, ES).replaceFirstChar { it.uppercase() } + " ${fecha.dayOfMonth}"
-
-private fun fechaCorta(fecha: LocalDate): String =
-    "${fecha.dayOfMonth} ${fecha.month.getDisplayName(TextStyle.SHORT, ES).removeSuffix(".")}"
 
 /**
  * [titulo] es el nombre de la persona o de la unidad familiar. [caregiverIds] son las
@@ -163,7 +172,7 @@ fun DialogoDisponibilidad(
     fun alternarDiaSemana(dia: DayOfWeek) {
         val activando = dia !in diasSemanaRepetir
         diasSemanaRepetir = if (activando) diasSemanaRepetir + dia else diasSemanaRepetir - dia
-        val fechasDelDia = fechasParaDiaSemana(fecha, dia, hastaRepetir).toSet()
+        val fechasDelDia = fechasParaDiaSemanaHoja(fecha, dia, hastaRepetir).toSet()
         fechasRepetir = if (activando) {
             fechasRepetir + fechasDelDia
         } else {
@@ -178,8 +187,8 @@ fun DialogoDisponibilidad(
         val hastaAnterior = hastaRepetir
         hastaRepetir = nuevaHasta
         if (diasSemanaRepetir.isEmpty()) return
-        val antiguas = diasSemanaRepetir.flatMap { dia -> fechasParaDiaSemana(fecha, dia, hastaAnterior) }.toSet()
-        val nuevas = diasSemanaRepetir.flatMap { dia -> fechasParaDiaSemana(fecha, dia, nuevaHasta) }.toSet()
+        val antiguas = diasSemanaRepetir.flatMap { dia -> fechasParaDiaSemanaHoja(fecha, dia, hastaAnterior) }.toSet()
+        val nuevas = diasSemanaRepetir.flatMap { dia -> fechasParaDiaSemanaHoja(fecha, dia, nuevaHasta) }.toSet()
         fechasRepetir = (fechasRepetir - antiguas) + nuevas
     }
     var horasEtiqueta by remember(seleccionId) { mutableStateOf("") }
@@ -295,15 +304,15 @@ fun DialogoDisponibilidad(
                 Text(
                     buildAnnotatedString {
                         append(titulo)
-                        withStyle(SpanStyle(color = TINTA_SUAVE)) { append(" · ") }
-                        withStyle(SpanStyle(color = ACENTO)) { append(nombreDia(fecha)) }
+                        withStyle(SpanStyle(color = tintaSuaveHoja)) { append(" · ") }
+                        withStyle(SpanStyle(color = acentoHoja)) { append(nombreDia(fecha)) }
                     },
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.ExtraBold,
-                    color = TINTA,
+                    color = tintaHoja,
                     modifier = Modifier.weight(1f)
                 )
-                BotonRedondoSuave(Icons.Default.Close, "Cerrar", onCerrar)
+                BotonRedondoSuaveHoja(Icons.Default.Close, "Cerrar", onCerrar)
             }
             Spacer(Modifier.height(14.dp))
 
@@ -314,7 +323,7 @@ fun DialogoDisponibilidad(
                     Text(
                         if (bloquesDelDia.size == 1) "Actividad de este día" else "Actividades de este día (toca una para editarla)",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = TINTA_SUAVE
+                        color = tintaSuaveHoja
                     )
                     Spacer(Modifier.height(8.dp))
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -350,7 +359,7 @@ fun DialogoDisponibilidad(
 
             // ── Categoría ─────────────────────────────────────────────────────────
             if (bloqueEnEdicion == null) {
-                TituloSeccion(
+                TituloSeccionHoja(
                     if (caregiverIds.size > 1) "Categoría (para todos)" else "Categoría",
                     "Selecciona una categoría para esta actividad"
                 )
@@ -385,7 +394,7 @@ fun DialogoDisponibilidad(
                         "Editando ${seleccionada.nombre}",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.ExtraBold,
-                        color = TINTA
+                        color = tintaHoja
                     )
                 }
                 Spacer(Modifier.height(14.dp))
@@ -395,9 +404,9 @@ fun DialogoDisponibilidad(
             if (seleccionada != null) {
                 key(seleccionada.id) {
                     if (porHoras) {
-                        TituloSeccion("Horarios", "Define el horario de esta actividad")
+                        TituloSeccionHoja("Horarios", "Define el horario de esta actividad")
                         Spacer(Modifier.height(10.dp))
-                        TarjetaSeccion(padding = 0.dp) {
+                        TarjetaSeccionHoja(padding = 0.dp) {
                             if (turnosDeLaCategoria.isNotEmpty()) {
                                 HorariosGuardados(
                                     turnos = turnosDeLaCategoria,
@@ -405,9 +414,9 @@ fun DialogoDisponibilidad(
                                     onElegir = { horasTodoElDia = false; horasInicio = it.horaInicio; horasFin = it.horaFin },
                                     onEliminar = { onEliminarTurno(it.id) }
                                 )
-                                Separador()
+                                SeparadorHoja()
                             }
-                            FilaConInterruptor(
+                            FilaConInterruptorHoja(
                                 icono = Icons.Default.Schedule,
                                 titulo = "Todo el día",
                                 subtitulo = "Marca si dura todo el día",
@@ -415,31 +424,31 @@ fun DialogoDisponibilidad(
                                 onCambiar = { horasTodoElDia = it }
                             )
                             if (!horasTodoElDia) {
-                                Separador()
+                                SeparadorHoja()
                                 Row(
                                     modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
                                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                                 ) {
-                                    CajaHora("Desde", horasInicio, Modifier.weight(1f)) { horasInicio = it }
-                                    CajaHora("Hasta", horasFin, Modifier.weight(1f)) { horasFin = it }
+                                    CajaHoraHoja("Desde", horasInicio, Modifier.weight(1f)) { horasInicio = it }
+                                    CajaHoraHoja("Hasta", horasFin, Modifier.weight(1f)) { horasFin = it }
                                 }
                                 if (horasInicio == horasFin) {
-                                    NotaSeccion("La hora de fin debe ser distinta de la de inicio.", error = true)
+                                    NotaSeccionHoja("La hora de fin debe ser distinta de la de inicio.", error = true)
                                 } else if (!horasFin.isAfter(horasInicio)) {
-                                    NotaSeccion("Turno de noche: termina al día siguiente a las ${formatearHora(horasFin)}.")
+                                    NotaSeccionHoja("Turno de noche: termina al día siguiente a las ${formatearHora(horasFin)}.")
                                 }
                                 if (turnoConHoras(turnosDeLaCategoria, horasInicio, horasFin) == null) {
-                                    Separador()
-                                    FilaConInterruptor(
+                                    SeparadorHoja()
+                                    FilaConInterruptorHoja(
                                         icono = Icons.Default.BookmarkBorder,
                                         titulo = "Guardar como horario",
                                         subtitulo = "Guarda estas horas para usarlas más adelante",
                                         activo = guardarComoHorario,
                                         onCambiar = { guardarComoHorario = it },
-                                        tintaIcono = ACENTO
+                                        tintaIcono = acentoHoja
                                     )
                                     if (guardarComoHorario) {
-                                        CampoTexto(
+                                        CampoTextoHoja(
                                             valor = nombreHorario,
                                             onCambiar = { nombreHorario = it.take(24) },
                                             placeholder = "Nombre del horario (p.ej. Mañana)",
@@ -448,7 +457,7 @@ fun DialogoDisponibilidad(
                                     }
                                 }
                             }
-                            Separador()
+                            SeparadorHoja()
                             FilaDetalle(valor = horasEtiqueta, onCambiar = { horasEtiqueta = it })
                         }
 
@@ -456,14 +465,14 @@ fun DialogoDisponibilidad(
                         // Repetir en otros días: interruptor (apagado por defecto) que despliega
                         // el calendario mensual para marcar los días que se quieran.
                         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            IconoEnCirculo(Icons.Default.CalendarMonth, fondo = LAVANDA, tinta = INDIGO)
+                            IconoEnCirculoHoja(Icons.Default.CalendarMonth, fondo = lavandaHoja, tinta = indigoHoja)
                             Spacer(Modifier.width(12.dp))
                             Column(modifier = Modifier.weight(1f)) {
-                                Text("Repetir en otros días", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = TINTA)
+                                Text("Repetir en otros días", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = tintaHoja)
                                 Text(
                                     if (repetirActivo) "Toca los días del calendario" else "Solo este día",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = TINTA_SUAVE
+                                    color = tintaSuaveHoja
                                 )
                             }
                             Switch(
@@ -481,8 +490,8 @@ fun DialogoDisponibilidad(
                         }
                         if (repetirActivo) {
                             Spacer(Modifier.height(12.dp))
-                            TarjetaSeccion(padding = 10.dp) {
-                                CalendarioMultiple(
+                            TarjetaSeccionHoja(padding = 10.dp) {
+                                CalendarioMultipleHoja(
                                     mesInicial = YearMonth.from(fecha),
                                     seleccionadas = fechasRepetir,
                                     onAlternar = { dia ->
@@ -494,51 +503,51 @@ fun DialogoDisponibilidad(
                                     }
                                 )
                                 Spacer(Modifier.height(14.dp))
-                                Separador()
+                                SeparadorHoja()
                                 Spacer(Modifier.height(10.dp))
                                 Text(
                                     "O cada semana en",
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = TINTA_SUAVE
+                                    color = tintaSuaveHoja
                                 )
                                 Spacer(Modifier.height(8.dp))
-                                SelectorDiasSemana(
+                                SelectorDiasSemanaHoja(
                                     seleccionados = diasSemanaRepetir,
                                     onAlternar = { dia -> alternarDiaSemana(dia) }
                                 )
                                 if (diasSemanaRepetir.isNotEmpty()) {
                                     Spacer(Modifier.height(10.dp))
-                                    CajaFecha("Hasta", hastaRepetir, Modifier.fillMaxWidth()) { cambiarHastaRepetir(it) }
+                                    CajaFechaHoja("Hasta", hastaRepetir, Modifier.fillMaxWidth()) { cambiarHastaRepetir(it) }
                                 }
                             }
                             Spacer(Modifier.height(8.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Info, contentDescription = null, tint = TINTA_SUAVE, modifier = Modifier.size(16.dp))
+                                Icon(Icons.Default.Info, contentDescription = null, tint = tintaSuaveHoja, modifier = Modifier.size(16.dp))
                                 Spacer(Modifier.width(8.dp))
                                 Text(
                                     (if (horasFechas.size == 1) "1 día" else "${horasFechas.size} días") +
                                         ". Si alguno ya tenía ${seleccionada.nombre}, se sustituye.",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = TINTA_SUAVE
+                                    color = tintaSuaveHoja
                                 )
                             }
                         }
                     } else {
-                        TituloSeccion("Fechas", "Uno o varios días completos")
+                        TituloSeccionHoja("Fechas", "Uno o varios días completos")
                         Spacer(Modifier.height(10.dp))
-                        TarjetaSeccion(padding = 0.dp) {
+                        TarjetaSeccionHoja(padding = 0.dp) {
                             Row(
                                 modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                CajaFecha("Desde", rangoDesde, Modifier.weight(1f)) { rangoDesde = it; if (rangoHasta.isBefore(it)) rangoHasta = it }
-                                CajaFecha("Hasta", rangoHasta, Modifier.weight(1f)) { rangoHasta = it }
+                                CajaFechaHoja("Desde", rangoDesde, Modifier.weight(1f)) { rangoDesde = it; if (rangoHasta.isBefore(it)) rangoHasta = it }
+                                CajaFechaHoja("Hasta", rangoHasta, Modifier.weight(1f)) { rangoHasta = it }
                             }
-                            NotaSeccion(
+                            NotaSeccionHoja(
                                 if (rangoFechas.size == 1) "1 día completo" else "${rangoFechas.size} días completos",
                                 error = rangoFechas.size > MAX_DIAS_RANGO
                             )
-                            Separador()
+                            SeparadorHoja()
                             FilaDetalle(valor = horasEtiqueta, onCambiar = { horasEtiqueta = it })
                         }
                     }
@@ -553,12 +562,12 @@ fun DialogoDisponibilidad(
                     modifier = Modifier.weight(1f).height(56.dp),
                     shape = RoundedCornerShape(18.dp),
                     border = null,
-                    colors = ButtonDefaults.outlinedButtonColors(containerColor = TARJETA, contentColor = TINTA)
+                    colors = ButtonDefaults.outlinedButtonColors(containerColor = tarjetaHoja, contentColor = tintaHoja)
                 ) {
                     Text("Cancelar", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 }
                 bloqueEnEdicion?.let { bloque ->
-                    BotonCuadrado(
+                    BotonCuadradoHoja(
                         icono = Icons.Default.Delete,
                         descripcion = "Borrar",
                         fondo = MaterialTheme.colorScheme.errorContainer,
@@ -567,12 +576,12 @@ fun DialogoDisponibilidad(
                     )
                 }
                 val puedeGuardar = puedeGuardarHoras || puedeGuardarRango
-                val fondoGuardar = if (puedeGuardar) ACENTO else ACENTO.copy(alpha = 0.35f)
-                BotonCuadrado(
+                val fondoGuardar = if (puedeGuardar) acentoHoja else acentoHoja.copy(alpha = 0.35f)
+                BotonCuadradoHoja(
                     icono = Icons.Default.Save,
                     descripcion = if (tieneSerie) "Guardar solo esta" else "Guardar",
                     fondo = fondoGuardar,
-                    tinta = ON_ACENTO,
+                    tinta = onAcentoHoja,
                     habilitado = puedeGuardar,
                     // Con serie, primero se pide confirmación de qué se guarda.
                     onClick = {
@@ -588,7 +597,7 @@ fun DialogoDisponibilidad(
                     BotonVariosDisquetesHoja(
                         descripcion = "Guardar toda la serie",
                         fondo = fondoGuardar,
-                        tinta = ON_ACENTO,
+                        tinta = onAcentoHoja,
                         habilitado = puedeGuardar,
                         onClick = { confirmarGuardadoSerie = true }
                     )
@@ -629,88 +638,6 @@ fun DialogoDisponibilidad(
 
 /* ───────────────────────────── Piezas del diseño ───────────────────────────── */
 
-/** Botón cuadrado redondeado solo con icono (papelera, disquete), de la altura de "Cancelar". */
-@Composable
-private fun BotonCuadrado(
-    icono: ImageVector,
-    descripcion: String,
-    fondo: Color,
-    tinta: Color,
-    habilitado: Boolean = true,
-    onClick: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .size(56.dp)
-            .clip(RoundedCornerShape(18.dp))
-            .background(fondo)
-            .clickable(enabled = habilitado, onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(icono, contentDescription = descripcion, tint = tinta, modifier = Modifier.size(24.dp))
-    }
-}
-
-@Composable
-private fun TituloSeccion(titulo: String, subtitulo: String) {
-    Text(titulo, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, color = TINTA)
-    Text(subtitulo, style = MaterialTheme.typography.bodyMedium, color = TINTA_SUAVE)
-}
-
-/** Tarjeta suave con borde tenue, base de "este día", "Horarios" y "Fechas". */
-@Composable
-private fun TarjetaSeccion(padding: Dp = 14.dp, contenido: @Composable ColumnScope.() -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(TARJETA)
-            .border(1.dp, BORDE.copy(alpha = 0.6f), RoundedCornerShape(20.dp))
-            .padding(padding),
-        content = contenido
-    )
-}
-
-@Composable
-private fun Separador() {
-    HorizontalDivider(color = BORDE.copy(alpha = 0.5f), modifier = Modifier.padding(horizontal = 14.dp))
-}
-
-@Composable
-private fun NotaSeccion(texto: String, error: Boolean = false) {
-    Text(
-        texto,
-        style = MaterialTheme.typography.bodySmall,
-        color = if (error) MaterialTheme.colorScheme.error else TINTA_SUAVE,
-        modifier = Modifier.padding(start = 14.dp, end = 14.dp, bottom = 10.dp)
-    )
-}
-
-@Composable
-private fun BotonRedondoSuave(icono: ImageVector, descripcion: String, onClick: () -> Unit, tinta: Color = TINTA) {
-    Box(
-        modifier = Modifier
-            .size(44.dp)
-            .clip(CircleShape)
-            .background(TARJETA)
-            .border(1.dp, BORDE.copy(alpha = 0.6f), CircleShape)
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(icono, contentDescription = descripcion, tint = tinta, modifier = Modifier.size(20.dp))
-    }
-}
-
-@Composable
-private fun IconoEnCirculo(icono: ImageVector, fondo: Color, tinta: Color, tamano: Dp = 40.dp) {
-    Box(
-        modifier = Modifier.size(tamano).clip(CircleShape).background(fondo),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(icono, contentDescription = null, tint = tinta, modifier = Modifier.size(tamano / 2))
-    }
-}
-
 /** Un bloque ya apuntado ese día: punto de color, icono en cuadro, nombre y horario. Toda
  * la fila es clicable y abre su edición; la que se está editando lleva el borde de acento. */
 @Composable
@@ -724,8 +651,8 @@ private fun FilaBloqueDelDia(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(CASILLA)
-            .border(1.dp, if (editando) ACENTO else BORDE.copy(alpha = 0.6f), RoundedCornerShape(16.dp))
+            .background(casillaHoja)
+            .border(1.dp, if (editando) acentoHoja else bordeHoja.copy(alpha = 0.6f), RoundedCornerShape(16.dp))
             .clickable(onClick = onEditar)
             .padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -740,10 +667,10 @@ private fun FilaBloqueDelDia(
         }
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(categoria.nombre, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = TINTA)
-            Text(subtitulo, style = MaterialTheme.typography.bodySmall, color = TINTA_SUAVE)
+            Text(categoria.nombre, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = tintaHoja)
+            Text(subtitulo, style = MaterialTheme.typography.bodySmall, color = tintaSuaveHoja)
         }
-        Icon(Icons.Default.Edit, contentDescription = "Editar", tint = if (editando) ACENTO else TINTA_SUAVE, modifier = Modifier.size(20.dp))
+        Icon(Icons.Default.Edit, contentDescription = "Editar", tint = if (editando) acentoHoja else tintaSuaveHoja, modifier = Modifier.size(20.dp))
     }
 }
 
@@ -756,8 +683,8 @@ private fun CasillaCategoria(categoria: CategoriaDisponibilidad, elegida: Boolea
                 .fillMaxWidth()
                 .height(66.dp)
                 .clip(RoundedCornerShape(16.dp))
-                .background(if (elegida) ACENTO else CASILLA)
-                .border(1.dp, if (elegida) ACENTO else BORDE.copy(alpha = 0.6f), RoundedCornerShape(16.dp))
+                .background(if (elegida) acentoHoja else casillaHoja)
+                .border(1.dp, if (elegida) acentoHoja else bordeHoja.copy(alpha = 0.6f), RoundedCornerShape(16.dp))
                 .clickable(onClick = onClick)
                 .padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -768,7 +695,7 @@ private fun CasillaCategoria(categoria: CategoriaDisponibilidad, elegida: Boolea
                 categoria.nombre,
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.ExtraBold,
-                color = if (elegida) ON_ACENTO else TINTA,
+                color = if (elegida) onAcentoHoja else tintaHoja,
                 maxLines = 2
             )
         }
@@ -779,11 +706,11 @@ private fun CasillaCategoria(categoria: CategoriaDisponibilidad, elegida: Boolea
                     .offset(x = 6.dp, y = (-6).dp)
                     .size(22.dp)
                     .clip(CircleShape)
-                    .background(ACENTO)
+                    .background(acentoHoja)
                     .border(2.dp, MaterialTheme.colorScheme.background, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.Check, contentDescription = null, tint = ON_ACENTO, modifier = Modifier.size(13.dp))
+                Icon(Icons.Default.Check, contentDescription = null, tint = onAcentoHoja, modifier = Modifier.size(13.dp))
             }
         }
     }
@@ -791,7 +718,7 @@ private fun CasillaCategoria(categoria: CategoriaDisponibilidad, elegida: Boolea
 
 @Composable
 private fun CasillaNuevaCategoria(modifier: Modifier = Modifier, onClick: () -> Unit) {
-    val colorBorde = TINTA_SUAVE.copy(alpha = 0.6f)
+    val colorBorde = tintaSuaveHoja.copy(alpha = 0.6f)
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -810,9 +737,9 @@ private fun CasillaNuevaCategoria(modifier: Modifier = Modifier, onClick: () -> 
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center
     ) {
-        Icon(Icons.Default.Add, contentDescription = null, tint = TINTA, modifier = Modifier.size(20.dp))
+        Icon(Icons.Default.Add, contentDescription = null, tint = tintaHoja, modifier = Modifier.size(20.dp))
         Spacer(Modifier.width(8.dp))
-        Text("Nueva categoría", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = TINTA, maxLines = 2)
+        Text("Nueva categoría", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = tintaHoja, maxLines = 2)
     }
 }
 
@@ -827,9 +754,9 @@ private fun HorariosGuardados(
     var editando by remember { mutableStateOf(false) }
     Column(modifier = Modifier.padding(start = 14.dp, end = 14.dp, top = 10.dp, bottom = 6.dp)) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text("Horarios guardados", style = MaterialTheme.typography.labelLarge, color = TINTA_SUAVE, modifier = Modifier.weight(1f))
+            Text("Horarios guardados", style = MaterialTheme.typography.labelLarge, color = tintaSuaveHoja, modifier = Modifier.weight(1f))
             TextButton(onClick = { editando = !editando }, contentPadding = PaddingValues(horizontal = 8.dp)) {
-                Text(if (editando) "Hecho" else "Editar", color = ACENTO)
+                Text(if (editando) "Hecho" else "Editar", color = acentoHoja)
             }
         }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -841,34 +768,10 @@ private fun HorariosGuardados(
                     trailingIcon = if (editando) {
                         { Icon(Icons.Default.Close, contentDescription = "Borrar horario", modifier = Modifier.size(16.dp)) }
                     } else null,
-                    colors = FilterChipDefaults.filterChipColors(selectedContainerColor = ACENTO, selectedLabelColor = ON_ACENTO)
+                    colors = FilterChipDefaults.filterChipColors(selectedContainerColor = acentoHoja, selectedLabelColor = onAcentoHoja)
                 )
             }
         }
-    }
-}
-
-/** Fila con icono en círculo, título, subtítulo e interruptor a la derecha. */
-@Composable
-private fun FilaConInterruptor(
-    icono: ImageVector,
-    titulo: String,
-    subtitulo: String,
-    activo: Boolean,
-    onCambiar: (Boolean) -> Unit,
-    tintaIcono: Color = INDIGO
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth().clickable { onCambiar(!activo) }.padding(horizontal = 14.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        IconoEnCirculo(icono, fondo = tintaIcono.copy(alpha = 0.18f), tinta = tintaIcono)
-        Spacer(Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(titulo, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = TINTA)
-            Text(subtitulo, style = MaterialTheme.typography.bodySmall, color = TINTA_SUAVE)
-        }
-        Switch(checked = activo, onCheckedChange = onCambiar, colors = coloresInterruptorEncaja())
     }
 }
 
@@ -876,204 +779,13 @@ private fun FilaConInterruptor(
 @Composable
 private fun FilaDetalle(valor: String, onCambiar: (String) -> Unit) {
     Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.Top) {
-        IconoEnCirculo(Icons.Default.Description, fondo = LAVANDA, tinta = INDIGO)
+        IconoEnCirculoHoja(Icons.Default.Description, fondo = lavandaHoja, tinta = indigoHoja)
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text("Detalle (opcional)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = TINTA)
+            Text("Detalle (opcional)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = tintaHoja)
             Spacer(Modifier.height(6.dp))
-            CampoTexto(valor = valor, onCambiar = onCambiar, placeholder = "Añade un detalle…")
+            CampoTextoHoja(valor = valor, onCambiar = onCambiar, placeholder = "Añade un detalle…")
         }
     }
 }
 
-@Composable
-private fun CampoTexto(valor: String, onCambiar: (String) -> Unit, placeholder: String, modifier: Modifier = Modifier) {
-    OutlinedTextField(
-        value = valor,
-        onValueChange = onCambiar,
-        placeholder = { Text(placeholder, color = TINTA_SUAVE) },
-        singleLine = true,
-        shape = RoundedCornerShape(14.dp),
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedContainerColor = CASILLA,
-            unfocusedContainerColor = CASILLA,
-            focusedBorderColor = ACENTO,
-            unfocusedBorderColor = BORDE.copy(alpha = 0.6f)
-        ),
-        modifier = modifier.fillMaxWidth()
-    )
-}
-
-/** Caja "Desde / 09:00" con reloj a la derecha; al tocarla se abre el reloj de Material 3. */
-@Composable
-private fun CajaHora(titulo: String, hora: LocalTime, modifier: Modifier = Modifier, onCambiar: (LocalTime) -> Unit) {
-    var abierto by remember { mutableStateOf(false) }
-    CajaValor(titulo, formatearHora(hora), Icons.Default.Schedule, modifier) { abierto = true }
-    if (abierto) {
-        SelectorHoraHoja(
-            titulo = titulo,
-            hora = hora,
-            onElegir = onCambiar,
-            onCerrar = { abierto = false }
-        )
-    }
-}
-
-/** Caja "Desde / 29 sept" con calendario a la derecha; al tocarla se abre el calendario. */
-@Composable
-private fun CajaFecha(titulo: String, fecha: LocalDate, modifier: Modifier = Modifier, onCambiar: (LocalDate) -> Unit) {
-    var abierto by remember { mutableStateOf(false) }
-    CajaValor(titulo, fechaCorta(fecha), Icons.Default.CalendarMonth, modifier) { abierto = true }
-    if (abierto) {
-        SelectorFechaHoja(
-            fecha = fecha,
-            onElegir = onCambiar,
-            onCerrar = { abierto = false }
-        )
-    }
-}
-
-@Composable
-private fun CajaValor(titulo: String, valor: String, icono: ImageVector, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    Row(
-        modifier = modifier
-            .clip(RoundedCornerShape(16.dp))
-            .background(CASILLA)
-            .border(1.dp, BORDE.copy(alpha = 0.6f), RoundedCornerShape(16.dp))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(titulo, style = MaterialTheme.typography.bodySmall, color = TINTA_SUAVE)
-            Text(valor, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold, color = TINTA, maxLines = 1)
-        }
-        IconoEnCirculo(icono, fondo = LAVANDA, tinta = INDIGO, tamano = 34.dp)
-    }
-}
-
-/**
- * Calendario de un mes (con flechas para cambiar de mes) en el que se marcan los días
- * que se quieran; los marcados van en color de acento y el de hoy lleva borde.
- */
-@Composable
-private fun CalendarioMultiple(mesInicial: YearMonth, seleccionadas: Set<LocalDate>, onAlternar: (LocalDate) -> Unit) {
-    var mes by remember { mutableStateOf(mesInicial) }
-    val hoy = LocalDate.now()
-
-    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = { mes = mes.minusMonths(1) }) {
-            Icon(Icons.Default.ChevronLeft, contentDescription = "Mes anterior", tint = INDIGO)
-        }
-        Text(
-            mes.month.getDisplayName(TextStyle.FULL, ES).replaceFirstChar { it.uppercase() } + " ${mes.year}",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.ExtraBold,
-            color = TINTA,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.weight(1f)
-        )
-        IconButton(onClick = { mes = mes.plusMonths(1) }) {
-            Icon(Icons.Default.ChevronRight, contentDescription = "Mes siguiente", tint = INDIGO)
-        }
-    }
-    Row(modifier = Modifier.fillMaxWidth()) {
-        DayOfWeek.values().forEach { dia ->
-            Text(
-                letraDeDia(dia),
-                style = MaterialTheme.typography.labelMedium,
-                color = TINTA_SUAVE,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.weight(1f)
-            )
-        }
-    }
-    Spacer(Modifier.height(4.dp))
-
-    // Celdas del mes: huecos antes del día 1 (la semana empieza en lunes) y después del último.
-    val primerDia = mes.atDay(1)
-    val huecosInicio = primerDia.dayOfWeek.value - 1
-    val celdas: List<LocalDate?> = List(huecosInicio) { null } + (1..mes.lengthOfMonth()).map { mes.atDay(it) }
-    celdas.chunked(7).forEach { semana ->
-        Row(modifier = Modifier.fillMaxWidth()) {
-            semana.forEach { dia ->
-                Box(modifier = Modifier.weight(1f).padding(2.dp), contentAlignment = Alignment.Center) {
-                    if (dia != null) {
-                        val marcado = dia in seleccionadas
-                        Box(
-                            modifier = Modifier
-                                .size(38.dp)
-                                .clip(CircleShape)
-                                .background(if (marcado) ACENTO else Color.Transparent)
-                                .border(
-                                    width = if (dia == hoy) 2.dp else 0.dp,
-                                    color = if (dia == hoy) ACENTO else Color.Transparent,
-                                    shape = CircleShape
-                                )
-                                .clickable { onAlternar(dia) },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                dia.dayOfMonth.toString(),
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = if (marcado) FontWeight.ExtraBold else FontWeight.Medium,
-                                color = if (marcado) ON_ACENTO else TINTA
-                            )
-                        }
-                    }
-                }
-            }
-            repeat(7 - semana.size) { Spacer(Modifier.weight(1f)) }
-        }
-    }
-}
-
-/** L M X J V S D (con X para el miércoles, para no repetir la M). */
-private fun letraDeDia(dia: DayOfWeek): String = when (dia) {
-    DayOfWeek.MONDAY -> "L"
-    DayOfWeek.TUESDAY -> "M"
-    DayOfWeek.WEDNESDAY -> "X"
-    DayOfWeek.THURSDAY -> "J"
-    DayOfWeek.FRIDAY -> "V"
-    DayOfWeek.SATURDAY -> "S"
-    DayOfWeek.SUNDAY -> "D"
-}
-
-/** [desde] y sus apariciones de [dia] hasta [hasta] (ambas incluidas; incluye [desde]
- * mismo si coincide con [dia]). */
-private fun fechasParaDiaSemana(desde: LocalDate, dia: DayOfWeek, hasta: LocalDate): List<LocalDate> {
-    val primera = desde.with(java.time.temporal.TemporalAdjusters.nextOrSame(dia))
-    if (hasta.isBefore(primera)) return emptyList()
-    return generateSequence(primera) { it.plusWeeks(1) }.takeWhile { !it.isAfter(hasta) }.toList()
-}
-
-/**
- * Fila de siete círculos (L a D) para marcar en qué días de la semana se repite la
- * ocupación cada semana — además de, no en vez de, las fechas sueltas del calendario.
- */
-@Composable
-private fun SelectorDiasSemana(seleccionados: Set<DayOfWeek>, onAlternar: (DayOfWeek) -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth()) {
-        DayOfWeek.values().forEach { dia ->
-            val marcado = dia in seleccionados
-            Box(modifier = Modifier.weight(1f).padding(2.dp), contentAlignment = Alignment.Center) {
-                Box(
-                    modifier = Modifier
-                        .size(34.dp)
-                        .clip(CircleShape)
-                        .background(if (marcado) ACENTO else Color.Transparent)
-                        .border(width = 1.dp, color = if (marcado) ACENTO else TINTA_SUAVE.copy(alpha = 0.35f), shape = CircleShape)
-                        .clickable { onAlternar(dia) },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        letraDeDia(dia),
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = if (marcado) FontWeight.ExtraBold else FontWeight.Medium,
-                        color = if (marcado) ON_ACENTO else TINTA
-                    )
-                }
-            }
-        }
-    }
-}

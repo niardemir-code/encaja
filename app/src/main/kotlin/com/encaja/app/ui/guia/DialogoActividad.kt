@@ -20,6 +20,11 @@ package com.encaja.app.ui.guia
 // "serie": no hay que elegir si el cambio o el borrado afecta solo a esta
 // ocurrencia o también a las siguientes.
 
+import com.encaja.app.ui.theme.CajaFechaHoja
+import com.encaja.app.ui.theme.CajaHoraHoja
+import com.encaja.app.ui.theme.CalendarioMultipleHoja
+import com.encaja.app.ui.theme.SelectorDiasSemanaHoja
+import com.encaja.app.ui.theme.fechasParaDiaSemanaHoja
 import com.encaja.app.ui.theme.SelectorHoraHoja
 import com.encaja.app.ui.theme.SelectorFechaHoja
 import com.encaja.app.ui.common.formatearHora
@@ -149,7 +154,7 @@ fun DialogoActividad(
     fun alternarDiaSemana(dia: DayOfWeek) {
         val activando = dia !in diasSemanaRepetir
         diasSemanaRepetir = if (activando) diasSemanaRepetir + dia else diasSemanaRepetir - dia
-        val fechasDelDia = fechasParaDiaSemana(fechaBase, dia, hastaRepetir).toSet()
+        val fechasDelDia = fechasParaDiaSemanaHoja(fechaBase, dia, hastaRepetir).toSet()
         fechasRepetir = if (activando) {
             fechasRepetir + fechasDelDia
         } else {
@@ -164,8 +169,8 @@ fun DialogoActividad(
         val hastaAnterior = hastaRepetir
         hastaRepetir = nuevaHasta
         if (diasSemanaRepetir.isEmpty()) return
-        val antiguas = diasSemanaRepetir.flatMap { dia -> fechasParaDiaSemana(fechaBase, dia, hastaAnterior) }.toSet()
-        val nuevas = diasSemanaRepetir.flatMap { dia -> fechasParaDiaSemana(fechaBase, dia, nuevaHasta) }.toSet()
+        val antiguas = diasSemanaRepetir.flatMap { dia -> fechasParaDiaSemanaHoja(fechaBase, dia, hastaAnterior) }.toSet()
+        val nuevas = diasSemanaRepetir.flatMap { dia -> fechasParaDiaSemanaHoja(fechaBase, dia, nuevaHasta) }.toSet()
         fechasRepetir = (fechasRepetir - antiguas) + nuevas
     }
 
@@ -325,8 +330,8 @@ fun DialogoActividad(
 
             // ── Desde / Hasta ─────────────────────────────────────────────────────
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                CajaHoraActividad("Desde", inicio, Modifier.weight(1f)) { inicio = it }
-                CajaHoraActividad("Hasta", fin, Modifier.weight(1f)) { fin = it }
+                CajaHoraHoja("Desde", inicio, Modifier.weight(1f)) { inicio = it }
+                CajaHoraHoja("Hasta", fin, Modifier.weight(1f)) { fin = it }
             }
             if (!horasValidas) {
                 Spacer(Modifier.height(6.dp))
@@ -428,7 +433,7 @@ fun DialogoActividad(
             if (repetirActivo) {
                 Spacer(Modifier.height(12.dp))
                 TarjetaSeccionHoja(padding = 10.dp) {
-                    CalendarioMultipleActividad(
+                    CalendarioMultipleHoja(
                         mesInicial = YearMonth.from(fechaBase),
                         seleccionadas = fechasRepetir,
                         onAlternar = { dia ->
@@ -444,13 +449,13 @@ fun DialogoActividad(
                     Spacer(Modifier.height(10.dp))
                     Text("O cada semana en", style = MaterialTheme.typography.bodyMedium, color = tintaSuaveHoja)
                     Spacer(Modifier.height(8.dp))
-                    SelectorDiasSemanaActividad(
+                    SelectorDiasSemanaHoja(
                         seleccionados = diasSemanaRepetir,
                         onAlternar = { dia -> alternarDiaSemana(dia) }
                     )
                     if (diasSemanaRepetir.isNotEmpty()) {
                         Spacer(Modifier.height(10.dp))
-                        CajaFechaActividad("Hasta", hastaRepetir, Modifier.fillMaxWidth()) { cambiarHastaRepetir(it) }
+                        CajaFechaHoja("Hasta", hastaRepetir, Modifier.fillMaxWidth()) { cambiarHastaRepetir(it) }
                     }
                 }
                 Spacer(Modifier.height(8.dp))
@@ -549,14 +554,6 @@ fun DialogoActividad(
 }
 
 /* ───────────────────────────── Piezas del diseño ───────────────────────────── */
-
-/** [desde] y sus apariciones de [dia] hasta [hasta] (ambas incluidas; incluye [desde]
- * mismo si coincide con [dia]) — igual que en Familia. */
-private fun fechasParaDiaSemana(desde: LocalDate, dia: DayOfWeek, hasta: LocalDate): List<LocalDate> {
-    val primera = desde.with(TemporalAdjusters.nextOrSame(dia))
-    if (hasta.isBefore(primera)) return emptyList()
-    return generateSequence(primera) { it.plusWeeks(1) }.takeWhile { !it.isAfter(hasta) }.toList()
-}
 
 /** Paleta estable (siempre el mismo color para el mismo nombre) para los avatares de
  * los niños, ya que Child no guarda un color propio. */
@@ -689,165 +686,6 @@ private fun FilaResponsable(
             
             }
         )
-    }
-}
-
-/** Caja "Desde / 09:00" con reloj a la derecha; al tocarla se abre el reloj de Material 3. */
-@Composable
-private fun CajaHoraActividad(titulo: String, hora: LocalTime, modifier: Modifier = Modifier, onCambiar: (LocalTime) -> Unit) {
-    var abierto by remember { mutableStateOf(false) }
-    CajaValorHoja(titulo, formatearHora(hora), Icons.Default.Schedule, modifier) { abierto = true }
-    if (abierto) {
-        SelectorHoraHoja(
-            titulo = titulo,
-            hora = hora,
-            onElegir = onCambiar,
-            onCerrar = { abierto = false }
-        )
-    }
-}
-
-/** Caja "Hasta / 2 ene" con calendario a la derecha; al tocarla se abre el calendario
- * de Material 3. Usada para el límite del patrón semanal de "Repetir en otros días". */
-@Composable
-private fun CajaFechaActividad(titulo: String, fecha: LocalDate, modifier: Modifier = Modifier, onCambiar: (LocalDate) -> Unit) {
-    var abierto by remember { mutableStateOf(false) }
-    CajaValorHoja(titulo, fechaCortaActividad(fecha), Icons.Default.CalendarMonth, modifier) { abierto = true }
-    if (abierto) {
-        SelectorFechaHoja(
-            fecha = fecha,
-            onElegir = onCambiar,
-            onCerrar = { abierto = false }
-        )
-    }
-}
-
-private fun fechaCortaActividad(fecha: LocalDate): String =
-    "${fecha.dayOfMonth} ${fecha.month.getDisplayName(TextStyle.SHORT, ES).removeSuffix(".")}"
-
-private fun fechaAMillisUtcActividad(fecha: LocalDate): Long =
-    fecha.atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli()
-
-private fun millisUtcAFechaActividad(millis: Long): LocalDate =
-    java.time.Instant.ofEpochMilli(millis).atZone(java.time.ZoneOffset.UTC).toLocalDate()
-
-/**
- * Calendario de un mes (con flechas para cambiar de mes) en el que se marcan los días
- * que se quieran; los marcados van en color de acento y el de hoy lleva borde. Igual
- * que CalendarioMultiple de Familia (DialogoDisponibilidad), duplicado aquí para no
- * acoplar los dos paquetes de UI.
- */
-@Composable
-private fun CalendarioMultipleActividad(mesInicial: YearMonth, seleccionadas: Set<LocalDate>, onAlternar: (LocalDate) -> Unit) {
-    var mes by remember { mutableStateOf(mesInicial) }
-    val hoy = LocalDate.now()
-
-    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = { mes = mes.minusMonths(1) }) {
-            Icon(Icons.Default.ChevronLeft, contentDescription = "Mes anterior", tint = indigoHoja)
-        }
-        Text(
-            mes.month.getDisplayName(TextStyle.FULL, ES).replaceFirstChar { it.uppercase() } + " ${mes.year}",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.ExtraBold,
-            color = tintaHoja,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.weight(1f)
-        )
-        IconButton(onClick = { mes = mes.plusMonths(1) }) {
-            Icon(Icons.Default.ChevronRight, contentDescription = "Mes siguiente", tint = indigoHoja)
-        }
-    }
-    Row(modifier = Modifier.fillMaxWidth()) {
-        DayOfWeek.values().forEach { dia ->
-            Text(
-                letraDeDiaActividad(dia),
-                style = MaterialTheme.typography.labelMedium,
-                color = tintaSuaveHoja,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.weight(1f)
-            )
-        }
-    }
-    Spacer(Modifier.height(4.dp))
-
-    val primerDia = mes.atDay(1)
-    val huecosInicio = primerDia.dayOfWeek.value - 1
-    val celdas: List<LocalDate?> = List(huecosInicio) { null } + (1..mes.lengthOfMonth()).map { mes.atDay(it) }
-    celdas.chunked(7).forEach { semana ->
-        Row(modifier = Modifier.fillMaxWidth()) {
-            semana.forEach { dia ->
-                Box(modifier = Modifier.weight(1f).padding(2.dp), contentAlignment = Alignment.Center) {
-                    if (dia != null) {
-                        val marcado = dia in seleccionadas
-                        Box(
-                            modifier = Modifier
-                                .size(38.dp)
-                                .clip(CircleShape)
-                                .background(if (marcado) acentoHoja else Color.Transparent)
-                                .border(
-                                    width = if (dia == hoy) 2.dp else 0.dp,
-                                    color = if (dia == hoy) acentoHoja else Color.Transparent,
-                                    shape = CircleShape
-                                )
-                                .clickable { onAlternar(dia) },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                dia.dayOfMonth.toString(),
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = if (marcado) FontWeight.ExtraBold else FontWeight.Medium,
-                                color = if (marcado) onAcentoHoja else tintaHoja
-                            )
-                        }
-                    }
-                }
-            }
-            repeat(7 - semana.size) { Spacer(Modifier.weight(1f)) }
-        }
-    }
-}
-
-/** L M X J V S D (con X para el miércoles, para no repetir la M). */
-private fun letraDeDiaActividad(dia: DayOfWeek): String = when (dia) {
-    DayOfWeek.MONDAY -> "L"
-    DayOfWeek.TUESDAY -> "M"
-    DayOfWeek.WEDNESDAY -> "X"
-    DayOfWeek.THURSDAY -> "J"
-    DayOfWeek.FRIDAY -> "V"
-    DayOfWeek.SATURDAY -> "S"
-    DayOfWeek.SUNDAY -> "D"
-}
-
-/**
- * Fila de siete círculos (L a D) para marcar en qué días de la semana se repite la
- * actividad cada semana — además de, no en vez de, las fechas sueltas del calendario.
- * Igual que SelectorDiasSemana de Familia.
- */
-@Composable
-private fun SelectorDiasSemanaActividad(seleccionados: Set<DayOfWeek>, onAlternar: (DayOfWeek) -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth()) {
-        DayOfWeek.values().forEach { dia ->
-            val marcado = dia in seleccionados
-            Box(modifier = Modifier.weight(1f).padding(2.dp), contentAlignment = Alignment.Center) {
-                Box(
-                    modifier = Modifier
-                        .size(34.dp)
-                        .clip(CircleShape)
-                        .background(if (marcado) acentoHoja else Color.Transparent)
-                        .border(width = 1.dp, color = if (marcado) acentoHoja else tintaSuaveHoja.copy(alpha = 0.35f), shape = CircleShape)
-                        .clickable { onAlternar(dia) },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        letraDeDiaActividad(dia),
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = if (marcado) FontWeight.ExtraBold else FontWeight.Medium,
-                        color = if (marcado) onAcentoHoja else tintaHoja
-                    )
-                }
-            }
-        }
     }
 }
 
