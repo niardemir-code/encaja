@@ -47,8 +47,6 @@ import com.encaja.app.ui.theme.onAcentoHoja
 import com.encaja.app.ui.theme.tarjetaHoja
 import com.encaja.app.ui.theme.tintaHoja
 import com.encaja.app.ui.theme.tintaSuaveHoja
-import com.encaja.app.ui.theme.SelectorHoraHoja
-import com.encaja.app.ui.theme.SelectorFechaHoja
 import com.encaja.app.ui.common.formatearHora
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -63,8 +61,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.ChevronLeft
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
@@ -82,13 +78,10 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.encaja.app.domain.model.AvailabilityBlock
@@ -99,7 +92,6 @@ import com.encaja.app.domain.model.ModoCategoria
 import com.encaja.app.domain.model.categoriaEn
 import com.encaja.app.domain.model.TurnoId
 import com.encaja.app.domain.model.TurnoTrabajo
-import com.encaja.app.ui.theme.LocalEncajaExtraColors
 import com.encaja.app.ui.theme.coloresInterruptorEncaja
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -154,9 +146,6 @@ fun DialogoDisponibilidad(
     // guarda el nuevo en su lugar (solo para su persona, aunque estemos en una unidad).
     // Nada se toca hasta pulsar Guardar o Borrar: cancelar deja todo como estaba.
     var bloqueEnEdicion by remember { mutableStateOf<AvailabilityBlock?>(bloqueInicial) }
-    // En una unidad familiar, lo que se guarda (también al editar y al repetir en otros
-    // días) se aplica a todos sus miembros: la unidad "va junta". En una persona, solo a ella.
-    val destinatarios = caregiverIds
 
     // Estado del formulario, elevado aquí para que Guardar (abajo del todo) lo vea. Se
     // reinicia al cambiar de categoría con el primer horario guardado de esa categoría.
