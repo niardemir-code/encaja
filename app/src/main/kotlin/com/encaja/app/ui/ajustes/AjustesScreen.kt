@@ -75,7 +75,7 @@ import com.encaja.app.ui.theme.onAcentoHoja
 import com.encaja.app.ui.theme.tintaHoja
 import com.encaja.app.ui.theme.tintaSuaveHoja
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.automirrored.filled.Logout
 
 /**
  * Menú raíz de Ajustes: solo enlaces a cada bloque (Niños, Cuidadores —que incluye
@@ -183,7 +183,7 @@ fun AjustesScreen(
         SeccionTema()
 
         Spacer(Modifier.height(32.dp))
-        BotonPildoraBordeHoja("Cerrar sesión", onClick = onCerrarSesion, icono = Icons.Default.Logout)
+        BotonPildoraBordeHoja("Cerrar sesión", onClick = onCerrarSesion, icono = Icons.AutoMirrored.Filled.Logout)
 
         // Darse de baja: desvincula la cuenta de la familia y elimina el acceso con Google.
         var confirmandoBaja by remember { mutableStateOf(false) }

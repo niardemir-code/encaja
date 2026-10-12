@@ -7,6 +7,8 @@ import com.encaja.app.domain.model.CoverageNeedId
 import com.encaja.app.domain.model.FamilyId
 import com.encaja.app.domain.repository.ChildRepository
 import com.encaja.app.domain.repository.CoverageNeedRepository
+import com.encaja.app.domain.usecase.ObtenerSerieDeActividad
+import com.encaja.app.domain.usecase.propagarASerie
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.util.UUID
@@ -25,6 +27,8 @@ class EditorDeActividades @Inject constructor(
     private val avisos: ProgramadorDeAvisos,
     private val sincronizador: SincronizadorDeAvisos
 ) {
+    private val serieDeActividad = ObtenerSerieDeActividad(coverageNeedRepository)
+
     /** Programa en este móvil los avisos que le tocan de [needs] (creador, quien lleva, quien recoge). */
     private suspend fun programarAvisos(familyId: FamilyId, needs: List<CoverageNeed>) {
         if (needs.none { it.avisoLlevarMin != null || it.avisoRecogerMin != null }) {
@@ -54,7 +58,7 @@ class EditorDeActividades @Inject constructor(
             } else {
                 listOf(plantilla)
             }
-            val actualizadas = deLaSerie.map { existente -> plantilla.copy(id = existente.id, fecha = existente.fecha) }
+            val actualizadas = propagarASerie(plantilla, deLaSerie)
             coverageNeedRepository.guardarNeeds(familyId, actualizadas)
             programarAvisos(familyId, actualizadas)
         } else {
@@ -69,22 +73,8 @@ class EditorDeActividades @Inject constructor(
      * quedó con una sola), las que son idénticas — mismo niño, nombre y horario — en el año
      * anterior y posterior a su fecha. Si solo sale ella misma, no hay serie.
      */
-    suspend fun ocurrenciasDeSerie(familyId: FamilyId, need: CoverageNeed): List<CoverageNeed> {
-        val grupoId = need.grupoRepeticionId
-        if (grupoId != null) {
-            val delGrupo = coverageNeedRepository.obtenerNeedsDelGrupo(familyId, grupoId)
-            if (delGrupo.size > 1) return delGrupo.sortedBy { it.fecha }
-        }
-        val nombre = need.descripcion.trim()
-        val iguales = coverageNeedRepository.obtenerNeeds(familyId, need.fecha.minusYears(1), need.fecha.plusYears(1))
-            .filter {
-                it.childId == need.childId &&
-                    it.descripcion.trim().equals(nombre, ignoreCase = true) &&
-                    it.horaInicio == need.horaInicio && it.horaFin == need.horaFin &&
-                    (it.grupoRepeticionId == null || it.grupoRepeticionId == grupoId)
-            }
-        return (if (iguales.any { it.id == need.id }) iguales else iguales + need).sortedBy { it.fecha }
-    }
+    suspend fun ocurrenciasDeSerie(familyId: FamilyId, need: CoverageNeed): List<CoverageNeed> =
+        serieDeActividad(familyId, need)
 
     /**
      * Borra una actividad. Si [serieCompleta] es true, borra todas las veces que se
