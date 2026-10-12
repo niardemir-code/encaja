@@ -345,6 +345,23 @@ class FamiliaViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Borra TODO lo apuntado (de cualquier categoría) en las casillas dadas. Cada casilla es
+     * una persona o los miembros de una unidad familiar, y un día. Una sola lectura y el
+     * borrado en tandas.
+     */
+    fun eliminarCasillas(casillas: List<Pair<List<CaregiverId>, LocalDate>>) {
+        val familyId = familyIdActual ?: return
+        if (casillas.isEmpty()) return
+        lanzarSeguro {
+            val fechas = casillas.map { it.second }
+            val existentes = availabilityRepository.obtenerDisponibilidad(familyId, fechas.min(), fechas.max())
+            val aBorrar = existentes.filter { b -> casillas.any { (ids, fecha) -> b.fecha == fecha && b.caregiverId in ids } }
+            availabilityRepository.eliminarBloques(familyId, aBorrar)
+            cargarDatos(mostrarCargando = false)
+        }
+    }
+
     /** Crea un horario guardado con nombre (p.ej. "Mañana 6-14") de una categoría, para toda la familia. */
     fun crearTurno(nombre: String, inicio: LocalTime, fin: LocalTime, categoriaId: CategoriaId) {
         val familyId = familyIdActual ?: return

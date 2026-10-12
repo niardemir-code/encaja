@@ -206,16 +206,13 @@ fun DialogoDisponibilidad(
 
     // Círculos L-D: sólido = todas las fechas de ese día hasta el vencimiento marcadas;
     // atenuado = alguna quitada; sin color = ninguna o sin activar desde la línea.
-    val estadosLinea = DayOfWeek.values().associateWith { dia ->
+    fun estadoLinea(dia: DayOfWeek): EstadoLineaSemanal =
         estadoDiaSemana(dia, dia in lineaActiva, fecha, hastaRepetir, fechasAplicar)
-    }
-    val lineaSolidos = estadosLinea.filterValues { it == EstadoLineaSemanal.SOLIDO }.keys
-    val lineaAtenuados = estadosLinea.filterValues { it == EstadoLineaSemanal.ATENUADO }.keys
 
     fun alternarDiaSemana(dia: DayOfWeek) {
         val fs = fechasDelDiaSemana(fecha, hastaRepetir, dia).toSet()
         if (fs.isEmpty()) return
-        if (estadosLinea[dia] == EstadoLineaSemanal.SIN_COLOR) {
+        if (estadoLinea(dia) == EstadoLineaSemanal.SIN_COLOR) {
             // Activar: todos esos días hasta el vencimiento llevan lo del formulario.
             fechasAplicar = fechasAplicar + fs
             fechasBorrar = fechasBorrar - fs
@@ -550,8 +547,8 @@ fun DialogoDisponibilidad(
                             )
                             Spacer(Modifier.height(8.dp))
                             SelectorDiasSemanaHoja(
-                                seleccionados = lineaSolidos,
-                                atenuados = lineaAtenuados,
+                                seleccionados = DayOfWeek.values().filter { estadoLinea(it) == EstadoLineaSemanal.SOLIDO }.toSet(),
+                                atenuados = DayOfWeek.values().filter { estadoLinea(it) == EstadoLineaSemanal.ATENUADO }.toSet(),
                                 onAlternar = { dia -> alternarDiaSemana(dia) }
                             )
                             Spacer(Modifier.height(10.dp))

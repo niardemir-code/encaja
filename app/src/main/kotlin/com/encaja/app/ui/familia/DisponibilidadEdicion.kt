@@ -137,13 +137,14 @@ fun estadoDiaSemana(
     hasta: LocalDate,
     marcadas: Set<LocalDate>
 ): EstadoLineaSemanal {
-    if (!activa) return EstadoLineaSemanal.SIN_COLOR
     val fechas = fechasDelDiaSemana(desde, hasta, dia)
     val marcadasDelDia = fechas.count { it in marcadas }
     return when {
         fechas.isEmpty() || marcadasDelDia == 0 -> EstadoLineaSemanal.SIN_COLOR
-        marcadasDelDia == fechas.size -> EstadoLineaSemanal.SOLIDO
-        else -> EstadoLineaSemanal.ATENUADO
+        // Completar a mano todas las fechas (al menos dos) también lo deja sólido.
+        marcadasDelDia == fechas.size -> if (activa || fechas.size >= 2) EstadoLineaSemanal.SOLIDO else EstadoLineaSemanal.SIN_COLOR
+        activa -> EstadoLineaSemanal.ATENUADO
+        else -> EstadoLineaSemanal.SIN_COLOR
     }
 }
 

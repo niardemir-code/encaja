@@ -155,9 +155,15 @@ class DisponibilidadEdicionTest {
     }
 
     @Test
-    fun `la linea semanal sin activar nunca lleva color aunque el calendario tenga todos los dias`() {
-        val estado = estadoDiaSemana(DayOfWeek.WEDNESDAY, activa = false, desde = lunes, hasta = hastaVencimiento, marcadas = miercoles.toSet())
+    fun `sin activar la linea semanal no lleva color por marcar solo algunos dias en el calendario`() {
+        val estado = estadoDiaSemana(DayOfWeek.WEDNESDAY, activa = false, desde = lunes, hasta = hastaVencimiento, marcadas = setOf(miercoles[0], miercoles[2]))
         assertEquals(EstadoLineaSemanal.SIN_COLOR, estado)
+    }
+
+    @Test
+    fun `sin activar pero con todas las fechas marcadas a mano queda solido`() {
+        val estado = estadoDiaSemana(DayOfWeek.WEDNESDAY, activa = false, desde = lunes, hasta = hastaVencimiento, marcadas = miercoles.toSet())
+        assertEquals(EstadoLineaSemanal.SOLIDO, estado)
     }
 
     @Test

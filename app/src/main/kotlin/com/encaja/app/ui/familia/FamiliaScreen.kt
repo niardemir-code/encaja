@@ -22,6 +22,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
@@ -36,6 +37,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FilterAlt
 import androidx.compose.material.icons.filled.Group
@@ -138,6 +140,9 @@ private fun ContenidoFamilia(estado: FamiliaUiState, viewModel: FamiliaViewModel
     }
     // Casilla abierta: id (de persona o de unidad familiar, como texto) y fecha.
     var celdaEnEdicion by remember { mutableStateOf<Pair<String, LocalDate>?>(null) }
+    // Casillas marcadas para el borrado masivo (se empieza con una pulsación larga).
+    var seleccion by remember { mutableStateOf(emptySet<Pair<String, LocalDate>>()) }
+    var confirmandoBorrado by remember { mutableStateOf(false) }
     val ocultos by viewModel.ocultos.collectAsState()
     val filtroCompartido by viewModel.filtroCompartido.collectAsState()
     val cuidadoresVisibles = remember(estado.cuidadores, ocultos) {
@@ -189,6 +194,34 @@ private fun ContenidoFamilia(estado: FamiliaUiState, viewModel: FamiliaViewModel
     // Se busca en el estado actual (no en una copia guardada al abrir), así al borrar
     // un bloque el diálogo se actualiza solo tras la recarga. La casilla puede ser de
     // una persona o de una unidad familiar (entonces se aplica a todos sus miembros).
+    if (confirmandoBorrado) {
+        val bloquesAfectados = seleccion.sumOf { (idTexto, fecha) ->
+            val dias = estado.cuidadores.firstOrNull { it.caregiver.id.value == idTexto }?.dias
+                ?: estado.unidades.firstOrNull { it.unidad.id.value == idTexto }?.dias
+            dias?.firstOrNull { it.fecha == fecha }?.bloqueos?.size ?: 0
+        }
+        AvisoHoja(
+            icono = Icons.Default.Delete,
+            titulo = "¿Vaciar ${seleccion.size} ${if (seleccion.size == 1) "casilla" else "casillas"}?",
+            texto = if (bloquesAfectados == 0) "Las casillas marcadas ya están libres."
+            else "Se borrará todo lo apuntado en ellas, sea de la categoría que sea. No se puede deshacer.",
+            acciones = listOf(
+                AccionAvisoHoja("Cancelar", EstiloAccionAviso.BORDE) { confirmandoBorrado = false },
+                AccionAvisoHoja("Borrar", EstiloAccionAviso.PELIGRO) {
+                    val casillas = seleccion.mapNotNull { (idTexto, fecha) ->
+                        val ids = estado.cuidadores.firstOrNull { it.caregiver.id.value == idTexto }?.let { listOf(it.caregiver.id) }
+                            ?: estado.unidades.firstOrNull { it.unidad.id.value == idTexto }?.unidad?.miembros
+                        ids?.let { it to fecha }
+                    }
+                    viewModel.eliminarCasillas(casillas)
+                    seleccion = emptySet()
+                    confirmandoBorrado = false
+                }
+            ),
+            onCerrar = { confirmandoBorrado = false }
+        )
+    }
+
     celdaEnEdicion?.let { (idTexto, fecha) ->
         val cuidadorSemana = estado.cuidadores.firstOrNull { it.caregiver.id.value == idTexto }
         val unidadSemana = estado.unidades.firstOrNull { it.unidad.id.value == idTexto }
@@ -231,6 +264,14 @@ private fun ContenidoFamilia(estado: FamiliaUiState, viewModel: FamiliaViewModel
             modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 12.dp)
         )
 
+        if (seleccion.isNotEmpty()) {
+            BarraSeleccion(
+                cantidad = seleccion.size,
+                onBorrar = { confirmandoBorrado = true },
+                onCancelar = { seleccion = emptySet() }
+            )
+        }
+
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 2.dp, bottom = 16.dp)
@@ -262,7 +303,17 @@ private fun ContenidoFamilia(estado: FamiliaUiState, viewModel: FamiliaViewModel
                     unidades = unidadesVisibles,
                     categorias = estado.categorias,
                     iniciales = iniciales,
-                    onClickDia = { idTexto, fecha -> celdaEnEdicion = idTexto to fecha },
+                    seleccion = seleccion,
+                    // Con la selección en marcha, tocar una casilla la marca o desmarca; si no, abre el diálogo.
+                    onClickDia = { idTexto, fecha ->
+                        val casilla = idTexto to fecha
+                        if (seleccion.isEmpty()) celdaEnEdicion = casilla
+                        else seleccion = if (casilla in seleccion) seleccion - casilla else seleccion + casilla
+                    },
+                    onLargoDia = { idTexto, fecha ->
+                        val casilla = idTexto to fecha
+                        seleccion = if (casilla in seleccion) seleccion - casilla else seleccion + casilla
+                    },
                     hayOcultosPorFiltro = totalFilas > 0 && filasVisibles == 0,
                     onCrearCuidador = { nuevoCuidadorAbierto = true },
                     cabecera = {
@@ -429,6 +480,8 @@ private fun LazyListScope.cuadriculaDisponibilidad(
     categorias: List<CategoriaDisponibilidad>,
     iniciales: Map<CaregiverId, String>,
     onClickDia: (idTexto: String, LocalDate) -> Unit,
+    seleccion: Set<Pair<String, LocalDate>> = emptySet(),
+    onLargoDia: (idTexto: String, LocalDate) -> Unit = { _, _ -> },
     hayOcultosPorFiltro: Boolean = false,
     onCrearCuidador: () -> Unit = {},
     cabecera: @Composable () -> Unit = {}
@@ -484,7 +537,9 @@ private fun LazyListScope.cuadriculaDisponibilidad(
                 colores = PaletaAvatarPersonas[indice % PaletaAvatarPersonas.size],
                 dias = cuidadorSemana.dias,
                 categorias = categorias,
-                onClickDia = { fecha -> onClickDia(cuidadorSemana.caregiver.id.value, fecha) }
+                onClickDia = { fecha -> onClickDia(cuidadorSemana.caregiver.id.value, fecha) },
+                onLargoDia = { fecha -> onLargoDia(cuidadorSemana.caregiver.id.value, fecha) },
+                seleccionadas = seleccion.filter { it.first == cuidadorSemana.caregiver.id.value }.map { it.second }.toSet()
             )
         }
     }
@@ -500,7 +555,9 @@ private fun LazyListScope.cuadriculaDisponibilidad(
                 dias = unidadSemana.dias,
                 categorias = categorias,
                 esUnidad = true,
-                onClickDia = { fecha -> onClickDia(unidadSemana.unidad.id.value, fecha) }
+                onClickDia = { fecha -> onClickDia(unidadSemana.unidad.id.value, fecha) },
+                onLargoDia = { fecha -> onLargoDia(unidadSemana.unidad.id.value, fecha) },
+                seleccionadas = seleccion.filter { it.first == unidadSemana.unidad.id.value }.map { it.second }.toSet()
             )
         }
     }
@@ -579,7 +636,9 @@ private fun BloqueFila(
     dias: List<DiaDisponibilidadCuidador>,
     categorias: List<CategoriaDisponibilidad>,
     esUnidad: Boolean = false,
-    onClickDia: ((LocalDate) -> Unit)?
+    onClickDia: ((LocalDate) -> Unit)?,
+    onLargoDia: ((LocalDate) -> Unit)? = null,
+    seleccionadas: Set<LocalDate> = emptySet()
 ) {
     Column(
         modifier = Modifier
@@ -617,7 +676,12 @@ private fun BloqueFila(
         Spacer(Modifier.height(8.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(ESPACIO_CELDAS)) {
             dias.forEach { dia ->
-                CeldaDisponibilidad(dia, categorias, modifier = Modifier.weight(1f), onClick = onClickDia?.let { f -> { f(dia.fecha) } })
+                CeldaDisponibilidad(
+                    dia, categorias, modifier = Modifier.weight(1f),
+                    seleccionada = dia.fecha in seleccionadas,
+                    onClick = onClickDia?.let { f -> { f(dia.fecha) } },
+                    onLongClick = onLargoDia?.let { f -> { f(dia.fecha) } }
+                )
             }
         }
     }
@@ -628,6 +692,8 @@ private fun CeldaDisponibilidad(
     dia: DiaDisponibilidadCuidador,
     categorias: List<CategoriaDisponibilidad>,
     modifier: Modifier = Modifier,
+    seleccionada: Boolean = false,
+    onLongClick: (() -> Unit)? = null,
     onClick: (() -> Unit)?
 ) {
     val primero = dia.bloqueos.minByOrNull { it.horaInicio }
@@ -640,10 +706,21 @@ private fun CeldaDisponibilidad(
             .height(ALTO_CELDA)
             .clip(RoundedCornerShape(10.dp))
             .background(fondoCelda)
-            .border(1.dp, bordeCelda, RoundedCornerShape(10.dp))
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
+            .border(
+                if (seleccionada) 3.dp else 1.dp,
+                if (seleccionada) INDIGO else bordeCelda,
+                RoundedCornerShape(10.dp)
+            )
+            .then(
+                if (onClick != null) Modifier.combinedClickable(onClick = onClick, onLongClick = onLongClick)
+                else Modifier
+            ),
         contentAlignment = Alignment.Center
     ) {
+        if (seleccionada) {
+            // Velo del color de la selección, para que se vea marcada aunque la casilla sea oscura.
+            Box(Modifier.matchParentSize().background(INDIGO.copy(alpha = 0.25f)))
+        }
         val emoji = emojiCelda(dia.bloqueos, categorias)
         if (emoji != null) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -663,6 +740,37 @@ private fun CeldaDisponibilidad(
                 maxLines = 2,
                 softWrap = false
             )
+        }
+    }
+}
+
+/** Barra de la selección múltiple: cuántas casillas hay marcadas, borrarlas o cancelar. */
+@Composable
+private fun BarraSeleccion(cantidad: Int, onBorrar: () -> Unit, onCancelar: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(LAVANDA)
+            .padding(horizontal = 14.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            if (cantidad == 1) "1 casilla marcada" else "$cantidad casillas marcadas",
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Bold,
+            color = INDIGO,
+            modifier = Modifier.weight(1f)
+        )
+        TextButton(onClick = onCancelar) { Text("Cancelar", color = INDIGO) }
+        Button(
+            onClick = onBorrar,
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+        ) {
+            Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(6.dp))
+            Text("Borrar")
         }
     }
 }

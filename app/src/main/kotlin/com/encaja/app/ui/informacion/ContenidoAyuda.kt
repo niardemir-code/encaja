@@ -120,6 +120,7 @@ val SECCIONES_AYUDA: List<SeccionAyuda> = listOf(
                     "Toca una casilla para apuntar algo: elige la categoría (Trabajo, Médico, Viaje, Vacaciones, Otro u otra tuya) y su horario o sus fechas.",
                     "Las categorías «por horas» piden hora de inicio y de fin (se permite el turno de noche) y puedes crear horarios con nombre, como «Mañana» o «Tarde», con «Nuevo horario». Las «por días» piden fecha de inicio y de fin.",
                     "«Repetir en otros días» abre un calendario con un punto en los días que esa persona ya tiene con esa categoría. Los días que marques (por defecto, el que editas) se guardan con el horario, el «Todo el día» y el detalle del formulario; los que no marques no cambian. La línea de L a D repite un día de la semana hasta «Repetir hasta»; tócalo otra vez para quitar esos días. Antes de aplicar cambios que sustituyan o borren varios días se pide confirmar.",
+                    "Borrado masivo: deja pulsada una casilla de la cuadrícula para marcarla; después toca otras (de cualquier persona o categoría) para marcarlas o desmarcarlas. Con «Borrar» se vacían todas a la vez, previa confirmación.",
                     "Lo que apuntas en una unidad familiar se aplica a todos sus miembros.",
                     "El botón «Cuidadores» permite mostrar u ocultar personas, solo para la semana que estás viendo."
                 ),
