@@ -147,31 +147,21 @@ private fun CabeceraMenu(
 ) {
     var calendarioAbierto by remember { mutableStateOf(false) }
 
+    Column(modifier = Modifier.fillMaxWidth()) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.Top
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        // weight(1f) + una sola línea con elipsis: así el título largo se acorta en vez
-        // de empujar los iconos de la derecha fuera de la pantalla (lo que hacía que
-        // pareciera que faltaba el botón de avanzar semana al añadir un cuarto icono).
-        Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
-            Text(
-                stringResource(R.string.menu_titulo),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(Modifier.height(2.dp))
-            Text(
-                stringResource(R.string.menu_subtitulo),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
+        // El título es corto y va solo junto a los botones; el subtítulo va debajo, a todo el ancho.
+        Text(
+            stringResource(R.string.menu_titulo),
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f).padding(end = 8.dp)
+        )
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onSemanaAnterior) {
@@ -194,6 +184,14 @@ private fun CabeceraMenu(
                 Icon(Icons.Default.ChevronRight, contentDescription = stringResource(R.string.comun_semana_siguiente))
             }
         }
+    }
+    Text(
+        stringResource(R.string.menu_subtitulo),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        maxLines = 2,
+        overflow = TextOverflow.Ellipsis
+    )
     }
 
     if (calendarioAbierto) {
