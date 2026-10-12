@@ -541,6 +541,11 @@ fun DialogoDisponibilidad(
                             Spacer(Modifier.height(8.dp))
                             LineaSemanalRepetir(
                                 estados = DayOfWeek.values().associateWith { estadoLinea(it) },
+                                conteos = DayOfWeek.values().associateWith { dia ->
+                                    val tienen = fechasConOcupacion(fechasAplicar, existentes, fechasBorrar)
+                                    val fechasDia = fechasDelDiaSemana(fecha, hastaRepetir, dia)
+                                    fechasDia.count { it in tienen } to fechasDia.size
+                                },
                                 onAlternar = { dia -> alternarDiaSemana(dia) }
                             )
                             Spacer(Modifier.height(10.dp))
@@ -877,7 +882,11 @@ private fun FilaDetalle(valor: String, onCambiar: (String) -> Unit) {
  * escribe en texto qué días están activos, para que se vea aunque el color no destaque.
  */
 @Composable
-private fun LineaSemanalRepetir(estados: Map<DayOfWeek, EstadoLineaSemanal>, onAlternar: (DayOfWeek) -> Unit) {
+private fun LineaSemanalRepetir(
+    estados: Map<DayOfWeek, EstadoLineaSemanal>,
+    conteos: Map<DayOfWeek, Pair<Int, Int>>,
+    onAlternar: (DayOfWeek) -> Unit
+) {
     Column {
         Row(modifier = Modifier.fillMaxWidth()) {
             DayOfWeek.values().forEach { dia ->
@@ -918,7 +927,8 @@ private fun LineaSemanalRepetir(estados: Map<DayOfWeek, EstadoLineaSemanal>, onA
         if (activos.isNotEmpty()) {
             Text(
                 "Cada semana: " + activos.joinToString(", ") { dia ->
-                    letraDeDiaHoja(dia) + if (estados[dia] == EstadoLineaSemanal.ATENUADO) " (parcial)" else ""
+                    val (con, total) = conteos[dia] ?: (0 to 0)
+                    letraDeDiaHoja(dia) + " ($con de $total)"
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = tintaSuaveHoja
