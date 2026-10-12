@@ -111,20 +111,43 @@ val SECCIONES_AYUDA: List<SeccionAyuda> = listOf(
                 nota = "Cuando una actividad se repite, al editarla puedes elegir «Guardar solo esta» o «Guardar toda la serie»: la serie copia los cambios (todo menos la fecha) a todas las veces que se repite. «Borrar» elimina solo esa actividad."
             ),
             TemaAyuda(
-                titulo = "Familia: disponibilidad",
+                titulo = "Familia: cuándo no puede alguien",
                 parrafos = listOf(
-                    "Sirve para apuntar cuándo no puede estar cada persona (trabajo, médico, un viaje...). Es lo que alimenta los avisos ámbar de Semana: si alguien asignado a una actividad tiene a esa hora algo apuntado que le ocupa, se avisa."
+                    "Aquí apuntas cuándo no puede estar cada persona: trabajo, médico, un viaje... Con eso, la app te avisa en Semana (aviso ámbar) si a alguien le asignas una actividad a una hora en la que está ocupado."
                 ),
                 puntos = listOf(
-                    "Hay una fila por persona y por unidad familiar, con una casilla por día. Verde significa libre; con color, tiene algo apuntado (con su icono o su horario, y «+N» si hay varias cosas).",
-                    "Toca una casilla para apuntar algo: elige la categoría (Trabajo, Médico, Viaje, Vacaciones, Otro u otra tuya) y su horario o sus fechas.",
-                    "Las categorías «por horas» piden hora de inicio y de fin (se permite el turno de noche) y puedes crear horarios con nombre, como «Mañana» o «Tarde», con «Nuevo horario». Las «por días» piden fecha de inicio y de fin.",
-                    "«Repetir en otros días» abre un calendario con un punto en los días que esa persona ya tiene con esa categoría. Los días que marques (por defecto, el que editas) se guardan con el horario, el «Todo el día» y el detalle del formulario; los que no marques no cambian. La línea de L a D repite un día de la semana hasta «Repetir hasta»; tócalo otra vez para quitar esos días. Antes de aplicar cambios que sustituyan o borren varios días se pide confirmar.",
-                    "Borrado masivo: deja pulsada una casilla de la cuadrícula para marcarla; después toca otras (de cualquier persona o categoría) para marcarlas o desmarcarlas. Con «Borrar» se vacían todas a la vez, previa confirmación.",
-                    "Lo que apuntas en una unidad familiar se aplica a todos sus miembros.",
-                    "El botón «Cuidadores» permite mostrar u ocultar personas, solo para la semana que estás viendo."
+                    "Cada persona tiene una fila con un cuadrito por día. Verde: libre. Con color: tiene algo apuntado.",
+                    "Toca un cuadrito para apuntar algo. Elige el tipo (Trabajo, Médico, Viaje, Vacaciones, Otro o uno tuyo) y luego el horario, o marca «Todo el día».",
+                    "En Trabajo y Médico eliges la hora de inicio y la de fin. Si repites un horario a menudo, pulsa «Nuevo horario», ponle un nombre («Mañana», «Tarde») y lo tendrás a un toque.",
+                    "En Viaje y Vacaciones eliges desde qué día hasta qué día.",
+                    "Lo que apuntas en un grupo familiar (por ejemplo «los abuelos») se apunta a todos sus miembros.",
+                    "El botón «Cuidadores» sirve para ver solo a algunas personas esta semana."
                 ),
-                nota = "Con el lápiz de la tarjeta «Categorías de estado de los cuidadores» puedes crear categorías propias (nombre, por horas o por días, icono y color) y decidir si «Ocupa a la persona». Una categoría que no ocupa es solo informativa y no genera avisos."
+                nota = "Con el lápiz de la tarjeta «Categorías de estado de los cuidadores» puedes crear tus propios tipos, con nombre, icono y color. Si un tipo no «Ocupa a la persona», es solo informativo y no genera avisos."
+            ),
+            TemaAyuda(
+                titulo = "Familia: repetir en varios días",
+                parrafos = listOf(
+                    "Para no apuntar lo mismo día por día, usa «Repetir en otros días» dentro de la misma ventana."
+                ),
+                puntos = listOf(
+                    "Activa «Repetir en otros días». Se abre un calendario: toca los días en los que quieres lo mismo. El día que estás editando ya viene marcado.",
+                    "Un puntito bajo un día significa que esa persona ya tiene algo de ese tipo ese día. Los días que no marques no cambian.",
+                    "Debajo hay una fila con las letras L M X J V S D. Tócala para marcar todos los lunes (o martes...) hasta la fecha de «Repetir hasta».",
+                    "Letra con color fuerte: ese día de la semana está apuntado todas las semanas hasta esa fecha. Color suave: solo en algunas. Sin color: en ninguna.",
+                    "Si tocas una letra con color fuerte, se quitan esos días y se borra lo que hubiera apuntado.",
+                    "«Repetir hasta» empieza en el último día que ya tiene algo apuntado; si no hay ninguno, a los 3 meses. Puedes cambiarlo.",
+                    "Antes de guardar cambios que sustituyen o borran varios días, la app te pide confirmar."
+                )
+            ),
+            TemaAyuda(
+                titulo = "Familia: borrar varios días a la vez",
+                puntos = listOf(
+                    "Mantén pulsado un cuadrito del calendario de Familia: se queda marcado con un borde de color.",
+                    "Con la selección en marcha, toca otros cuadritos, de la persona o del tipo que sean, para añadirlos o quitarlos.",
+                    "Abajo aparece una barra que dice cuántos llevas marcados. Pulsa «Borrar» y confirma: se vacían todos a la vez. «Cancelar» lo deja todo como estaba."
+                ),
+                nota = "Borrar vacía el cuadrito entero, sea cual sea lo apuntado. No se puede deshacer."
             ),
             TemaAyuda(
                 titulo = "Menú",
@@ -169,8 +192,8 @@ val SECCIONES_AYUDA: List<SeccionAyuda> = listOf(
                 puntos = listOf(
                     "Niños: añade o quita niños. Solo se pide el nombre.",
                     "Cuidadores: añade o quita personas, vincula tu cuenta a tu persona con el icono de persona, y crea unidades familiares (grupos que van juntos, como «los abuelos maternos») para asignarlos a la vez. Los administradores pueden desvincular la cuenta de otra persona.",
-                    "Actividades: ver y editar todas las actividades, buscar y borrar varias a la vez.",
-                    "Ocupaciones: repasa y borra lo apuntado en Familia, de hace un mes a un año adelante.",
+                    "Actividades: ver y editar todas las actividades, buscar y borrar varias a la vez (desaparecen al momento).",
+                    "Ocupaciones: repasa lo apuntado en Familia, de hace un mes a un año adelante. Puedes marcar varias y borrarlas de una vez: desaparecen al momento.",
                     "Ver las ayudas otra vez: vuelve a mostrar las guías de la primera vez.",
                     "Tema: claro, oscuro o el del sistema.",
                     "Ayuda, Contacto y Privacidad y legal."
