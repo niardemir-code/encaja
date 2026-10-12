@@ -2,6 +2,7 @@ package com.encaja.app.domain
 
 import com.encaja.app.domain.model.*
 import com.encaja.app.domain.usecase.DetectarConflictosDeAsignacion
+import com.encaja.app.domain.usecase.RolResponsable
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import java.time.LocalDate
@@ -82,6 +83,8 @@ class CategoriaDisponibilidadTest {
 
         val conGym = listOf(gym).conBloqueoDeCategorias(categorias)
         val avisos = DetectarConflictosDeAsignacion(listOf(nina), listOf(cuidador), conGym)(listOf(necesidad))
-        assertEquals(2, avisos.size) // conflicto tanto para "lleva" como para "recoge", ambos asignados a Víctor
+        // Víctor lleva y recoge: sale un solo aviso a su nombre, con los dos roles.
+        assertEquals(1, avisos.size)
+        assertEquals(setOf(RolResponsable.LLEVA, RolResponsable.RECOGE), avisos.single().roles)
     }
 }
