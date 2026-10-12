@@ -125,14 +125,12 @@ fun fechasDelDiaSemana(desde: LocalDate, hasta: LocalDate, dia: DayOfWeek): List
 enum class EstadoLineaSemanal { SIN_COLOR, SOLIDO, ATENUADO }
 
 /**
- * Estado del círculo de [dia]. La línea semanal solo se activa tocándola ([activa]): si no
- * está activa nunca lleva color, por mucho que se marquen días a mano en el calendario.
- * Activa: sólido si están marcadas TODAS las fechas de ese día entre [desde] y [hasta]
- * (la fecha de vencimiento), atenuado si falta alguna, y sin color si no queda ninguna.
+ * Estado del círculo de [dia] en la línea L-D de Repetir, solo según las fechas [marcadas]:
+ * sólido si están marcadas TODAS las fechas de ese día de la semana entre [desde] y [hasta]
+ * (el vencimiento), atenuado si solo algunas, y sin color si ninguna.
  */
 fun estadoDiaSemana(
     dia: DayOfWeek,
-    activa: Boolean,
     desde: LocalDate,
     hasta: LocalDate,
     marcadas: Set<LocalDate>
@@ -141,12 +139,17 @@ fun estadoDiaSemana(
     val marcadasDelDia = fechas.count { it in marcadas }
     return when {
         fechas.isEmpty() || marcadasDelDia == 0 -> EstadoLineaSemanal.SIN_COLOR
-        // Completar a mano todas las fechas (al menos dos) también lo deja sólido.
-        marcadasDelDia == fechas.size -> if (activa || fechas.size >= 2) EstadoLineaSemanal.SOLIDO else EstadoLineaSemanal.SIN_COLOR
-        activa -> EstadoLineaSemanal.ATENUADO
-        else -> EstadoLineaSemanal.SIN_COLOR
+        marcadasDelDia == fechas.size -> EstadoLineaSemanal.SOLIDO
+        else -> EstadoLineaSemanal.ATENUADO
     }
 }
+
+/**
+ * Los días que tendrán la ocupación al guardar: los [marcadas] en el calendario más los que
+ * ya la tenían ([existentes]) y no se van a borrar ([aBorrar]).
+ */
+fun fechasConOcupacion(marcadas: Set<LocalDate>, existentes: Set<LocalDate>, aBorrar: Set<LocalDate>): Set<LocalDate> =
+    marcadas + (existentes - aBorrar)
 
 /**
  * Los días de la semana (al menos dos fechas) cuyas fechas, entre [desde] y [hasta] (el

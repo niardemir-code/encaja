@@ -155,40 +155,35 @@ class DisponibilidadEdicionTest {
     }
 
     @Test
-    fun `sin activar la linea semanal no lleva color por marcar solo algunos dias en el calendario`() {
-        val estado = estadoDiaSemana(DayOfWeek.WEDNESDAY, activa = false, desde = lunes, hasta = hastaVencimiento, marcadas = setOf(miercoles[0], miercoles[2]))
-        assertEquals(EstadoLineaSemanal.SIN_COLOR, estado)
-    }
-
-    @Test
-    fun `sin activar pero con todas las fechas marcadas a mano queda solido`() {
-        val estado = estadoDiaSemana(DayOfWeek.WEDNESDAY, activa = false, desde = lunes, hasta = hastaVencimiento, marcadas = miercoles.toSet())
+    fun `con todos los dias de esa semana marcados hasta el vencimiento el circulo queda solido`() {
+        val estado = estadoDiaSemana(DayOfWeek.WEDNESDAY, desde = lunes, hasta = hastaVencimiento, marcadas = miercoles.toSet())
         assertEquals(EstadoLineaSemanal.SOLIDO, estado)
     }
 
     @Test
-    fun `activa y con todos los dias hasta el vencimiento marcados queda en color solido`() {
-        val estado = estadoDiaSemana(DayOfWeek.WEDNESDAY, activa = true, desde = lunes, hasta = hastaVencimiento, marcadas = miercoles.toSet())
-        assertEquals(EstadoLineaSemanal.SOLIDO, estado)
-    }
-
-    @Test
-    fun `activa pero con un dia quitado dentro del vencimiento queda atenuada`() {
+    fun `con un dia quitado el circulo queda atenuado`() {
         val sinElDel30 = setOf(miercoles[0], miercoles[2])
-        val estado = estadoDiaSemana(DayOfWeek.WEDNESDAY, activa = true, desde = lunes, hasta = hastaVencimiento, marcadas = sinElDel30)
+        val estado = estadoDiaSemana(DayOfWeek.WEDNESDAY, desde = lunes, hasta = hastaVencimiento, marcadas = sinElDel30)
         assertEquals(EstadoLineaSemanal.ATENUADO, estado)
     }
 
     @Test
-    fun `activa pero sin ningun dia marcado queda sin color`() {
-        val estado = estadoDiaSemana(DayOfWeek.WEDNESDAY, activa = true, desde = lunes, hasta = hastaVencimiento, marcadas = emptySet())
+    fun `sin ningun dia marcado el circulo queda sin color`() {
+        val estado = estadoDiaSemana(DayOfWeek.WEDNESDAY, desde = lunes, hasta = hastaVencimiento, marcadas = emptySet())
         assertEquals(EstadoLineaSemanal.SIN_COLOR, estado)
     }
 
     @Test
     fun `un dia de la semana sin fechas dentro del vencimiento no se pinta`() {
-        val estado = estadoDiaSemana(DayOfWeek.TUESDAY, activa = true, desde = lunes, hasta = lunes, marcadas = setOf(lunes))
+        val estado = estadoDiaSemana(DayOfWeek.TUESDAY, desde = lunes, hasta = lunes, marcadas = setOf(lunes))
         assertEquals(EstadoLineaSemanal.SIN_COLOR, estado)
+    }
+
+    @Test
+    fun `los dias que ya tenian la ocupacion cuentan salvo los que se van a borrar`() {
+        val existentes = setOf(miercoles[1], miercoles[2])
+        assertEquals(miercoles.toSet(), fechasConOcupacion(setOf(miercoles[0]), existentes, emptySet()))
+        assertEquals(setOf(miercoles[0], miercoles[2]), fechasConOcupacion(setOf(miercoles[0]), existentes, setOf(miercoles[1])))
     }
 
     @Test

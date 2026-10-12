@@ -159,9 +159,6 @@ fun DialogoDisponibilidad(
     // quita las ocupaciones de esa categoría de ese día de la semana hasta el vencimiento.
     var fechasAplicar by remember(seleccionId) { mutableStateOf(setOf(fecha)) }
     var fechasBorrar by remember(seleccionId) { mutableStateOf(emptySet<LocalDate>()) }
-    // Días de la semana activados desde la línea L-D. Solo se activan tocándola: marcar días a
-    // mano en el calendario nunca los colorea.
-    var lineaActiva by remember(seleccionId) { mutableStateOf(emptySet<DayOfWeek>()) }
     var repetirActivo by remember(seleccionId) { mutableStateOf(false) }
     // Hasta qué día llega el patrón semanal al guardar (fecha de vencimiento); por defecto, 3 meses.
     var hastaRepetir by remember(seleccionId) { mutableStateOf(fecha.plusMonths(3)) }
@@ -204,46 +201,44 @@ fun DialogoDisponibilidad(
     val puedeGuardar = seleccionada != null && (soloBorrar || (formularioValido && guardarFechas.isNotEmpty()))
     val necesitaConfirmar = repetirActivo && (borrarFechas.isNotEmpty() || sustituidas > 1)
 
-    // Círculos L-D: sólido = todas las fechas de ese día hasta el vencimiento marcadas;
-    // atenuado = alguna quitada; sin color = ninguna o sin activar desde la línea.
+    // Círculos L-D: sólido = todas las fechas de ese día hasta el vencimiento tienen la ocupación
+    // (marcadas ahora o ya de antes); atenuado = solo algunas; sin color = ninguna.
     fun estadoLinea(dia: DayOfWeek): EstadoLineaSemanal =
-        estadoDiaSemana(dia, dia in lineaActiva, fecha, hastaRepetir, fechasAplicar)
+        estadoDiaSemana(dia, fecha, hastaRepetir, fechasConOcupacion(fechasAplicar, existentes, fechasBorrar))
 
+    // Tocar un día de la línea: si ya está sólido se quitan todas sus fechas (y se borra lo que
+    // hubiera de esa categoría esos días); si está atenuado o sin color, se marcan todas.
     fun alternarDiaSemana(dia: DayOfWeek) {
         val fs = fechasDelDiaSemana(fecha, hastaRepetir, dia).toSet()
         if (fs.isEmpty()) return
-        if (estadoLinea(dia) == EstadoLineaSemanal.SIN_COLOR) {
-            // Activar: todos esos días hasta el vencimiento llevan lo del formulario.
-            fechasAplicar = fechasAplicar + fs
-            fechasBorrar = fechasBorrar - fs
-            lineaActiva = lineaActiva + dia
-        } else {
-            // Sólido o atenuado: se quitan todos y se borra lo que hubiera de esa categoría.
+        if (estadoLinea(dia) == EstadoLineaSemanal.SOLIDO) {
             fechasAplicar = fechasAplicar - fs
             fechasBorrar = fechasBorrar + fs.filter { it in existentes }
-            lineaActiva = lineaActiva - dia
+        } else {
+            fechasAplicar = fechasAplicar + fs
+            fechasBorrar = fechasBorrar - fs
         }
     }
 
-    // Marcar o desmarcar un día en el calendario solo cambia ese día. La línea L-D no se colorea
-    // por marcar días sueltos; solo si se completan a mano TODAS las fechas de un día de la
-    // semana hasta el vencimiento (entonces queda sólido), y si deja sin ninguna fecha a un día
-    // activo, se apaga. Quitar uno de un día sólido lo deja atenuado.
+    // Marcar o desmarcar un día en el calendario solo cambia ese día; la línea L-D se limita a
+    // reflejar cuántas fechas de cada día de la semana están marcadas.
     fun alternarDiaCalendario(dia: LocalDate) {
-        val nuevas = if (dia in fechasAplicar) fechasAplicar - dia else fechasAplicar + dia
-        fechasAplicar = nuevas
-        lineaActiva = (lineaActiva + diasSemanaConTodasLasFechas(fecha, hastaRepetir, nuevas))
-            .filter { d -> fechasDelDiaSemana(fecha, hastaRepetir, d).any { it in nuevas } }
-            .toSet()
+        if (dia in fechasAplicar) {
+            fechasAplicar = fechasAplicar - dia
+        } else {
+            fechasAplicar = fechasAplicar + dia
+            fechasBorrar = fechasBorrar - dia
+        }
     }
 
-    // Al cambiar el vencimiento, los días de la semana activos ganan o pierden solo las
-    // fechas entre el vencimiento anterior y el nuevo; el resto no se toca.
+    // Al cambiar el vencimiento, los días de la semana que estaban sólidos (todas sus fechas
+    // marcadas) ganan o pierden solo las fechas entre el vencimiento anterior y el nuevo.
     fun cambiarHastaRepetir(nuevaHasta: LocalDate) {
         val hastaAnterior = hastaRepetir
+        val solidos = DayOfWeek.values().filter { estadoLinea(it) == EstadoLineaSemanal.SOLIDO }
         hastaRepetir = nuevaHasta
         val (menor, mayor) = if (nuevaHasta.isBefore(hastaAnterior)) nuevaHasta to hastaAnterior else hastaAnterior to nuevaHasta
-        val diferencia = lineaActiva
+        val diferencia = solidos
             .flatMap { dia -> fechasDelDiaSemana(fecha, mayor, dia) }
             .filter { it.isAfter(menor) }
             .toSet()
@@ -276,7 +271,6 @@ fun DialogoDisponibilidad(
         horasEtiqueta = bloque.etiqueta.orEmpty()
         fechasAplicar = setOf(bloque.fecha)
         fechasBorrar = emptySet()
-        lineaActiva = emptySet()
         repetirActivo = false
         hastaRepetir = bloque.fecha.plusMonths(3)
         rangoDesde = bloque.fecha
@@ -515,8 +509,7 @@ fun DialogoDisponibilidad(
                             onCheckedChange = { activo ->
                                 repetirActivo = activo
                                 fechasBorrar = emptySet()
-                                lineaActiva = emptySet()
-                                fechasAplicar = if (activo && !porHoras) rangoFechas.toSet() else setOf(fecha)
+                                                        fechasAplicar = if (activo && !porHoras) rangoFechas.toSet() else setOf(fecha)
                                 hastaRepetir = fecha.plusMonths(3)
                             },
                             colors = coloresInterruptorEncaja()
