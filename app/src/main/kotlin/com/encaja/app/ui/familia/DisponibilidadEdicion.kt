@@ -145,6 +145,13 @@ fun estadoDiaSemana(
 }
 
 /**
+ * Hasta cuándo se repite por defecto: el último día posterior a [fecha] que ya tiene la
+ * ocupación ([existentes]) y, si no hay ninguno, tres meses después de [fecha].
+ */
+fun vencimientoPorDefecto(fecha: LocalDate, existentes: Set<LocalDate>): LocalDate =
+    existentes.filter { it.isAfter(fecha) }.maxOrNull() ?: fecha.plusMonths(3)
+
+/**
  * Los días que tendrán la ocupación al guardar: los [marcadas] en el calendario más los que
  * ya la tenían ([existentes]) y no se van a borrar ([aBorrar]).
  */

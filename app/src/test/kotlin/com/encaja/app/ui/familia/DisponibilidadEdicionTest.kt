@@ -187,6 +187,13 @@ class DisponibilidadEdicionTest {
     }
 
     @Test
+    fun `el vencimiento por defecto es el ultimo dia que ya tiene la ocupacion, o tres meses`() {
+        assertEquals(miercoles[2], vencimientoPorDefecto(miercoles[0], setOf(miercoles[0], miercoles[1], miercoles[2])))
+        assertEquals(miercoles[0].plusMonths(3), vencimientoPorDefecto(miercoles[0], setOf(miercoles[0])))
+        assertEquals(miercoles[0].plusMonths(3), vencimientoPorDefecto(miercoles[0], emptySet()))
+    }
+
+    @Test
     fun `completar a mano todas las fechas de un dia de la semana lo reconoce, y un solo dia no`() {
         assertEquals(setOf(DayOfWeek.WEDNESDAY), diasSemanaConTodasLasFechas(lunes, hastaVencimiento, miercoles.toSet()))
         assertTrue(diasSemanaConTodasLasFechas(lunes, hastaVencimiento, setOf(miercoles[0])).isEmpty())

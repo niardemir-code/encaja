@@ -510,7 +510,7 @@ fun DialogoDisponibilidad(
                                 repetirActivo = activo
                                 fechasBorrar = emptySet()
                                                         fechasAplicar = if (activo && !porHoras) rangoFechas.toSet() else setOf(fecha)
-                                hastaRepetir = fecha.plusMonths(3)
+                                hastaRepetir = vencimientoPorDefecto(fecha, existentes)
                             },
                             colors = coloresInterruptorEncaja()
                         )
