@@ -29,13 +29,17 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.encaja.app.R
 import com.encaja.app.domain.model.Caregiver
 import com.encaja.app.domain.model.CaregiverId
 import com.encaja.app.domain.model.FamilyUnit
 import com.encaja.app.domain.model.FamilyUnitId
+import com.encaja.app.ui.common.TextoUi
+import com.encaja.app.ui.common.resolver
 import com.encaja.app.ui.familia.DialogoNuevoCuidador
 import com.encaja.app.ui.theme.AccionAvisoHoja
 import com.encaja.app.ui.theme.AvatarInicialesHoja
@@ -74,17 +78,17 @@ fun AjustesCuidadoresScreen(viewModel: AjustesViewModel = hiltViewModel()) {
                 .padding(bottom = 32.dp)
         ) {
             CabeceraPantalla(
-                "Cuidadores",
-                "Las personas de la familia y los grupos que van juntos."
+                stringResource(R.string.ajustes_cuidadores_titulo),
+                stringResource(R.string.cuidadores_subtitulo)
             )
 
             when (val estadoActual = pantalla) {
                 is AjustesPantallaEstado.Cargando -> CircularProgressIndicator()
                 is AjustesPantallaEstado.SinFamilia -> {
-                    MensajePantalla("Vincúlate a una familia desde la pestaña Semana para gestionar sus datos.")
+                    MensajePantalla(stringResource(R.string.comun_sin_familia_gestionar))
                 }
                 is AjustesPantallaEstado.ConDatos -> {
-                    var errorBaja by remember { mutableStateOf<String?>(null) }
+                    var errorBaja by remember { mutableStateOf<TextoUi?>(null) }
                     SeccionCuidadores(
                         cuidadores = estadoActual.cuidadores,
                         miCaregiverId = estadoActual.miCaregiverId,
@@ -98,7 +102,7 @@ fun AjustesCuidadoresScreen(viewModel: AjustesViewModel = hiltViewModel()) {
                         onEliminar = { caregiverId -> viewModel.eliminarCuidador(caregiverId) },
                         onVincularme = { caregiverId -> viewModel.vincularmeAEsteCuidador(caregiverId) }
                     )
-                    errorBaja?.let { MensajePantalla(it, error = true) }
+                    errorBaja?.let { MensajePantalla(it.resolver(), error = true) }
 
                     Spacer(Modifier.height(28.dp))
 
@@ -143,16 +147,14 @@ private fun SeccionCuidadores(
     cuidadorAEliminar?.let { cuidador ->
         AvisoHoja(
             icono = Icons.Default.Delete,
-            titulo = "¿Eliminar a ${cuidador.nombreCompleto}?",
-            texto = "Se eliminará de la lista, su cuenta perderá el acceso, se borrarán las unidades " +
-                "familiares en las que esté y sus actividades asignadas quedarán sin responsable. " +
-                "No se puede deshacer.",
+            titulo = stringResource(R.string.cuidadores_eliminar_titulo, cuidador.nombreCompleto),
+            texto = stringResource(R.string.cuidadores_eliminar_texto),
             acciones = listOf(
-                AccionAvisoHoja("Eliminar", EstiloAccionAviso.PELIGRO) {
+                AccionAvisoHoja(stringResource(R.string.comun_eliminar), EstiloAccionAviso.PELIGRO) {
                     onEliminar(cuidador.id)
                     cuidadorAEliminar = null
                 },
-                AccionAvisoHoja("Cancelar", EstiloAccionAviso.BORDE) { cuidadorAEliminar = null }
+                AccionAvisoHoja(stringResource(R.string.comun_cancelar), EstiloAccionAviso.BORDE) { cuidadorAEliminar = null }
             ),
             onCerrar = { cuidadorAEliminar = null }
         )
@@ -161,29 +163,28 @@ private fun SeccionCuidadores(
     cuidadorADesvincular?.let { cuidador ->
         AvisoHoja(
             icono = Icons.Default.LinkOff,
-            titulo = "¿Desvincular a ${cuidador.nombreCompleto}?",
-            texto = "Su cuenta dejará de tener acceso a los datos de la familia y dejará de recibir " +
-                "avisos. ${cuidador.nombreCompleto} seguirá en la lista y podrás volver a invitarle.",
+            titulo = stringResource(R.string.cuidadores_desvincular_titulo, cuidador.nombreCompleto),
+            texto = stringResource(R.string.cuidadores_desvincular_texto, cuidador.nombreCompleto),
             peligro = false,
             acciones = listOf(
-                AccionAvisoHoja("Desvincular", EstiloAccionAviso.PRIMARIO) {
+                AccionAvisoHoja(stringResource(R.string.cuidadores_desvincular_accion), EstiloAccionAviso.PRIMARIO) {
                     onDesvincular(cuidador.id)
                     cuidadorADesvincular = null
                 },
-                AccionAvisoHoja("Cancelar", EstiloAccionAviso.BORDE) { cuidadorADesvincular = null }
+                AccionAvisoHoja(stringResource(R.string.comun_cancelar), EstiloAccionAviso.BORDE) { cuidadorADesvincular = null }
             ),
             onCerrar = { cuidadorADesvincular = null }
         )
     }
 
     Column(modifier = Modifier.fillMaxWidth()) {
-        RotuloSeccionPantalla("Personas")
+        RotuloSeccionPantalla(stringResource(R.string.cuidadores_personas))
 
         if (cuidadores.isEmpty()) {
-            MensajePantalla("Todavía no has añadido ningún cuidador.")
+            MensajePantalla(stringResource(R.string.cuidadores_vacio))
         } else {
             Text(
-                "Si eres tú quien tiene la sesión abierta, usa el icono de persona para vincularte a tu propio cuidador.",
+                stringResource(R.string.cuidadores_ayuda_vincular),
                 style = MaterialTheme.typography.bodySmall,
                 color = tintaSuaveHoja,
                 modifier = Modifier.padding(bottom = 10.dp)
@@ -205,9 +206,9 @@ private fun SeccionCuidadores(
                         color = tintaHoja
                     )
                     val estado = when {
-                        vinculadoAId == cuidador.id -> "Vinculado"
-                        cuidador.id == miCaregiverId -> "Tú"
-                        cuidador.id in vinculados -> "Con cuenta vinculada"
+                        vinculadoAId == cuidador.id -> stringResource(R.string.cuidadores_estado_vinculado)
+                        cuidador.id == miCaregiverId -> stringResource(R.string.cuidadores_estado_tu)
+                        cuidador.id in vinculados -> stringResource(R.string.cuidadores_estado_con_cuenta)
                         else -> null
                     }
                     estado?.let {
@@ -218,13 +219,13 @@ private fun SeccionCuidadores(
                     if (soyAdmin && cuidador.id in vinculados && cuidador.id != miCaregiverId) {
                         BotonRedondoSuaveHoja(
                             Icons.Default.LinkOff,
-                            "Desvincular la cuenta de ${cuidador.nombreCompleto}",
+                            stringResource(R.string.cuidadores_desvincular_cuenta_de, cuidador.nombreCompleto),
                             { cuidadorADesvincular = cuidador }
                         )
                     }
                     BotonRedondoSuaveHoja(
                         Icons.Default.Person,
-                        "Vincularme a ${cuidador.nombreCompleto}",
+                        stringResource(R.string.cuidadores_vincularme_a, cuidador.nombreCompleto),
                         {
                             onVincularme(cuidador.id)
                             vinculadoAId = cuidador.id
@@ -232,7 +233,7 @@ private fun SeccionCuidadores(
                     )
                     BotonRedondoSuaveHoja(
                         Icons.Default.Delete,
-                        "Eliminar a ${cuidador.nombreCompleto}",
+                        stringResource(R.string.cuidadores_eliminar_a, cuidador.nombreCompleto),
                         { cuidadorAEliminar = cuidador },
                         tinta = MaterialTheme.colorScheme.error
                     )
@@ -242,7 +243,7 @@ private fun SeccionCuidadores(
         }
 
         Spacer(Modifier.height(6.dp))
-        BotonPildoraHoja("Nuevo cuidador", onClick = { nuevoAbierto = true }, icono = Icons.Default.PersonAdd)
+        BotonPildoraHoja(stringResource(R.string.cuidadores_nuevo), onClick = { nuevoAbierto = true }, icono = Icons.Default.PersonAdd)
     }
 }
 
@@ -275,30 +276,30 @@ private fun SeccionUnidadesFamiliares(
     unidadAEliminar?.let { unidad ->
         AvisoHoja(
             icono = Icons.Default.Delete,
-            titulo = "¿Eliminar la unidad ${unidad.nombre}?",
-            texto = "Las personas del grupo siguen en la lista; solo desaparece el grupo. No se puede deshacer.",
+            titulo = stringResource(R.string.unidades_eliminar_titulo, unidad.nombre),
+            texto = stringResource(R.string.unidades_eliminar_texto),
             acciones = listOf(
-                AccionAvisoHoja("Eliminar", EstiloAccionAviso.PELIGRO) {
+                AccionAvisoHoja(stringResource(R.string.comun_eliminar), EstiloAccionAviso.PELIGRO) {
                     onEliminar(unidad.id)
                     unidadAEliminar = null
                 },
-                AccionAvisoHoja("Cancelar", EstiloAccionAviso.BORDE) { unidadAEliminar = null }
+                AccionAvisoHoja(stringResource(R.string.comun_cancelar), EstiloAccionAviso.BORDE) { unidadAEliminar = null }
             ),
             onCerrar = { unidadAEliminar = null }
         )
     }
 
     Column(modifier = Modifier.fillMaxWidth()) {
-        RotuloSeccionPantalla("Unidades familiares")
+        RotuloSeccionPantalla(stringResource(R.string.unidades_titulo))
         Text(
-            "Grupos de cuidadores que van juntos (p.ej. los abuelos maternos), para poder asignarlos a un día de una vez.",
+            stringResource(R.string.unidades_ayuda),
             style = MaterialTheme.typography.bodySmall,
             color = tintaSuaveHoja,
             modifier = Modifier.padding(bottom = 10.dp)
         )
 
         if (unidades.isEmpty()) {
-            MensajePantalla("Todavía no has creado ninguna unidad familiar.")
+            MensajePantalla(stringResource(R.string.unidades_vacio))
         }
 
         unidades.forEach { unidad ->
@@ -325,7 +326,7 @@ private fun SeccionUnidadesFamiliares(
                 Spacer(Modifier.width(8.dp))
                 BotonRedondoSuaveHoja(
                     Icons.Default.Delete,
-                    "Eliminar unidad ${unidad.nombre}",
+                    stringResource(R.string.unidades_eliminar_a, unidad.nombre),
                     { unidadAEliminar = unidad },
                     tinta = MaterialTheme.colorScheme.error
                 )
@@ -335,7 +336,7 @@ private fun SeccionUnidadesFamiliares(
 
         Spacer(Modifier.height(6.dp))
         BotonPildoraHoja(
-            "Nueva unidad familiar",
+            stringResource(R.string.unidades_nueva),
             onClick = { nuevaAbierta = true },
             icono = Icons.Default.Add,
             habilitado = cuidadores.isNotEmpty()
@@ -355,15 +356,15 @@ private fun DialogoNuevaUnidad(
     var miembros by remember { mutableStateOf(setOf<CaregiverId>()) }
     AvisoHoja(
         icono = Icons.Default.Group,
-        titulo = "Crear una unidad familiar",
+        titulo = stringResource(R.string.unidades_crear_titulo),
         texto = null,
         peligro = false,
         conX = true,
         accionesEnFila = true,
         acciones = listOf(
-            AccionAvisoHoja("Cancelar", EstiloAccionAviso.BORDE) { onCerrar() },
+            AccionAvisoHoja(stringResource(R.string.comun_cancelar), EstiloAccionAviso.BORDE) { onCerrar() },
             AccionAvisoHoja(
-                "Crear",
+                stringResource(R.string.comun_crear),
                 EstiloAccionAviso.PRIMARIO,
                 habilitada = codigo.isNotBlank() && nombre.isNotBlank() && miembros.isNotEmpty()
             ) {
@@ -373,10 +374,10 @@ private fun DialogoNuevaUnidad(
         onCerrar = onCerrar,
         contenido = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                CampoTextoConIconoHoja(codigo, { codigo = it }, "Código del avatar (p.ej. GF)", Icons.Default.Badge)
-                CampoTextoConIconoHoja(nombre, { nombre = it }, "Nombre (p.ej. Gregorio y Josefa)", Icons.Default.Group)
+                CampoTextoConIconoHoja(codigo, { codigo = it }, stringResource(R.string.unidades_codigo), Icons.Default.Badge)
+                CampoTextoConIconoHoja(nombre, { nombre = it }, stringResource(R.string.unidades_nombre), Icons.Default.Group)
                 Text(
-                    "Miembros del grupo",
+                    stringResource(R.string.unidades_miembros),
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,
                     color = tintaHoja,

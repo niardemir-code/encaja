@@ -48,10 +48,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import com.encaja.app.R
+import com.encaja.app.ui.common.TextoUi
+import com.encaja.app.ui.common.resolver
 import com.encaja.app.ui.informacion.AvisosBateria
 import com.encaja.app.ui.informacion.DialogoMasInformacionBateria
 import com.encaja.app.ui.theme.PreferenciaTema
@@ -105,57 +109,57 @@ fun AjustesScreen(
             .padding(bottom = 32.dp)
     ) {
         CabeceraPantalla(
-            "Ajustes",
-            viewModel.emailUsuarioActual?.let { "Sesión iniciada como: $it" }
+            stringResource(R.string.ajustes_titulo),
+            viewModel.emailUsuarioActual?.let { stringResource(R.string.ajustes_sesion_como, it) }
         )
 
         FilaAjuste(
             icono = Icons.Default.ChildCare,
-            titulo = "Niños",
-            subtitulo = "Añadir o quitar niños de la familia",
+            titulo = stringResource(R.string.ninos_titulo),
+            subtitulo = stringResource(R.string.ajustes_ninos_sub),
             onClick = onAbrirNinos
         )
         Spacer(Modifier.height(12.dp))
         FilaAjuste(
             icono = Icons.Default.Group,
-            titulo = "Cuidadores",
-            subtitulo = "Personas y unidades familiares",
+            titulo = stringResource(R.string.ajustes_cuidadores_titulo),
+            subtitulo = stringResource(R.string.ajustes_cuidadores_sub),
             onClick = onAbrirCuidadores
         )
         Spacer(Modifier.height(12.dp))
         FilaAjuste(
             icono = Icons.Default.CalendarViewWeek,
-            titulo = "Actividades",
-            subtitulo = "Ver y editar todas las actividades",
+            titulo = stringResource(R.string.ajustes_actividades_titulo),
+            subtitulo = stringResource(R.string.ajustes_actividades_sub),
             onClick = onAbrirTodasActividades
         )
         Spacer(Modifier.height(12.dp))
         FilaAjuste(
             icono = Icons.Default.EventBusy,
-            titulo = "Ocupaciones",
-            subtitulo = "Todo lo apuntado en Familia, para repasar y borrar",
+            titulo = stringResource(R.string.ajustes_ocupaciones_titulo),
+            subtitulo = stringResource(R.string.ajustes_ocupaciones_sub),
             onClick = onAbrirOcupaciones
         )
 
         Spacer(Modifier.height(12.dp))
         FilaAjuste(
             icono = Icons.Default.QuestionMark,
-            titulo = "Ayuda",
-            subtitulo = "Cómo funciona la app, pantalla por pantalla",
+            titulo = stringResource(R.string.ajustes_ayuda_titulo),
+            subtitulo = stringResource(R.string.ajustes_ayuda_sub),
             onClick = onAbrirAyuda
         )
         Spacer(Modifier.height(12.dp))
         FilaAjuste(
             icono = Icons.Default.Mail,
-            titulo = "Contacto",
-            subtitulo = "Escribe al desarrollador",
+            titulo = stringResource(R.string.contacto_titulo),
+            subtitulo = stringResource(R.string.ajustes_contacto_sub),
             onClick = onAbrirContacto
         )
         Spacer(Modifier.height(12.dp))
         FilaAjuste(
             icono = Icons.Default.Lock,
-            titulo = "Privacidad y legal",
-            subtitulo = "Tus datos, condiciones de uso y aviso legal",
+            titulo = stringResource(R.string.ajustes_legal_titulo),
+            subtitulo = stringResource(R.string.ajustes_legal_sub),
             onClick = onAbrirLegal
         )
 
@@ -164,9 +168,8 @@ fun AjustesScreen(
         var ayudasReiniciadas by remember { mutableStateOf(false) }
         FilaAjuste(
             icono = Icons.Default.Info,
-            titulo = "Ver las ayudas otra vez",
-            subtitulo = if (ayudasReiniciadas) "Hecho: volverán a mostrarse al entrar en cada pantalla"
-            else "Repite la guía de la primera vez en cada pantalla",
+            titulo = stringResource(R.string.ajustes_ayudas_titulo),
+            subtitulo = stringResource(if (ayudasReiniciadas) R.string.ajustes_ayudas_hecho else R.string.ajustes_ayudas_sub),
             onClick = {
                 com.encaja.app.ui.ayuda.PreferenciaAyuda.reiniciar(contexto)
                 ayudasReiniciadas = true
@@ -183,12 +186,12 @@ fun AjustesScreen(
         SeccionTema()
 
         Spacer(Modifier.height(32.dp))
-        BotonPildoraBordeHoja("Cerrar sesión", onClick = onCerrarSesion, icono = Icons.AutoMirrored.Filled.Logout)
+        BotonPildoraBordeHoja(stringResource(R.string.ajustes_cerrar_sesion), onClick = onCerrarSesion, icono = Icons.AutoMirrored.Filled.Logout)
 
         // Darse de baja: desvincula la cuenta de la familia y elimina el acceso con Google.
         var confirmandoBaja by remember { mutableStateOf(false) }
         var borrando by remember { mutableStateOf(false) }
-        var errorBaja by remember { mutableStateOf<String?>(null) }
+        var errorBaja by remember { mutableStateOf<TextoUi?>(null) }
         var codigoParaVolver by remember { mutableStateOf<String?>(null) }
         var cuentaBorrada by remember { mutableStateOf(false) }
         Spacer(Modifier.height(12.dp))
@@ -197,38 +200,34 @@ fun AjustesScreen(
             enabled = !borrando,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Borrar mi cuenta", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.ajustes_borrar_cuenta), color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
         }
         errorBaja?.let {
-            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+            Text(it.resolver(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
         }
         // Cuenta ya borrada: si era la última de la familia, se enseña el código para que quien
         // llegue después pueda retomar a este cuidador con todo su historial.
         if (cuentaBorrada) {
             AvisoHoja(
                 icono = Icons.Default.CheckCircle,
-                titulo = "Cuenta borrada",
+                titulo = stringResource(R.string.ajustes_cuenta_borrada_titulo),
                 texto = if (codigoParaVolver != null) {
-                    "Eras la última persona con cuenta en esta familia. Su información sigue " +
-                        "guardada. Apunta este código: quien lo introduzca al crear su cuenta se " +
-                        "vinculará a tu persona y seguirá con todo.\n\n${codigoParaVolver}"
+                    stringResource(R.string.ajustes_cuenta_borrada_ultima, codigoParaVolver!!)
                 } else {
-                    "Tu cuenta se ha eliminado. La información de la familia sigue guardada."
+                    stringResource(R.string.ajustes_cuenta_borrada_texto)
                 },
                 peligro = false,
-                acciones = listOf(AccionAvisoHoja("Entendido", EstiloAccionAviso.PRIMARIO) { onCerrarSesion() }),
+                acciones = listOf(AccionAvisoHoja(stringResource(R.string.comun_entendido), EstiloAccionAviso.PRIMARIO) { onCerrarSesion() }),
                 onCerrar = {}
             )
         }
         if (confirmandoBaja) {
             AvisoHoja(
                 icono = Icons.Default.Delete,
-                titulo = "¿Borrar tu cuenta?",
-                texto = "Se eliminará tu cuenta de la app y dejarás de tener acceso a esta familia y de " +
-                    "recibir avisos. Tu persona y todo su historial se quedan en la familia, y podrán " +
-                    "volver a vincular a alguien con ella. No se puede deshacer.",
+                titulo = stringResource(R.string.ajustes_borrar_titulo),
+                texto = stringResource(R.string.ajustes_borrar_texto),
                 acciones = listOf(
-                    AccionAvisoHoja("Borrar", EstiloAccionAviso.PELIGRO) {
+                    AccionAvisoHoja(stringResource(R.string.ajustes_borrar_accion), EstiloAccionAviso.PELIGRO) {
                         confirmandoBaja = false
                         borrando = true
                         viewModel.borrarMiCuenta(
@@ -240,7 +239,7 @@ fun AjustesScreen(
                             alFallar = { borrando = false; errorBaja = it }
                         )
                     },
-                    AccionAvisoHoja("Cancelar", EstiloAccionAviso.BORDE) { confirmandoBaja = false }
+                    AccionAvisoHoja(stringResource(R.string.comun_cancelar), EstiloAccionAviso.BORDE) { confirmandoBaja = false }
                 ),
                 onCerrar = { confirmandoBaja = false }
             )
@@ -285,7 +284,7 @@ private fun SeccionAlarmasExactas() {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconoEnCirculoHoja(Icons.Default.Alarm, MaterialTheme.colorScheme.errorContainer, MaterialTheme.colorScheme.error)
                 Text(
-                    "Los avisos pueden llegar tarde",
+                    stringResource(R.string.ajustes_alarma_titulo),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = tintaHoja,
@@ -294,14 +293,12 @@ private fun SeccionAlarmasExactas() {
             }
             Spacer(Modifier.height(8.dp))
             Text(
-                "Encaja no tiene permiso para programar alarmas a una hora exacta, así que el móvil " +
-                    "puede retrasar los avisos de las actividades bastantes minutos. Para que salten justo " +
-                    "a la hora elegida, activa \"Alarmas y recordatorios\" para Encaja.",
+                stringResource(R.string.ajustes_alarma_texto, stringResource(R.string.app_name)),
                 style = MaterialTheme.typography.bodySmall,
                 color = tintaSuaveHoja
             )
             Spacer(Modifier.height(14.dp))
-            BotonPildoraHoja("Activar", onClick = {
+            BotonPildoraHoja(stringResource(R.string.ajustes_activar), onClick = {
                 val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
                     data = Uri.fromParts("package", contexto.packageName, null)
                 }
@@ -347,7 +344,7 @@ private fun SeccionAhorroDeBateria() {
                     if (exenta) indigoHoja else MaterialTheme.colorScheme.error
                 )
                 Text(
-                    "Avisos con la app cerrada",
+                    stringResource(R.string.bateria_titulo),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = tintaHoja,
@@ -356,25 +353,20 @@ private fun SeccionAhorroDeBateria() {
             }
             Spacer(Modifier.height(8.dp))
             Text(
-                if (exenta) {
-                    "Encaja no tiene restricciones de batería. Si aun así no te llegan los avisos con la app cerrada, " +
-                        "tu móvil puede tener un ahorro de energía propio del fabricante."
-                } else {
-                    "El ahorro de batería del móvil puede impedir que lleguen los avisos cuando " +
-                        "Encaja no está abierta en pantalla. Para evitarlo, quita las restricciones de batería: " +
-                        "se abrirá la ficha de Encaja en los ajustes: entra en «Batería» y elige «Sin restricciones» " +
-                        "(según el móvil, puede llamarse «No optimizar»)."
-                },
+                stringResource(
+                    if (exenta) R.string.bateria_sin_restricciones else R.string.bateria_con_restricciones,
+                    stringResource(R.string.app_name)
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = tintaSuaveHoja
             )
             Spacer(Modifier.height(14.dp))
             if (!exenta) {
-                BotonPildoraHoja("Quitar restricciones", onClick = { AvisosBateria.abrirQuitarRestricciones(contexto) })
+                BotonPildoraHoja(stringResource(R.string.bateria_quitar), onClick = { AvisosBateria.abrirQuitarRestricciones(contexto) })
                 Spacer(Modifier.height(4.dp))
             }
             TextButton(onClick = { masInfoAbierta = true }) {
-                Text("Más información (Xiaomi, Oppo, Huawei…)", color = acentoHoja, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.bateria_mas_info), color = acentoHoja, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -400,11 +392,11 @@ private fun SeccionTema() {
     val contexto = LocalContext.current
     val temaActual by PreferenciaTema.actual
 
-    RotuloSeccionPantalla("Tema")
+    RotuloSeccionPantalla(stringResource(R.string.tema_titulo))
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-        OpcionTema("Sistema", TemaPreferido.SISTEMA, temaActual, contexto, Modifier.weight(1f))
-        OpcionTema("Claro", TemaPreferido.CLARO, temaActual, contexto, Modifier.weight(1f))
-        OpcionTema("Oscuro", TemaPreferido.OSCURO, temaActual, contexto, Modifier.weight(1f))
+        OpcionTema(stringResource(R.string.tema_sistema), TemaPreferido.SISTEMA, temaActual, contexto, Modifier.weight(1f))
+        OpcionTema(stringResource(R.string.tema_claro), TemaPreferido.CLARO, temaActual, contexto, Modifier.weight(1f))
+        OpcionTema(stringResource(R.string.tema_oscuro), TemaPreferido.OSCURO, temaActual, contexto, Modifier.weight(1f))
     }
 }
 

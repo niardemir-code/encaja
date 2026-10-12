@@ -24,6 +24,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.encaja.app.R
+import com.encaja.app.ui.common.TextoUi
+import com.encaja.app.ui.common.textoUi
 
 @HiltViewModel
 class AjustesViewModel @Inject constructor(
@@ -93,21 +96,21 @@ class AjustesViewModel @Inject constructor(
      * Si sale bien se llama a [alTerminar] (con un código de invitación si era la última cuenta
      * de la familia); si no, a [alFallar]. El cuidador y su historial no se tocan.
      */
-    fun borrarMiCuenta(alTerminar: (codigoParaVolver: String?) -> Unit, alFallar: (String) -> Unit) {
+    fun borrarMiCuenta(alTerminar: (codigoParaVolver: String?) -> Unit, alFallar: (TextoUi) -> Unit) {
         lanzarSeguro {
             cuentaRepository.borrarMiCuenta().fold(
                 onSuccess = { codigo -> alTerminar(codigo) },
-                onFailure = { alFallar("No se pudo borrar la cuenta. Comprueba la conexión e inténtalo de nuevo.") }
+                onFailure = { alFallar(textoUi(R.string.ajustes_error_borrar_cuenta)) }
             )
         }
     }
 
     /** (Administradores) quita la cuenta vinculada a un cuidador; el cuidador sigue en la familia. */
-    fun desvincularCuenta(caregiverId: CaregiverId, alFallar: (String) -> Unit) {
+    fun desvincularCuenta(caregiverId: CaregiverId, alFallar: (TextoUi) -> Unit) {
         lanzarSeguro {
             cuentaRepository.desvincularCuenta(caregiverId).fold(
                 onSuccess = { cargar() },
-                onFailure = { alFallar("No se pudo desvincular la cuenta. Inténtalo de nuevo.") }
+                onFailure = { alFallar(textoUi(R.string.ajustes_error_desvincular)) }
             )
         }
     }
