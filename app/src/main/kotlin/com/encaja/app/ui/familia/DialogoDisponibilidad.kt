@@ -34,7 +34,7 @@ import com.encaja.app.ui.theme.CampoTextoHoja
 import com.encaja.app.ui.theme.FilaConInterruptorHoja
 import com.encaja.app.ui.theme.IconoEnCirculoHoja
 import com.encaja.app.ui.theme.NotaSeccionHoja
-import com.encaja.app.ui.theme.SelectorDiasSemanaHoja
+import com.encaja.app.ui.theme.letraDeDiaHoja
 import com.encaja.app.ui.theme.SeparadorHoja
 import com.encaja.app.ui.theme.TarjetaSeccionHoja
 import com.encaja.app.ui.theme.TituloSeccionHoja
@@ -546,9 +546,8 @@ fun DialogoDisponibilidad(
                                 color = tintaSuaveHoja
                             )
                             Spacer(Modifier.height(8.dp))
-                            SelectorDiasSemanaHoja(
-                                seleccionados = DayOfWeek.values().filter { estadoLinea(it) == EstadoLineaSemanal.SOLIDO }.toSet(),
-                                atenuados = DayOfWeek.values().filter { estadoLinea(it) == EstadoLineaSemanal.ATENUADO }.toSet(),
+                            LineaSemanalRepetir(
+                                estados = DayOfWeek.values().associateWith { estadoLinea(it) },
                                 onAlternar = { dia -> alternarDiaSemana(dia) }
                             )
                             Spacer(Modifier.height(10.dp))
@@ -878,3 +877,59 @@ private fun FilaDetalle(valor: String, onCambiar: (String) -> Unit) {
     }
 }
 
+
+/**
+ * La línea L-D de «Repetir»: un círculo por día de la semana. Sólido = todas sus fechas hasta
+ * el vencimiento están marcadas; atenuado = falta alguna; sin color = ninguna. Debajo se
+ * escribe en texto qué días están activos, para que se vea aunque el color no destaque.
+ */
+@Composable
+private fun LineaSemanalRepetir(estados: Map<DayOfWeek, EstadoLineaSemanal>, onAlternar: (DayOfWeek) -> Unit) {
+    Column {
+        Row(modifier = Modifier.fillMaxWidth()) {
+            DayOfWeek.values().forEach { dia ->
+                val estado = estados[dia] ?: EstadoLineaSemanal.SIN_COLOR
+                val solido = estado == EstadoLineaSemanal.SOLIDO
+                val atenuado = estado == EstadoLineaSemanal.ATENUADO
+                Box(modifier = Modifier.weight(1f).padding(2.dp), contentAlignment = Alignment.Center) {
+                    Box(
+                        modifier = Modifier
+                            .size(34.dp)
+                            .clip(CircleShape)
+                            .background(
+                                when {
+                                    solido -> indigoHoja
+                                    atenuado -> indigoHoja.copy(alpha = 0.35f)
+                                    else -> Color.Transparent
+                                }
+                            )
+                            .border(
+                                1.dp,
+                                if (solido || atenuado) indigoHoja else tintaSuaveHoja.copy(alpha = 0.35f),
+                                CircleShape
+                            )
+                            .clickable { onAlternar(dia) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            letraDeDiaHoja(dia),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = if (solido || atenuado) FontWeight.ExtraBold else FontWeight.Medium,
+                            color = if (solido) MaterialTheme.colorScheme.onPrimary else tintaHoja
+                        )
+                    }
+                }
+            }
+        }
+        val activos = DayOfWeek.values().filter { (estados[it] ?: EstadoLineaSemanal.SIN_COLOR) != EstadoLineaSemanal.SIN_COLOR }
+        if (activos.isNotEmpty()) {
+            Text(
+                "Cada semana: " + activos.joinToString(", ") { dia ->
+                    letraDeDiaHoja(dia) + if (estados[dia] == EstadoLineaSemanal.ATENUADO) " (parcial)" else ""
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = tintaSuaveHoja
+            )
+        }
+    }
+}

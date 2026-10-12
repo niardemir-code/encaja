@@ -109,6 +109,8 @@ fun FamiliaScreen(viewModel: FamiliaViewModel = hiltViewModel()) {
     // no perder la semana/día elegido al cambiar de pestaña; a cambio, hay que recargar
     // al reentrar para reflejar cambios hechos desde otras pantallas.
     LaunchedEffect(Unit) { viewModel.recargar() }
+    // La posición del scroll vive aquí, por encima de todo lo que cambia con la selección.
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
 
     Box(modifier = Modifier.fillMaxSize().background(FONDO_PANTALLA)) {
         when (val estadoActual = pantalla) {
@@ -128,13 +130,17 @@ fun FamiliaScreen(viewModel: FamiliaViewModel = hiltViewModel()) {
                 }
             }
 
-            is FamiliaPantallaEstado.ConDatos -> ContenidoFamilia(estadoActual.estado, viewModel)
+            is FamiliaPantallaEstado.ConDatos -> ContenidoFamilia(estadoActual.estado, viewModel, listState)
         }
     }
 }
 
 @Composable
-private fun ContenidoFamilia(estado: FamiliaUiState, viewModel: FamiliaViewModel) {
+private fun ContenidoFamilia(
+    estado: FamiliaUiState,
+    viewModel: FamiliaViewModel,
+    listState: androidx.compose.foundation.lazy.LazyListState
+) {
     val iniciales = remember(estado.cuidadores) {
         calcularInicialesCuidadores(estado.cuidadores.map { it.caregiver })
     }
@@ -264,17 +270,11 @@ private fun ContenidoFamilia(estado: FamiliaUiState, viewModel: FamiliaViewModel
             modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 12.dp)
         )
 
-        if (seleccion.isNotEmpty()) {
-            BarraSeleccion(
-                cantidad = seleccion.size,
-                onBorrar = { confirmandoBorrado = true },
-                onCancelar = { seleccion = emptySet() }
-            )
-        }
-
+        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
         LazyColumn(
+            state = listState,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 2.dp, bottom = 16.dp)
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 2.dp, bottom = 80.dp)
         ) {
             item {
                 Tarjeta {
@@ -337,6 +337,17 @@ private fun ContenidoFamilia(estado: FamiliaUiState, viewModel: FamiliaViewModel
                         }
                     }
                 )
+        }
+            // La barra flota sobre la lista (no la desplaza), así el scroll no se mueve.
+            if (seleccion.isNotEmpty()) {
+                Box(modifier = Modifier.align(Alignment.BottomCenter)) {
+                    BarraSeleccion(
+                        cantidad = seleccion.size,
+                        onBorrar = { confirmandoBorrado = true },
+                        onCancelar = { seleccion = emptySet() }
+                    )
+                }
+            }
         }
     }
 }
