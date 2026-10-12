@@ -319,7 +319,7 @@ fun DialogoDisponibilidad(
             // ── Actividad de este día ────────────────────────────────────────────
             // Solo cuando no se está editando: al editar se va directo a los horarios.
             if (bloquesDelDia.isNotEmpty() && bloqueEnEdicion == null) {
-                TarjetaSeccion {
+                TarjetaSeccionHoja {
                     Text(
                         if (bloquesDelDia.size == 1) "Actividad de este día" else "Actividades de este día (toca una para editarla)",
                         style = MaterialTheme.typography.bodyMedium,
