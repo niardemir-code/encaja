@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -28,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.encaja.app.R
+import com.encaja.app.ui.common.resolver
 import kotlinx.coroutines.launch
 
 // NOTA: depende de Jetpack Compose (Material 3), no compilado en este entorno.
@@ -74,7 +76,7 @@ fun LoginScreen(
             // Logo + nombre
             Image(
                 painter = painterResource(R.drawable.logo_encaja),
-                contentDescription = "Encaja",
+                contentDescription = stringResource(R.string.app_name),
                 modifier = Modifier.height(80.dp).aspectRatio(640f / 576f)
             )
             Spacer(Modifier.height(6.dp))
@@ -85,7 +87,7 @@ fun LoginScreen(
                 fontWeight = FontWeight.ExtraBold
             )
             Text(
-                "Organiza la vida familiar de forma sencilla",
+                stringResource(R.string.login_lema),
                 color = colores.onBackground.copy(alpha = 0.7f),
                 fontSize = 14.sp,
                 textAlign = TextAlign.Center
@@ -102,14 +104,13 @@ fun LoginScreen(
             ) {
                 Column(Modifier.padding(16.dp)) {
                     Text(
-                        if (modoRegistro) "Crea tu cuenta" else "Te damos la bienvenida",
+                        stringResource(if (modoRegistro) R.string.login_titulo_registro else R.string.login_titulo_entrar),
                         color = colores.onSurface,
                         fontSize = 20.sp,
                         fontWeight = FontWeight.ExtraBold
                     )
                     Text(
-                        if (modoRegistro) "Solo necesitas un correo y una contraseña."
-                        else "Inicia sesión para ver tu semana.",
+                        stringResource(if (modoRegistro) R.string.login_sub_registro else R.string.login_sub_entrar),
                         color = colores.onSurface.copy(alpha = 0.65f),
                         fontSize = 13.sp
                     )
@@ -118,7 +119,7 @@ fun LoginScreen(
                     OutlinedTextField(
                         value = email,
                         onValueChange = { email = it },
-                        label = { Text("Correo electrónico") },
+                        label = { Text(stringResource(R.string.login_correo)) },
                         leadingIcon = { Icon(Icons.Default.Mail, contentDescription = null) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                         singleLine = true,
@@ -130,13 +131,13 @@ fun LoginScreen(
                     OutlinedTextField(
                         value = password,
                         onValueChange = { password = it },
-                        label = { Text("Contraseña") },
+                        label = { Text(stringResource(R.string.login_password)) },
                         leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
                         trailingIcon = {
                             IconButton(onClick = { verPassword = !verPassword }) {
                                 Icon(
                                     if (verPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                    contentDescription = if (verPassword) "Ocultar contraseña" else "Mostrar contraseña"
+                                    contentDescription = stringResource(if (verPassword) R.string.login_ocultar_password else R.string.login_mostrar_password)
                                 )
                             }
                         },
@@ -149,7 +150,7 @@ fun LoginScreen(
 
                     if (uiState.error != null) {
                         Spacer(Modifier.height(10.dp))
-                        Text(uiState.error!!, color = colores.error, fontSize = 13.sp)
+                        Text(uiState.error!!.resolver(), color = colores.error, fontSize = 13.sp)
                     }
                     Spacer(Modifier.height(12.dp))
 
@@ -169,7 +170,7 @@ fun LoginScreen(
                             CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
                         } else {
                             Text(
-                                if (modoRegistro) "Crear cuenta" else "Entrar",
+                                stringResource(if (modoRegistro) R.string.login_crear_cuenta else R.string.login_entrar),
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 16.sp
                             )
@@ -180,7 +181,8 @@ fun LoginScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         HorizontalDivider(Modifier.weight(1f))
                         Text(
-                            "  o  ",
+                            stringResource(R.string.login_o),
+                            modifier = Modifier.padding(horizontal = 10.dp),
                             color = colores.onSurface.copy(alpha = 0.55f),
                             fontSize = 13.sp
                         )
@@ -198,7 +200,7 @@ fun LoginScreen(
                         shape = RoundedCornerShape(16.dp),
                         modifier = Modifier.fillMaxWidth().height(48.dp)
                     ) {
-                        Text("Continuar con Google", fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.login_google), fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -206,7 +208,7 @@ fun LoginScreen(
             Spacer(Modifier.height(4.dp))
             TextButton(onClick = { modoRegistro = !modoRegistro }) {
                 Text(
-                    if (modoRegistro) "¿Ya tienes cuenta? Inicia sesión" else "¿No tienes cuenta? Regístrate",
+                    stringResource(if (modoRegistro) R.string.login_cambiar_a_entrar else R.string.login_cambiar_a_registro),
                     fontWeight = FontWeight.Bold
                 )
             }

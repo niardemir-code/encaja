@@ -25,9 +25,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.encaja.app.R
 import com.encaja.app.ui.theme.BotonPildoraBordeHoja
 import com.encaja.app.ui.theme.BotonPildoraHoja
 import com.encaja.app.ui.theme.CabeceraPantalla
@@ -42,7 +44,7 @@ import com.encaja.app.ui.theme.tintaSuaveHoja
 fun ContactoScreen() {
     val contexto = LocalContext.current
     val portapapeles = LocalClipboardManager.current
-    var mensaje by remember { mutableStateOf<String?>(null) }
+    var mensaje by remember { mutableStateOf<Int?>(null) }
 
     FondoPantalla {
         Column(
@@ -53,13 +55,13 @@ fun ContactoScreen() {
                 .padding(bottom = 32.dp)
         ) {
             CabeceraPantalla(
-                "Contacto",
-                "¿Tienes una duda, has encontrado un fallo o quieres proponer una mejora? Escríbenos."
+                stringResource(R.string.contacto_titulo),
+                stringResource(R.string.contacto_subtitulo)
             )
 
             TarjetaFilaHoja {
                 Column(Modifier.weight(1f)) {
-                    Text("Correo del desarrollador", style = MaterialTheme.typography.labelMedium, color = tintaSuaveHoja)
+                    Text(stringResource(R.string.contacto_correo_desarrollador), style = MaterialTheme.typography.labelMedium, color = tintaSuaveHoja)
                     Text(
                         DatosLegales.EMAIL_CONTACTO,
                         style = MaterialTheme.typography.titleMedium,
@@ -71,27 +73,27 @@ fun ContactoScreen() {
             Spacer(Modifier.height(16.dp))
 
             BotonPildoraHoja(
-                "Escribir un correo",
+                stringResource(R.string.contacto_escribir),
                 onClick = {
                     mensaje = if (abrirCorreo(contexto)) null
-                    else "No hay ninguna app de correo en este móvil. Copia la dirección y escríbenos desde donde prefieras."
+                    else R.string.contacto_sin_app_correo
                 },
                 icono = Icons.Default.Mail
             )
             Spacer(Modifier.height(10.dp))
-            BotonPildoraBordeHoja("Copiar dirección", onClick = {
+            BotonPildoraBordeHoja(stringResource(R.string.contacto_copiar), onClick = {
                 portapapeles.setText(AnnotatedString(DatosLegales.EMAIL_CONTACTO))
-                mensaje = "Dirección copiada."
+                mensaje = R.string.contacto_copiada
             })
 
             mensaje?.let {
                 Spacer(Modifier.height(12.dp))
-                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                Text(stringResource(it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
             }
 
             Spacer(Modifier.height(20.dp))
             Text(
-                "Al escribir desde la app, se añade al mensaje la versión de Encaja y de Android para ayudarnos a entender el problema. Puedes borrarlo antes de enviar.",
+                stringResource(R.string.contacto_nota),
                 style = MaterialTheme.typography.bodySmall,
                 color = tintaSuaveHoja
             )
@@ -102,11 +104,11 @@ fun ContactoScreen() {
 /** Abre la app de correo con un mensaje nuevo para el desarrollador. Devuelve false si no hay ninguna. */
 private fun abrirCorreo(contexto: Context): Boolean {
     val version = versionDeLaApp(contexto)
-    val cuerpo = "\n\n—\nVersión de Encaja: $version\nAndroid: ${Build.VERSION.RELEASE} (${Build.MODEL})"
+    val cuerpo = "\n\n—\n${contexto.getString(R.string.contacto_version, version)}\nAndroid: ${Build.VERSION.RELEASE} (${Build.MODEL})"
     val intent = Intent(Intent.ACTION_SENDTO).apply {
         data = Uri.parse("mailto:")
         putExtra(Intent.EXTRA_EMAIL, arrayOf(DatosLegales.EMAIL_CONTACTO))
-        putExtra(Intent.EXTRA_SUBJECT, "Encaja: consulta")
+        putExtra(Intent.EXTRA_SUBJECT, contexto.getString(R.string.contacto_asunto))
         putExtra(Intent.EXTRA_TEXT, cuerpo)
     }
     return try {
