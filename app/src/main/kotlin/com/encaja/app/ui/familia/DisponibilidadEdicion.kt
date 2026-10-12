@@ -115,53 +115,34 @@ fun List<AvailabilityBlock>.sinRepetirEntrePersonas(): List<AvailabilityBlock> {
     return resultado
 }
 
-/**
- * Las fechas de [dia] (lunes, martes...) desde [desde] hasta [hasta], ambas incluidas. Con
- * [universo] solo las que estén en él (p.ej. los días que ya tienen la categoría apuntada).
- */
-fun fechasDelDiaSemana(
-    desde: LocalDate,
-    hasta: LocalDate,
-    dia: DayOfWeek,
-    universo: Set<LocalDate>? = null
-): List<LocalDate> {
-    val todas = generateSequence(desde.with(TemporalAdjusters.nextOrSame(dia))) { it.plusWeeks(1) }
+/** Las fechas de [dia] (lunes, martes...) desde [desde] hasta [hasta], ambas incluidas. */
+fun fechasDelDiaSemana(desde: LocalDate, hasta: LocalDate, dia: DayOfWeek): List<LocalDate> =
+    generateSequence(desde.with(TemporalAdjusters.nextOrSame(dia))) { it.plusWeeks(1) }
         .takeWhile { !it.isAfter(hasta) }
         .toList()
-    return if (universo == null) todas else todas.filter { it in universo }
-}
+
+/** Cómo se pinta el círculo de un día de la semana en la «línea semanal» de Repetir. */
+enum class EstadoLineaSemanal { SIN_COLOR, SOLIDO, ATENUADO }
 
 /**
- * Los días de la semana (círculos L-D) «llenos»: aquellos cuyas fechas, desde [desde] hasta
- * [hasta], están TODAS en [marcadas]. Sin [universo] se piden al menos dos fechas, para que
- * cuente como repetición semanal y no como un día suelto; con [universo] (modo borrar: solo
- * cuentan los días que existen) basta una, y un día de la semana sin fechas no se enciende.
+ * Estado del círculo de [dia]. La línea semanal solo se activa tocándola ([activa]): si no
+ * está activa nunca lleva color, por mucho que se marquen días a mano en el calendario.
+ * Activa: sólido si están marcadas TODAS las fechas de ese día entre [desde] y [hasta]
+ * (la fecha de vencimiento), atenuado si falta alguna, y sin color si no queda ninguna.
  */
-fun diasSemanaCompletos(
+fun estadoDiaSemana(
+    dia: DayOfWeek,
+    activa: Boolean,
     desde: LocalDate,
     hasta: LocalDate,
-    marcadas: Set<LocalDate>,
-    universo: Set<LocalDate>? = null
-): Set<DayOfWeek> =
-    DayOfWeek.values().filter { dia ->
-        val fechas = fechasDelDiaSemana(desde, hasta, dia, universo)
-        fechas.size >= (if (universo == null) 2 else 1) && fechas.all { it in marcadas }
-    }.toSet()
-
-/**
- * Los días de la semana «a medias»: tienen alguna fecha marcada pero no todas. Sin
- * [universo] no cuenta el propio [desde] (el día que se está editando), para que un toque
- * en el círculo no lo quite sin querer. Un toque en un círculo a medias quita lo marcado.
- */
-fun diasSemanaParciales(
-    desde: LocalDate,
-    hasta: LocalDate,
-    marcadas: Set<LocalDate>,
-    universo: Set<LocalDate>? = null
-): Set<DayOfWeek> {
-    val completos = diasSemanaCompletos(desde, hasta, marcadas, universo)
-    return DayOfWeek.values().filter { dia ->
-        dia !in completos && fechasDelDiaSemana(desde, hasta, dia, universo)
-            .any { (universo != null || it != desde) && it in marcadas }
-    }.toSet()
+    marcadas: Set<LocalDate>
+): EstadoLineaSemanal {
+    if (!activa) return EstadoLineaSemanal.SIN_COLOR
+    val fechas = fechasDelDiaSemana(desde, hasta, dia)
+    val marcadasDelDia = fechas.count { it in marcadas }
+    return when {
+        fechas.isEmpty() || marcadasDelDia == 0 -> EstadoLineaSemanal.SIN_COLOR
+        marcadasDelDia == fechas.size -> EstadoLineaSemanal.SOLIDO
+        else -> EstadoLineaSemanal.ATENUADO
+    }
 }

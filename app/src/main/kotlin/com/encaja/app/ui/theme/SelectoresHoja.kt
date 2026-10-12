@@ -90,9 +90,7 @@ fun CalendarioMultipleHoja(
     seleccionadas: Set<LocalDate>,
     onAlternar: (LocalDate) -> Unit,
     /** Días que llevan un puntito (p.ej. los que ya tienen algo apuntado), estén o no marcados. */
-    conPunto: Set<LocalDate> = emptySet(),
-    colorSeleccion: Color = acentoHoja,
-    tintaSeleccion: Color = onAcentoHoja
+    conPunto: Set<LocalDate> = emptySet()
 ) {
     var mes by remember { mutableStateOf(mesInicial) }
     val hoy = LocalDate.now()
@@ -140,7 +138,7 @@ fun CalendarioMultipleHoja(
                             modifier = Modifier
                                 .size(38.dp)
                                 .clip(CircleShape)
-                                .background(if (marcado) colorSeleccion else Color.Transparent)
+                                .background(if (marcado) acentoHoja else Color.Transparent)
                                 .border(
                                     width = if (dia == hoy) 2.dp else 0.dp,
                                     color = if (dia == hoy) acentoHoja else Color.Transparent,
@@ -153,7 +151,7 @@ fun CalendarioMultipleHoja(
                                 dia.dayOfMonth.toString(),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = if (marcado) FontWeight.ExtraBold else FontWeight.Medium,
-                                color = if (marcado) tintaSeleccion else tintaHoja
+                                color = if (marcado) onAcentoHoja else tintaHoja
                             )
                             if (dia in conPunto) {
                                 Box(
@@ -162,7 +160,7 @@ fun CalendarioMultipleHoja(
                                         .padding(bottom = 4.dp)
                                         .size(5.dp)
                                         .clip(CircleShape)
-                                        .background(if (marcado) tintaSeleccion else acentoHoja)
+                                        .background(if (marcado) onAcentoHoja else acentoHoja)
                                 )
                             }
                         }
@@ -201,13 +199,13 @@ fun fechasParaDiaSemanaHoja(desde: LocalDate, dia: DayOfWeek, hasta: LocalDate):
 fun SelectorDiasSemanaHoja(
     seleccionados: Set<DayOfWeek>,
     onAlternar: (DayOfWeek) -> Unit,
-    /** Días «a medias» (algunas fechas marcadas, no todas): círculo con borde y fondo suave. */
-    parciales: Set<DayOfWeek> = emptySet()
+    /** Días atenuados (activos, pero con alguna fecha quitada): mismo color, más suave. */
+    atenuados: Set<DayOfWeek> = emptySet()
 ) {
     Row(modifier = Modifier.fillMaxWidth()) {
         DayOfWeek.values().forEach { dia ->
             val marcado = dia in seleccionados
-            val aMedias = !marcado && dia in parciales
+            val atenuado = !marcado && dia in atenuados
             Box(modifier = Modifier.weight(1f).padding(2.dp), contentAlignment = Alignment.Center) {
                 Box(
                     modifier = Modifier
@@ -216,13 +214,13 @@ fun SelectorDiasSemanaHoja(
                         .background(
                             when {
                                 marcado -> acentoHoja
-                                aMedias -> acentoHoja.copy(alpha = 0.35f)
+                                atenuado -> acentoHoja.copy(alpha = 0.35f)
                                 else -> Color.Transparent
                             }
                         )
                         .border(
-                            width = if (aMedias) 2.dp else 1.dp,
-                            color = if (marcado || aMedias) acentoHoja else tintaSuaveHoja.copy(alpha = 0.35f),
+                            width = 1.dp,
+                            color = if (marcado || atenuado) acentoHoja else tintaSuaveHoja.copy(alpha = 0.35f),
                             shape = CircleShape
                         )
                         .clickable { onAlternar(dia) },
@@ -231,7 +229,7 @@ fun SelectorDiasSemanaHoja(
                     Text(
                         letraDeDiaHoja(dia),
                         style = MaterialTheme.typography.labelMedium,
-                        fontWeight = if (marcado || aMedias) FontWeight.ExtraBold else FontWeight.Medium,
+                        fontWeight = if (marcado || atenuado) FontWeight.ExtraBold else FontWeight.Medium,
                         color = if (marcado) onAcentoHoja else tintaHoja
                     )
                 }
