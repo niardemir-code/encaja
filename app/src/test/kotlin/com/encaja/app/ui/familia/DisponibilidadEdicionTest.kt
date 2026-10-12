@@ -184,4 +184,16 @@ class DisponibilidadEdicionTest {
         val estado = estadoDiaSemana(DayOfWeek.TUESDAY, activa = true, desde = lunes, hasta = lunes, marcadas = setOf(lunes))
         assertEquals(EstadoLineaSemanal.SIN_COLOR, estado)
     }
+
+    @Test
+    fun `completar a mano todas las fechas de un dia de la semana lo reconoce, y un solo dia no`() {
+        assertEquals(setOf(DayOfWeek.WEDNESDAY), diasSemanaConTodasLasFechas(lunes, hastaVencimiento, miercoles.toSet()))
+        assertTrue(diasSemanaConTodasLasFechas(lunes, hastaVencimiento, setOf(miercoles[0])).isEmpty())
+    }
+
+    @Test
+    fun `con un solo lunes dentro del vencimiento no se considera repeticion semanal`() {
+        assertTrue(diasSemanaConTodasLasFechas(lunes, lunes.plusDays(3), setOf(lunes)).isEmpty())
+    }
 }
+

@@ -228,12 +228,16 @@ fun DialogoDisponibilidad(
         }
     }
 
-    // Marcar o desmarcar un día en el calendario solo cambia ese día; si deja sin ninguna fecha
-    // a un día de la semana activo, la línea lo desactiva (nunca colorea uno nuevo).
+    // Marcar o desmarcar un día en el calendario solo cambia ese día. La línea L-D no se colorea
+    // por marcar días sueltos; solo si se completan a mano TODAS las fechas de un día de la
+    // semana hasta el vencimiento (entonces queda sólido), y si deja sin ninguna fecha a un día
+    // activo, se apaga. Quitar uno de un día sólido lo deja atenuado.
     fun alternarDiaCalendario(dia: LocalDate) {
         val nuevas = if (dia in fechasAplicar) fechasAplicar - dia else fechasAplicar + dia
         fechasAplicar = nuevas
-        lineaActiva = lineaActiva.filter { d -> fechasDelDiaSemana(fecha, hastaRepetir, d).any { it in nuevas } }.toSet()
+        lineaActiva = (lineaActiva + diasSemanaConTodasLasFechas(fecha, hastaRepetir, nuevas))
+            .filter { d -> fechasDelDiaSemana(fecha, hastaRepetir, d).any { it in nuevas } }
+            .toSet()
     }
 
     // Al cambiar el vencimiento, los días de la semana activos ganan o pierden solo las
@@ -258,7 +262,10 @@ fun DialogoDisponibilidad(
         }
         val (ini, fin) =
             if (porHoras) inicioAGuardar to finAGuardar else AvailabilityBlock.INICIO_DIA to AvailabilityBlock.FIN_DIA
-        onGuardar(cat, guardarFechas, borrarFechas, ini, fin, horasEtiqueta.trim().ifBlank { null }, bloqueEnEdicion)
+        // Si se desmarca el día que se edita, se queda como estaba: solo se sustituye la original
+        // cuando este día está entre los que se guardan.
+        val original = bloqueEnEdicion?.takeIf { !repetirActivo || fecha in guardarFechas }
+        onGuardar(cat, guardarFechas, borrarFechas, ini, fin, horasEtiqueta.trim().ifBlank { null }, original)
         bloqueEnEdicion = null
         onCerrar()
     }

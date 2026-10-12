@@ -146,3 +146,15 @@ fun estadoDiaSemana(
         else -> EstadoLineaSemanal.ATENUADO
     }
 }
+
+/**
+ * Los días de la semana (al menos dos fechas) cuyas fechas, entre [desde] y [hasta] (el
+ * vencimiento), están TODAS en [marcadas]. Sirve para que la línea L-D se encienda también
+ * cuando se completan a mano en el calendario todas las fechas de un día de la semana.
+ */
+fun diasSemanaConTodasLasFechas(desde: LocalDate, hasta: LocalDate, marcadas: Set<LocalDate>): Set<DayOfWeek> =
+    DayOfWeek.values().filter { dia ->
+        val fechas = fechasDelDiaSemana(desde, hasta, dia)
+        fechas.size >= 2 && fechas.all { it in marcadas }
+    }.toSet()
+
