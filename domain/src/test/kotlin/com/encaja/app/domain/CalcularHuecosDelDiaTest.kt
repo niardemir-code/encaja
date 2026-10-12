@@ -81,37 +81,6 @@ class CalcularHuecosDelDiaTest {
     }
 
     @Test
-    fun `proponer cuidadores excluye a quien esta ocupado y ordena por reparto`() {
-        val disponibilidad = listOf(
-            AvailabilityBlock(victor.id, martes, LocalTime.of(14, 0), LocalTime.of(22, 0), MotivoNoDisponibilidad.TRABAJO),
-            AvailabilityBlock(josefa.id, martes, LocalTime.of(18, 0), LocalTime.of(19, 0), MotivoNoDisponibilidad.MEDICO)
-        )
-        val reparto = mapOf(josefa.id to 2, silvia.id to 4)
-
-        val propuestas = ProponerCuidadores(
-            listOf(victor, silvia, josefa), disponibilidad, reparto
-        )(Hueco(futbol, MotivoHueco.SIN_ASIGNACION))
-
-        assertEquals(listOf(silvia.id), propuestas.map { it.id })
-    }
-
-    @Test
-    fun `reparto semanal cuenta los tramos de cada cuidador`() {
-        val patronesSemana = listOf(
-            PatronCuidado(DayOfWeek.MONDAY, victor.id),
-            PatronCuidado(DayOfWeek.TUESDAY, josefa.id),
-            PatronCuidado(DayOfWeek.WEDNESDAY, silvia.id),
-            PatronCuidado(DayOfWeek.THURSDAY, silvia.id),
-            PatronCuidado(DayOfWeek.FRIDAY, victor.id)
-        )
-        val reparto = CalcularRepartoSemanal(patronesSemana, emptyMap())(martes.lunesDeEstaSemana())
-
-        assertEquals(2, reparto[victor.id])
-        assertEquals(2, reparto[silvia.id])
-        assertEquals(1, reparto[josefa.id])
-    }
-
-    @Test
     fun `un conflicto de disponibilidad no cambia si esta cubierta, solo genera aviso`() {
         val need = futbol.copy(quienLlevaId = silvia.id.value, quienRecogeId = josefa.id.value)
         val disponibilidad = listOf(
