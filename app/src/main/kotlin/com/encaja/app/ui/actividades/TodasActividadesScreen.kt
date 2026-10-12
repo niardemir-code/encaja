@@ -7,6 +7,7 @@ package com.encaja.app.ui.actividades
 // diálogo de la Guía (p.ej. porque no pertenecen a ningún grupo de repetición). Un buscador
 // por texto ayuda a marcar rápido todas las de un mismo nombre (p.ej. "Hello English").
 
+import com.encaja.app.ui.common.localeApp
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -53,10 +54,8 @@ import com.encaja.app.ui.theme.acentoHoja
 import com.encaja.app.ui.theme.tintaHoja
 import com.encaja.app.ui.theme.tintaSuaveHoja
 import java.time.format.DateTimeFormatter
-import java.util.Locale
 
-private val ES = Locale("es")
-private val FORMATO_FECHA = DateTimeFormatter.ofPattern("d MMM yyyy", ES)
+private fun formatoFecha(): DateTimeFormatter = DateTimeFormatter.ofPattern("d MMM yyyy", localeApp())
 
 @Composable
 fun TodasActividadesScreen(viewModel: TodasActividadesViewModel = hiltViewModel()) {
@@ -213,7 +212,7 @@ private fun FilaActividad(actividad: CoverageNeed, marcada: Boolean, onMarcar: (
                 color = tintaHoja
             )
             Text(
-                "${actividad.fecha.format(FORMATO_FECHA)} · ${formatearHora(actividad.horaInicio)}–" +
+                "${actividad.fecha.format(formatoFecha())} · ${formatearHora(actividad.horaInicio)}–" +
                     formatearHora(actividad.horaFin),
                 style = MaterialTheme.typography.bodySmall,
                 color = tintaSuaveHoja

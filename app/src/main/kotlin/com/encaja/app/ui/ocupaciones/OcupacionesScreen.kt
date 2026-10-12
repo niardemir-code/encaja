@@ -8,6 +8,7 @@ package com.encaja.app.ui.ocupaciones
 // una casilla por ocupación y un botón para borrar de golpe la selección. Mismo estilo
 // que "Todas las actividades".
 
+import com.encaja.app.ui.common.localeApp
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -50,10 +51,8 @@ import com.encaja.app.ui.theme.casillaHoja
 import com.encaja.app.ui.theme.tintaHoja
 import com.encaja.app.ui.theme.tintaSuaveHoja
 import java.time.format.DateTimeFormatter
-import java.util.Locale
 
-private val ES = Locale("es")
-private val FORMATO_FECHA = DateTimeFormatter.ofPattern("EEE d MMM yyyy", ES)
+private fun formatoFecha(): DateTimeFormatter = DateTimeFormatter.ofPattern("EEE d MMM yyyy", localeApp())
 
 @Composable
 fun OcupacionesScreen(viewModel: OcupacionesViewModel = hiltViewModel()) {
@@ -260,7 +259,7 @@ private fun FilaOcupacion(ocupacion: Ocupacion, marcada: Boolean, onMarcar: (Boo
             )
             Text(
                 listOfNotNull(
-                    bloque.fecha.format(FORMATO_FECHA).replaceFirstChar { it.uppercase() },
+                    bloque.fecha.format(formatoFecha()).replaceFirstChar { it.uppercase() },
                     ocupacion.quien,
                     bloque.etiqueta?.takeIf { it.isNotBlank() }
                 ).joinToString(" · "),

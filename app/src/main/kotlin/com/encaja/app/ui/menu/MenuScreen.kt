@@ -11,6 +11,8 @@ package com.encaja.app.ui.menu
 // Cena (icono sol/luna + texto + lápiz de edición), todo dentro de un
 // único recuadro para que quede bien delimitado y alineado.
 
+import com.encaja.app.ui.common.nombreDiaCorto
+import com.encaja.app.ui.common.nombreMesCorto
 import com.encaja.app.ui.theme.SelectorFechaHoja
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -42,8 +44,6 @@ import com.encaja.app.domain.model.ComidaDelDia
 import com.encaja.app.ui.familia.fechaAMillisUtc
 import com.encaja.app.ui.familia.millisUtcAFecha
 import java.time.LocalDate
-import java.time.format.TextStyle
-import java.util.Locale
 
 private val paletaDias = listOf(
     Color(0xFFB5D4F4), // azul
@@ -244,10 +244,8 @@ private fun TarjetaDia(
 
 @Composable
 private fun PanelDelDia(fecha: LocalDate, color: Color) {
-    val nombreDia = fecha.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale("es"))
-        .replaceFirstChar { it.uppercase() }
-    val nombreMes = fecha.month.getDisplayName(TextStyle.SHORT, Locale("es"))
-        .replaceFirstChar { it.uppercase() }
+    val nombreDia = nombreDiaCorto(fecha.dayOfWeek)
+    val nombreMes = nombreMesCorto(fecha).replaceFirstChar { it.uppercase() }
 
     Column(
         modifier = Modifier

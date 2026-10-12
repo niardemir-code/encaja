@@ -94,12 +94,8 @@ import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.YearMonth
-import java.time.format.TextStyle
 import java.time.temporal.TemporalAdjusters
-import java.util.Locale
 import java.util.UUID
-
-private val ES = Locale("es")
 
 /**
  * [actividad] null = crear una nueva (con opción de repetición); si no, se edita esa

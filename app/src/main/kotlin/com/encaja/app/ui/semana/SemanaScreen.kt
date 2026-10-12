@@ -9,6 +9,11 @@ package com.encaja.app.ui.semana
 // sin familia, con datos. El botón de invitar vive en la barra superior
 // (EncajaApp.kt), no aquí.
 
+import com.encaja.app.ui.common.rangoSemana
+import com.encaja.app.ui.common.letraDia
+import com.encaja.app.ui.common.diaConNumero
+import com.encaja.app.ui.common.nombreDia
+import com.encaja.app.ui.common.localeApp
 import com.encaja.app.ui.theme.EstiloAccionAviso
 import com.encaja.app.ui.theme.AccionAvisoHoja
 import com.encaja.app.ui.theme.AvisoHoja
@@ -84,10 +89,6 @@ import kotlinx.coroutines.launch
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
-import java.time.format.TextStyle
-import java.util.Locale
-
-private val ES = Locale("es")
 
 /** Visita guiada de la primera vez en Semana. */
 private val PASOS_AYUDA_SEMANA = listOf(
@@ -463,7 +464,7 @@ private fun TarjetaSemana(
                     )
                     if (lunes != null) {
                         Text(
-                            textoRangoSemana(lunes),
+                            rangoSemana(lunes, separador = "–"),
                             style = MaterialTheme.typography.bodyMedium,
                             color = TINTA_SUAVE,
                             textAlign = TextAlign.Center,
@@ -493,20 +494,6 @@ private fun TarjetaSemana(
         )
     }
 }
-
-/** "21 – 27 de septiembre", o "28 sept – 4 oct" si la semana cambia de mes: corto para
- * que quepa en una línea entre los cuatro botones de la cabecera. */
-private fun textoRangoSemana(lunes: LocalDate): String {
-    val domingo = lunes.plusDays(6)
-    return if (lunes.month == domingo.month) {
-        "${lunes.dayOfMonth} – ${domingo.dayOfMonth} de ${domingo.month.getDisplayName(TextStyle.FULL, ES)}"
-    } else {
-        "${lunes.dayOfMonth} ${mesCorto(lunes)} – ${domingo.dayOfMonth} ${mesCorto(domingo)}"
-    }
-}
-
-private fun mesCorto(fecha: LocalDate): String =
-    fecha.month.getDisplayName(TextStyle.SHORT, ES).removeSuffix(".")
 
 /** Botón circular blanco con icono índigo, como los de la maqueta. Atenuado si no
  * está habilitado (p.ej. "ir a la semana actual" cuando ya se está en ella). */
@@ -657,7 +644,7 @@ private fun FilaDeDias(dias: List<DiaSemaforo>, onClickDia: (DiaSemaforo) -> Uni
             val esHoy = dia.fecha == hoy
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text = dia.fecha.dayOfWeek.getDisplayName(TextStyle.SHORT, ES).take(1).uppercase(),
+                    text = letraDia(dia.fecha.dayOfWeek),
                     style = MaterialTheme.typography.labelMedium,
                     color = TINTA_SUAVE
                 )
@@ -846,8 +833,7 @@ private fun tituloConNino(descripcion: String, nombreNino: String?): String =
 
 /** "Martes 29" en vez de la fecha ISO en bruto (2026-09-29). */
 private fun formatearFechaHueco(fecha: LocalDate): String {
-    val nombreDia = fecha.dayOfWeek.getDisplayName(TextStyle.FULL, ES).replaceFirstChar { it.uppercase() }
-    return "$nombreDia ${fecha.dayOfMonth}"
+    return diaConNumero(fecha)
 }
 
 
@@ -945,7 +931,7 @@ private fun textoAviso(aviso: AvisoConflicto): String {
         RolResponsable.LLEVA in aviso.roles -> "llevar"
         else -> "recoger"
     }
-    val dia = aviso.need.fecha.dayOfWeek.getDisplayName(TextStyle.FULL, ES)
+    val dia = nombreDia(aviso.need.fecha.dayOfWeek).lowercase(localeApp())
     val tarea = aviso.bloque.etiqueta ?: etiquetaMotivo(aviso.bloque.motivo)
     return "Ojo, ${aviso.caregiver.nombreCompleto} tiene asignado $accion a ${aviso.child.nombre} " +
         "el $dia en \"${aviso.need.descripcion}\", pero tiene asignada \"$tarea\" a esa hora."

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Idioma de origen: castellano. El nombre de la app cambia según el idioma. -->
+    <string name="app_name">Encaja</string>
+</resources>

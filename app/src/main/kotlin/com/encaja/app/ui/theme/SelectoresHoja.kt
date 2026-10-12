@@ -4,6 +4,9 @@ package com.encaja.app.ui.theme
 // Selectores de fecha, hora y días compartidos por los diálogos de disponibilidad (Familia)
 // y de actividades (Guía): antes cada uno tenía su copia idéntica.
 
+import com.encaja.app.ui.common.diaYMesCorto
+import com.encaja.app.ui.common.mesYAnio
+import com.encaja.app.ui.common.letraDia
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -42,11 +45,7 @@ import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.YearMonth
-import java.time.format.TextStyle
 import java.time.temporal.TemporalAdjusters
-import java.util.Locale
-
-private val ES = Locale("es")
 
 /** Caja "Desde / 09:00" con reloj a la derecha; al tocarla se abre el reloj de Material 3. */
 @Composable
@@ -77,8 +76,7 @@ fun CajaFechaHoja(titulo: String, fecha: LocalDate, modifier: Modifier = Modifie
     }
 }
 
-fun fechaCortaHoja(fecha: LocalDate): String =
-    "${fecha.dayOfMonth} ${fecha.month.getDisplayName(TextStyle.SHORT, ES).removeSuffix(".")}"
+fun fechaCortaHoja(fecha: LocalDate): String = diaYMesCorto(fecha)
 
 /**
  * Calendario de un mes (con flechas para cambiar de mes) en el que se marcan los días
@@ -100,7 +98,7 @@ fun CalendarioMultipleHoja(
             Icon(Icons.Default.ChevronLeft, contentDescription = "Mes anterior", tint = indigoHoja)
         }
         Text(
-            mes.month.getDisplayName(TextStyle.FULL, ES).replaceFirstChar { it.uppercase() } + " ${mes.year}",
+            mesYAnio(mes.atDay(1)),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.ExtraBold,
             color = tintaHoja,
@@ -172,16 +170,8 @@ fun CalendarioMultipleHoja(
     }
 }
 
-/** L M X J V S D (con X para el miércoles, para no repetir la M). */
-fun letraDeDiaHoja(dia: DayOfWeek): String = when (dia) {
-    DayOfWeek.MONDAY -> "L"
-    DayOfWeek.TUESDAY -> "M"
-    DayOfWeek.WEDNESDAY -> "X"
-    DayOfWeek.THURSDAY -> "J"
-    DayOfWeek.FRIDAY -> "V"
-    DayOfWeek.SATURDAY -> "S"
-    DayOfWeek.SUNDAY -> "D"
-}
+/** Una letra por día (L M X J V S D, o M T W T F S S en inglés). */
+fun letraDeDiaHoja(dia: DayOfWeek): String = letraDia(dia)
 
 /** [desde] y sus apariciones de [dia] hasta [hasta] (ambas incluidas; incluye [desde]
  * mismo si coincide con [dia]). */

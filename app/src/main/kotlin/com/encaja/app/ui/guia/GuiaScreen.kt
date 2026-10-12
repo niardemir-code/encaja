@@ -11,6 +11,8 @@ package com.encaja.app.ui.guia
 // se está viendo hoy), y debajo la lista "Actividades del día", una tarjeta por niño.
 // El botón "Ahora" (punto de disparo) vuelve a la hora actual (y al día de hoy).
 
+import com.encaja.app.ui.common.nombreDia
+import com.encaja.app.ui.common.diaYMes
 import com.encaja.app.ui.theme.SelectorFechaHoja
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -71,12 +73,7 @@ import kotlinx.coroutines.launch
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
-import java.time.format.DateTimeFormatter
-import java.time.format.TextStyle
-import java.util.Locale
 import kotlin.math.roundToInt
-
-private val ES = Locale("es")
 
 // La franja horaria que se representa en la guía: de 7:00 a 00:00 (el final del día).
 private val INICIO_FRANJA: LocalTime = LocalTime.of(7, 0)
@@ -461,8 +458,7 @@ private fun TarjetaDia(
     onAhora: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val formatter = DateTimeFormatter.ofPattern("d 'de' MMMM", ES)
-    val etiquetaDia = fecha.dayOfWeek.getDisplayName(TextStyle.FULL, ES).replaceFirstChar { it.uppercase() }
+    val etiquetaDia = nombreDia(fecha.dayOfWeek)
     var calendarioAbierto by remember { mutableStateOf(false) }
 
     Surface(
@@ -486,7 +482,7 @@ private fun TarjetaDia(
                         maxLines = 1
                     )
                     Text(
-                        fecha.format(formatter),
+                        diaYMes(fecha),
                         style = MaterialTheme.typography.bodySmall,
                         color = TINTA_SUAVE,
                         textAlign = TextAlign.Center,

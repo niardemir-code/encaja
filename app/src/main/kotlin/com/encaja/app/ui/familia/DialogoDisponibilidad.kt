@@ -21,6 +21,7 @@ package com.encaja.app.ui.familia
 //    guarda ni se borra hasta pulsar uno de los dos.
 // Las categorías se editan desde la tarjeta "Categorías" de la pantalla.
 
+import com.encaja.app.ui.common.diaConNumero
 import com.encaja.app.ui.theme.AccionAvisoHoja
 import com.encaja.app.ui.theme.AvisoHoja
 import com.encaja.app.ui.theme.BotonCuadradoHoja
@@ -97,15 +98,8 @@ import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.YearMonth
-import java.time.format.TextStyle
-import java.util.Locale
-
-private val ES = Locale("es")
 
 private fun textoDias(n: Int): String = if (n == 1) "1 día" else "$n días"
-
-private fun nombreDia(fecha: LocalDate): String =
-    fecha.dayOfWeek.getDisplayName(TextStyle.FULL, ES).replaceFirstChar { it.uppercase() } + " ${fecha.dayOfMonth}"
 
 /**
  * [titulo] es el nombre de la persona o de la unidad familiar. [caregiverIds] son las
@@ -309,7 +303,7 @@ fun DialogoDisponibilidad(
                     buildAnnotatedString {
                         append(titulo)
                         withStyle(SpanStyle(color = tintaSuaveHoja)) { append(" · ") }
-                        withStyle(SpanStyle(color = acentoHoja)) { append(nombreDia(fecha)) }
+                        withStyle(SpanStyle(color = acentoHoja)) { append(diaConNumero(fecha)) }
                     },
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.ExtraBold,

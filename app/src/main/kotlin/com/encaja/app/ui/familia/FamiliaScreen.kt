@@ -13,6 +13,8 @@ package com.encaja.app.ui.familia
 // Los colores del diseño están aquí como constantes para no tocar el tema
 // del resto de pantallas.
 
+import com.encaja.app.ui.common.rangoSemana
+import com.encaja.app.ui.common.letraDia
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Visibility
 import com.encaja.app.ui.theme.SelectorFechaHoja
@@ -69,8 +71,6 @@ import com.encaja.app.ui.theme.CampoTextoConIconoHoja
 import com.encaja.app.ui.theme.EstiloAccionAviso
 import com.encaja.app.ui.theme.LocalEncajaExtraColors
 import java.time.LocalDate
-import java.time.format.TextStyle
-import java.util.Locale
 
 // Paleta del diseño de la pantalla Familia. Se leen del tema activo (Cálido/Nocturno)
 // para que la pantalla cambie sola con el modo claro/oscuro del teléfono.
@@ -99,8 +99,6 @@ private val ALTO_CABECERA = 40.dp
 private val ALTO_CELDA = 46.dp
 private val ESPACIO_CELDAS = 4.dp
 private val PADDING_BLOQUE = 8.dp
-
-private val ES = Locale("es")
 
 @Composable
 fun FamiliaScreen(viewModel: FamiliaViewModel = hiltViewModel()) {
@@ -382,7 +380,7 @@ private fun CabeceraFamilia(
             ) {
                 BotonCircular(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Semana anterior", onSemanaAnterior)
                 Text(
-                    textoRangoSemana(lunes),
+                    rangoSemana(lunes),
                     modifier = Modifier.weight(1f).padding(horizontal = 6.dp),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
@@ -414,23 +412,6 @@ private fun CabeceraFamilia(
         )
     }
 }
-
-/** "21 - 27 de septiembre", o "28 sept - 4 oct" si la semana cambia de mes. */
-private fun textoRangoSemana(lunes: LocalDate): String {
-    val domingo = lunes.plusDays(6)
-    return if (lunes.month == domingo.month) {
-        "${lunes.dayOfMonth} - ${domingo.dayOfMonth} de ${domingo.month.getDisplayName(TextStyle.FULL, ES)}"
-    } else {
-        "${lunes.dayOfMonth} ${mesCorto(lunes)} - ${domingo.dayOfMonth} ${mesCorto(domingo)}"
-    }
-}
-
-private fun mesCorto(fecha: LocalDate): String =
-    fecha.month.getDisplayName(TextStyle.SHORT, ES).removeSuffix(".")
-
-/** Primera letra del día abreviado en español: L M M J V S D. */
-private fun letraDia(fecha: LocalDate): String =
-    fecha.dayOfWeek.getDisplayName(TextStyle.SHORT, ES).take(1).uppercase()
 
 /** Tarjeta blanca con esquinas redondeadas y sombra suave, base de todos los bloques. */
 @Composable
@@ -627,7 +608,7 @@ private fun CabeceraDia(fecha: LocalDate, esHoy: Boolean, modifier: Modifier = M
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text(letraDia(fecha), style = MaterialTheme.typography.labelSmall, color = if (esHoy) INDIGO else TINTA_SUAVE)
+        Text(letraDia(fecha.dayOfWeek), style = MaterialTheme.typography.labelSmall, color = if (esHoy) INDIGO else TINTA_SUAVE)
         Text(
             "${fecha.dayOfMonth}",
             style = MaterialTheme.typography.labelLarge,
