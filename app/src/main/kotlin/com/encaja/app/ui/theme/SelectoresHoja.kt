@@ -144,7 +144,7 @@ fun CalendarioMultipleHoja(mesInicial: YearMonth, seleccionadas: Set<LocalDate>,
                             Text(
                                 dia.dayOfMonth.toString(),
                                 style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = if (marcado) FontWeight.ExtraBold else FontWeight.Medium,
+                                fontWeight = if (marcado || aMedias) FontWeight.ExtraBold else FontWeight.Medium,
                                 color = if (marcado) onAcentoHoja else tintaHoja
                             )
                         }
@@ -180,24 +180,40 @@ fun fechasParaDiaSemanaHoja(desde: LocalDate, dia: DayOfWeek, hasta: LocalDate):
  * ocupación cada semana — además de, no en vez de, las fechas sueltas del calendario.
  */
 @Composable
-fun SelectorDiasSemanaHoja(seleccionados: Set<DayOfWeek>, onAlternar: (DayOfWeek) -> Unit) {
+fun SelectorDiasSemanaHoja(
+    seleccionados: Set<DayOfWeek>,
+    onAlternar: (DayOfWeek) -> Unit,
+    /** Días «a medias» (algunas fechas marcadas, no todas): círculo con borde y fondo suave. */
+    parciales: Set<DayOfWeek> = emptySet()
+) {
     Row(modifier = Modifier.fillMaxWidth()) {
         DayOfWeek.values().forEach { dia ->
             val marcado = dia in seleccionados
+            val aMedias = !marcado && dia in parciales
             Box(modifier = Modifier.weight(1f).padding(2.dp), contentAlignment = Alignment.Center) {
                 Box(
                     modifier = Modifier
                         .size(34.dp)
                         .clip(CircleShape)
-                        .background(if (marcado) acentoHoja else Color.Transparent)
-                        .border(width = 1.dp, color = if (marcado) acentoHoja else tintaSuaveHoja.copy(alpha = 0.35f), shape = CircleShape)
+                        .background(
+                            when {
+                                marcado -> acentoHoja
+                                aMedias -> acentoHoja.copy(alpha = 0.18f)
+                                else -> Color.Transparent
+                            }
+                        )
+                        .border(
+                            width = if (aMedias) 2.dp else 1.dp,
+                            color = if (marcado || aMedias) acentoHoja else tintaSuaveHoja.copy(alpha = 0.35f),
+                            shape = CircleShape
+                        )
                         .clickable { onAlternar(dia) },
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         letraDeDiaHoja(dia),
                         style = MaterialTheme.typography.labelMedium,
-                        fontWeight = if (marcado) FontWeight.ExtraBold else FontWeight.Medium,
+                        fontWeight = if (marcado || aMedias) FontWeight.ExtraBold else FontWeight.Medium,
                         color = if (marcado) onAcentoHoja else tintaHoja
                     )
                 }

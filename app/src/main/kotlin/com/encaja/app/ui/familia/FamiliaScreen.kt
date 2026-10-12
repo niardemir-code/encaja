@@ -207,16 +207,12 @@ private fun ContenidoFamilia(estado: FamiliaUiState, viewModel: FamiliaViewModel
                 onEliminar = { viewModel.eliminarBloqueDe(caregiverIds, it) },
                 turnos = estado.turnos,
                 categorias = estado.categorias,
-                onGuardarHoras = { ids, categoria, fechas, inicio, fin, duplicar, etiqueta, grupo ->
-                    viewModel.guardarHoras(ids, categoria, fechas, inicio, fin, duplicar, etiqueta, grupo)
-                },
-                buscarOcurrencias = { viewModel.ocurrenciasDeSerie(it, caregiverIds) },
-                onGuardarSerie = { ocurrencias, ids, categoria, inicio, fin, etiqueta, grupo ->
-                    viewModel.guardarSerie(ocurrencias, ids, categoria, inicio, fin, etiqueta, grupo)
+                buscarDeCategoria = { categoria -> viewModel.ocupacionesDeCategoria(caregiverIds, categoria) },
+                onGuardar = { categoria, aGuardar, aBorrar, inicio, fin, etiqueta, original ->
+                    viewModel.guardarOcupacion(caregiverIds, categoria, aGuardar, aBorrar, inicio, fin, etiqueta, original)
                 },
                 onCrearTurno = { nombre, inicio, fin, categoriaId -> viewModel.crearTurno(nombre, inicio, fin, categoriaId) },
                 onEliminarTurno = { viewModel.eliminarTurno(it) },
-                onGuardarBloques = { viewModel.guardarBloques(it) },
                 onGuardarCategoria = { viewModel.guardarCategoria(it) },
                 onCerrar = { celdaEnEdicion = null }
             )

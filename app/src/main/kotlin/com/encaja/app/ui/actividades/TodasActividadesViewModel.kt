@@ -83,14 +83,24 @@ class TodasActividadesViewModel @Inject constructor(
         }
     }
 
-    /** Borra de golpe todas las actividades cuyo id esté en [ids], sean del niño y de la
-     * serie que sean. */
+    /**
+     * Borra de golpe todas las actividades cuyo id esté en [ids], sean del niño y de la
+     * serie que sean. La lista se actualiza al momento y se vuelve a leer al terminar.
+     */
     fun eliminarSeleccionadas(ids: Set<CoverageNeedId>) {
         val familyId = familyIdActual ?: return
         if (ids.isEmpty()) return
+        (_pantalla.value as? TodasActividadesPantallaEstado.ConDatos)?.let { datos ->
+            _pantalla.value = datos.copy(
+                grupos = datos.grupos.map { g -> g.copy(actividades = g.actividades.filter { it.id !in ids }) }
+            )
+        }
         lanzarSeguro {
-            coverageNeedRepository.eliminarNeeds(familyId, ids.toList())
-            cargar()
+            try {
+                coverageNeedRepository.eliminarNeeds(familyId, ids.toList())
+            } finally {
+                cargar()
+            }
         }
     }
 }

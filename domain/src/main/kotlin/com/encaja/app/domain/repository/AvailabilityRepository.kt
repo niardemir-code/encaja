@@ -11,4 +11,6 @@ interface AvailabilityRepository {
     suspend fun obtenerBloquesDelGrupo(familyId: FamilyId, grupoRepeticionId: String): List<AvailabilityBlock>
     suspend fun guardarBloque(familyId: FamilyId, bloque: AvailabilityBlock)
     suspend fun eliminarBloque(familyId: FamilyId, caregiverId: CaregiverId, fecha: LocalDate, horaInicio: java.time.LocalTime)
+    /** Borra muchos bloques de golpe (en tandas), mucho más rápido que uno a uno. */
+    suspend fun eliminarBloques(familyId: FamilyId, bloques: List<AvailabilityBlock>)
 }

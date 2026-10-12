@@ -13,6 +13,7 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
+import java.time.temporal.TemporalAdjusters
 
 /**
  * Lógica pura (sin Compose) detrás del diálogo de disponibilidad de la
@@ -113,3 +114,39 @@ fun List<AvailabilityBlock>.sinRepetirEntrePersonas(): List<AvailabilityBlock> {
     for (bloque in this) if (resultado.none { it.mismaOcupacionQue(bloque) }) resultado += bloque
     return resultado
 }
+
+/**
+ * Vencimiento que se propone al abrir «Repetir o borrar en otros días»: el último día ya
+ * apuntado después de [fecha] (así los días de la semana que ya se repetían salen
+ * encendidos), o 3 meses más tarde si no hay nada apuntado más adelante.
+ */
+fun hastaInicialRepeticion(existentes: Set<LocalDate>, fecha: LocalDate): LocalDate =
+    existentes.filter { it.isAfter(fecha) }.maxOrNull() ?: fecha.plusMonths(3)
+
+/**
+ * Los días de la semana (círculos L-D) que están «encendidos»: aquellos cuyas fechas, desde
+ * [desde] hasta [hasta] (ambas incluidas), están TODAS en [marcadas]. Se piden al menos dos
+ * fechas para que cuente como repetición semanal y no como un día suelto.
+ */
+fun diasSemanaCompletos(desde: LocalDate, hasta: LocalDate, marcadas: Set<LocalDate>): Set<DayOfWeek> =
+    DayOfWeek.values().filter { dia ->
+        val fechas = generateSequence(desde.with(TemporalAdjusters.nextOrSame(dia))) { it.plusWeeks(1) }
+            .takeWhile { !it.isAfter(hasta) }
+            .toList()
+        fechas.size >= 2 && fechas.all { it in marcadas }
+    }.toSet()
+
+/**
+ * Los días de la semana «a medias»: tienen alguna fecha marcada entre [desde] (sin contar
+ * el propio [desde], que es el día que se está editando) y [hasta], pero no todas. Un toque
+ * en su círculo quita las que haya; para rellenar los huecos hay que volver a tocarlo.
+ */
+fun diasSemanaParciales(desde: LocalDate, hasta: LocalDate, marcadas: Set<LocalDate>): Set<DayOfWeek> {
+    val completos = diasSemanaCompletos(desde, hasta, marcadas)
+    return DayOfWeek.values().filter { dia ->
+        dia !in completos && generateSequence(desde.with(TemporalAdjusters.nextOrSame(dia))) { it.plusWeeks(1) }
+            .takeWhile { !it.isAfter(hasta) }
+            .any { it != desde && it in marcadas }
+    }.toSet()
+}
+

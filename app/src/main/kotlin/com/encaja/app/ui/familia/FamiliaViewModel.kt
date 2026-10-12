@@ -243,92 +243,62 @@ class FamiliaViewModel @Inject constructor(
     }
 
     /**
-     * Guarda un tramo por horas de [categoria] para cada persona de [caregiverIds] (una,
-     * o todos los miembros de una unidad familiar) en las [fechas] indicadas (y, si se
-     * pide, en las mismas fechas de la semana siguiente). Si alguno de esos días ya tenía
-     * algo de esa misma categoría, se sustituye — así cambiar el turno de mañana a tarde
-     * no deja los dos a la vez. Vale para cualquier categoría por horas, no solo Trabajo.
+     * Todas las ocupaciones de [categoria] de las personas de [caregiverIds], sea cual sea
+     * su horario (desde hace un mes, que es lo que se conserva, hasta dos años adelante).
+     * Es lo que enseña «Repetir o borrar en otros días» como días ya marcados.
      */
-    fun guardarHoras(
+    suspend fun ocupacionesDeCategoria(
         caregiverIds: List<CaregiverId>,
-        categoria: CategoriaDisponibilidad,
-        fechas: List<LocalDate>,
-        inicio: LocalTime,
-        fin: LocalTime,
-        duplicarSemanaSiguiente: Boolean,
-        etiqueta: String? = null,
-        grupoRepeticionId: String? = null
-    ) {
-        val familyId = familyIdActual ?: return
-        val todas = fechasTrabajo(fechas, duplicarSemanaSiguiente)
-        if (todas.isEmpty() || caregiverIds.isEmpty()) return
-        // Varios días guardados de golpe forman una serie (comparten grupo); si se está
-        // editando una ocupación que ya era de una serie, sigue en ella.
-        val grupo = grupoRepeticionId ?: if (todas.size > 1) java.util.UUID.randomUUID().toString() else null
-
-        lanzarSeguro {
-            val existentes = availabilityRepository.obtenerDisponibilidad(familyId, todas.first(), todas.last())
-                .filter { it.caregiverId in caregiverIds && it.fecha in todas && esDeLaCategoria(it, categoria) }
-            existentes.forEach { availabilityRepository.eliminarBloque(familyId, it.caregiverId, it.fecha, it.horaInicio) }
-            caregiverIds.forEach { caregiverId ->
-                todas.forEach { fecha ->
-                    availabilityRepository.guardarBloque(familyId, bloqueDeCategoria(categoria, caregiverId, fecha, inicio, fin, etiqueta, grupo))
-                }
-            }
-            cargarDatos(mostrarCargando = false)
-        }
-    }
-
-    /**
-     * Todas las veces que se repite [bloque] para las personas de [caregiverIds] (él
-     * incluido): las de su grupo si hay más de un día; si no (ocupaciones de antes de
-     * existir las series), las idénticas — misma categoría, horario y detalle — en el año
-     * anterior y posterior a su fecha. Si solo sale un día, no hay serie.
-     */
-    suspend fun ocurrenciasDeSerie(bloque: AvailabilityBlock, caregiverIds: List<CaregiverId>): List<AvailabilityBlock> {
-        val familyId = familyIdActual ?: return listOf(bloque)
-        val grupoId = bloque.grupoRepeticionId
-        if (grupoId != null) {
-            val delGrupo = availabilityRepository.obtenerBloquesDelGrupo(familyId, grupoId)
-                .filter { it.caregiverId in caregiverIds }
-            if (delGrupo.map { it.fecha }.distinct().size > 1) return delGrupo.sortedBy { it.fecha }
-        }
-        return availabilityRepository.obtenerDisponibilidad(familyId, bloque.fecha.minusYears(1), bloque.fecha.plusYears(1))
-            .filter {
-                it.caregiverId in caregiverIds && it.motivo == bloque.motivo && it.categoriaId == bloque.categoriaId &&
-                    it.horaInicio == bloque.horaInicio && it.horaFin == bloque.horaFin &&
-                    (it.etiqueta ?: "") == (bloque.etiqueta ?: "") &&
-                    (it.grupoRepeticionId == null || it.grupoRepeticionId == grupoId)
-            }
+        categoria: CategoriaDisponibilidad
+    ): List<AvailabilityBlock> {
+        val familyId = familyIdActual ?: return emptyList()
+        val hoy = LocalDate.now()
+        return availabilityRepository.obtenerDisponibilidad(familyId, hoy.minusMonths(1), hoy.plusYears(2))
+            .filter { it.caregiverId in caregiverIds && esDeLaCategoria(it, categoria) }
             .sortedBy { it.fecha }
     }
 
     /**
-     * "Guardar toda la serie": aplica [categoria], el horario ([inicio]-[fin]) y la
-     * [etiqueta] a todas las [ocurrencias] de la serie, respetando el día de cada una, y
-     * las deja con un mismo grupo ([grupoRepeticionId], o uno nuevo si eran de antes de
-     * existir las series). Se borran y se vuelven a guardar porque la hora de inicio
-     * forma parte de la clave de cada bloque.
+     * Guarda una ocupación de [categoria] para cada persona de [caregiverIds] (una, o todos
+     * los miembros de una unidad) en [fechasAGuardar], sustituyendo lo que ya hubiera de esa
+     * misma categoría esos días (da igual con qué horario), y borra la categoría de las
+     * [fechasABorrar]. Si se estaba editando una ocupación ([original]), se quita primero.
+     * Todo en una sola operación, con los borrados en tandas, para que sea rápido y no
+     * quede a medias. Ya no se crean «series»: cada día es independiente.
      */
-    fun guardarSerie(
-        ocurrencias: List<AvailabilityBlock>,
+    fun guardarOcupacion(
         caregiverIds: List<CaregiverId>,
         categoria: CategoriaDisponibilidad,
-        inicio: java.time.LocalTime,
-        fin: java.time.LocalTime,
+        fechasAGuardar: Set<LocalDate>,
+        fechasABorrar: Set<LocalDate>,
+        inicio: LocalTime,
+        fin: LocalTime,
         etiqueta: String?,
-        grupoRepeticionId: String?
+        original: AvailabilityBlock?
     ) {
         val familyId = familyIdActual ?: return
-        if (caregiverIds.isEmpty() || ocurrencias.isEmpty()) return
-        val grupo = grupoRepeticionId ?: java.util.UUID.randomUUID().toString()
+        if (caregiverIds.isEmpty()) return
+        if (fechasAGuardar.isEmpty() && fechasABorrar.isEmpty() && original == null) return
+
         lanzarSeguro {
-            val fechas = ocurrencias.map { it.fecha }.distinct()
-            ocurrencias.forEach { availabilityRepository.eliminarBloque(familyId, it.caregiverId, it.fecha, it.horaInicio) }
+            val aBorrar = mutableListOf<AvailabilityBlock>()
+            if (original != null) {
+                aBorrar += availabilityRepository.obtenerDisponibilidad(familyId, original.fecha, original.fecha)
+                    .filter { it.caregiverId in caregiverIds && it.mismaOcupacionQue(original) }
+            }
+            val tocadas = fechasAGuardar + fechasABorrar
+            if (tocadas.isNotEmpty()) {
+                aBorrar += availabilityRepository.obtenerDisponibilidad(familyId, tocadas.min(), tocadas.max())
+                    .filter { it.caregiverId in caregiverIds && it.fecha in tocadas && esDeLaCategoria(it, categoria) }
+            }
+            availabilityRepository.eliminarBloques(
+                familyId,
+                aBorrar.distinctBy { Triple(it.caregiverId, it.fecha, it.horaInicio) }
+            )
             caregiverIds.forEach { caregiverId ->
-                fechas.forEach { fecha ->
+                fechasAGuardar.sorted().forEach { fecha ->
                     availabilityRepository.guardarBloque(
-                        familyId, bloqueDeCategoria(categoria, caregiverId, fecha, inicio, fin, etiqueta, grupo)
+                        familyId, bloqueDeCategoria(categoria, caregiverId, fecha, inicio, fin, etiqueta, null)
                     )
                 }
             }
@@ -354,16 +324,6 @@ class FamiliaViewModel @Inject constructor(
             val id = generarCaregiverIdDesdeNombre(nombreLimpio, ap1, ap2, actuales.map { it.id })
             val nuevo = Caregiver(id, nombreLimpio, ap1, ap2, CaregiverRole.CUIDADOR)
             caregiverRepository.guardarCuidadores(familyId, actuales + nuevo)
-            cargarDatos(mostrarCargando = false)
-        }
-    }
-
-    /** Guarda bloques sueltos (una cita médica, los días de un viaje...). */
-    fun guardarBloques(bloques: List<AvailabilityBlock>) {
-        val familyId = familyIdActual ?: return
-        if (bloques.isEmpty()) return
-        lanzarSeguro {
-            bloques.forEach { availabilityRepository.guardarBloque(familyId, it) }
             cargarDatos(mostrarCargando = false)
         }
     }

@@ -110,15 +110,24 @@ class OcupacionesViewModel @Inject constructor(
         }
     }
 
-    /** Borra las ocupaciones elegidas: cada una en todas las personas que la tengan. */
+    /**
+     * Borra las ocupaciones elegidas: cada una en todas las personas que la tengan. La
+     * lista de la pantalla se actualiza al momento (sin esperar al servidor) y se vuelve
+     * a leer al terminar, por si algo hubiera fallado.
+     */
     fun eliminar(ocupaciones: List<Ocupacion>) {
         val familyId = familyIdActual ?: return
         if (ocupaciones.isEmpty()) return
+        val claves = ocupaciones.map { it.clave }.toSet()
+        (_pantalla.value as? OcupacionesPantallaEstado.ConDatos)?.let { datos ->
+            _pantalla.value = datos.copy(ocupaciones = datos.ocupaciones.filter { it.clave !in claves })
+        }
         lanzarSeguro {
-            ocupaciones.flatMap { it.bloques }.forEach { bloque ->
-                availabilityRepository.eliminarBloque(familyId, bloque.caregiverId, bloque.fecha, bloque.horaInicio)
+            try {
+                availabilityRepository.eliminarBloques(familyId, ocupaciones.flatMap { it.bloques })
+            } finally {
+                cargar()
             }
-            cargar()
         }
     }
 }

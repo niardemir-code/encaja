@@ -85,4 +85,16 @@ class AvailabilityRepositoryImpl @Inject constructor(
         coleccion(familyId).document(id).delete().await()
         dao.eliminar(familyId.value, caregiverId.value, fecha.toString(), horaInicio.toString())
     }
+
+    override suspend fun eliminarBloques(familyId: FamilyId, bloques: List<AvailabilityBlock>) {
+        if (bloques.isEmpty()) return
+        val coleccion = coleccion(familyId)
+        // Firestore admite como mucho 500 escrituras por batch: se trocea en tandas.
+        bloques.chunked(500).forEach { tanda ->
+            val batch = firestore.batch()
+            tanda.forEach { batch.delete(coleccion.document(idDocumento(it.caregiverId, it.fecha, it.horaInicio))) }
+            batch.commit().await()
+        }
+        bloques.forEach { dao.eliminar(familyId.value, it.caregiverId.value, it.fecha.toString(), it.horaInicio.toString()) }
+    }
 }

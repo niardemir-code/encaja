@@ -118,8 +118,8 @@ val SECCIONES_AYUDA: List<SeccionAyuda> = listOf(
                 puntos = listOf(
                     "Hay una fila por persona y por unidad familiar, con una casilla por día. Verde significa libre; con color, tiene algo apuntado (con su icono o su horario, y «+N» si hay varias cosas).",
                     "Toca una casilla para apuntar algo: elige la categoría (Trabajo, Médico, Viaje, Vacaciones, Otro u otra tuya) y su horario o sus fechas.",
-                    "Las categorías «por horas» piden hora de inicio y de fin (se permite el turno de noche) y puedes guardar horarios con nombre, como «Mañana». Las «por días» piden fecha de inicio y de fin.",
-                    "Con «Repetir en otros días» apuntas lo mismo en varios días a la vez.",
+                    "Las categorías «por horas» piden hora de inicio y de fin (se permite el turno de noche) y puedes crear horarios con nombre, como «Mañana» o «Tarde», con «Nuevo horario». Las «por días» piden fecha de inicio y de fin.",
+                    "«Repetir o borrar en otros días» enseña marcados todos los días en que esa persona ya tiene esa categoría, con el horario que tengan. Marca días (o círculos de L a D, con su fecha «Repetir hasta») para apuntar lo mismo o sustituir lo que había; desmarca los que quieras borrar. Antes de aplicar se pide confirmar.",
                     "Lo que apuntas en una unidad familiar se aplica a todos sus miembros.",
                     "El botón «Cuidadores» permite mostrar u ocultar personas, solo para la semana que estás viendo."
                 ),

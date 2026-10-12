@@ -11,14 +11,20 @@ package com.encaja.app.ui.familia
 //  - "Categoría" (solo al añadir): rejilla de casillas (la elegida en color de acento
 //    con un check) y "Nueva categoría" con borde discontinuo.
 //  - "Horarios" (categorías por horas): todo el día, desde/hasta, guardar como horario,
-//    detalle; y debajo "Repetir en otros días", un interruptor que despliega un
-//    calendario mensual para marcar los días. Las categorías por días llevan "Fechas"
-//    (desde/hasta) y detalle.
+//    detalle; las categorías por días llevan "Fechas" (desde/hasta) y detalle. Debajo,
+//    en todas, "Repetir o borrar en otros días": un interruptor que despliega un calendario
+//    con TODOS los días que esa persona ya tiene de esa categoría marcados; marcar añade o
+//    sustituye, desmarcar borra, y los círculos L-D con su fecha de vencimiento repiten
+//    (o dejan de repetir) un día de la semana.
 //  - Abajo, Cancelar, papelera (si se está editando) y disquete (guardar). Nada se
 //    guarda ni se borra hasta pulsar uno de los dos.
 // Las categorías se editan desde la tarjeta "Categorías" de la pantalla.
 
+import com.encaja.app.ui.theme.AccionAvisoHoja
+import com.encaja.app.ui.theme.AvisoHoja
 import com.encaja.app.ui.theme.BotonCuadradoHoja
+import com.encaja.app.ui.theme.CampoTextoConIconoHoja
+import com.encaja.app.ui.theme.EstiloAccionAviso
 import com.encaja.app.ui.theme.BotonRedondoSuaveHoja
 import com.encaja.app.ui.theme.CajaFechaHoja
 import com.encaja.app.ui.theme.CajaHoraHoja
@@ -93,8 +99,6 @@ import com.encaja.app.domain.model.ModoCategoria
 import com.encaja.app.domain.model.categoriaEn
 import com.encaja.app.domain.model.TurnoId
 import com.encaja.app.domain.model.TurnoTrabajo
-import com.encaja.app.ui.theme.BotonVariosDisquetesHoja
-import com.encaja.app.ui.theme.ConfirmarGuardadoHoja
 import com.encaja.app.ui.theme.LocalEncajaExtraColors
 import com.encaja.app.ui.theme.coloresInterruptorEncaja
 import java.time.DayOfWeek
@@ -105,6 +109,8 @@ import java.time.format.TextStyle
 import java.util.Locale
 
 private val ES = Locale("es")
+
+private fun textoDias(n: Int): String = if (n == 1) "1 día" else "$n días"
 
 private fun nombreDia(fecha: LocalDate): String =
     fecha.dayOfWeek.getDisplayName(TextStyle.FULL, ES).replaceFirstChar { it.uppercase() } + " ${fecha.dayOfMonth}"
@@ -125,16 +131,14 @@ fun DialogoDisponibilidad(
     turnos: List<TurnoTrabajo>,
     categorias: List<CategoriaDisponibilidad>,
     onEliminar: (AvailabilityBlock) -> Unit,
-    // Guarda un tramo por horas de una categoría en varias fechas (sustituyendo lo que
-    // ya hubiera de esa categoría esos días) y, si se pide, también la semana siguiente.
-    onGuardarHoras: (caregiverIds: List<CaregiverId>, categoria: CategoriaDisponibilidad, fechas: List<LocalDate>, inicio: LocalTime, fin: LocalTime, duplicarSemanaSiguiente: Boolean, etiqueta: String?, grupoRepeticionId: String?) -> Unit,
-    // Busca todas las veces que se repite el bloque que se está editando (él incluido).
-    buscarOcurrencias: suspend (AvailabilityBlock) -> List<AvailabilityBlock>,
-    // "Guardar toda la serie": aplica los cambios a todas esas ocurrencias.
-    onGuardarSerie: (ocurrencias: List<AvailabilityBlock>, caregiverIds: List<CaregiverId>, categoria: CategoriaDisponibilidad, inicio: LocalTime, fin: LocalTime, etiqueta: String?, grupoRepeticionId: String?) -> Unit,
+    // Todas las ocupaciones de esta categoría para estas personas (sea cual sea su horario):
+    // son los días que «Repetir o borrar en otros días» enseña ya marcados.
+    buscarDeCategoria: suspend (CategoriaDisponibilidad) -> List<AvailabilityBlock>,
+    // Guarda en [fechasAGuardar] (sustituyendo lo que hubiera de esa categoría), borra la
+    // categoría de [fechasABorrar] y, si se editaba una ocupación, quita antes la original.
+    onGuardar: (categoria: CategoriaDisponibilidad, fechasAGuardar: Set<LocalDate>, fechasABorrar: Set<LocalDate>, inicio: LocalTime, fin: LocalTime, etiqueta: String?, original: AvailabilityBlock?) -> Unit,
     onCrearTurno: (nombre: String, inicio: LocalTime, fin: LocalTime, categoriaId: CategoriaId) -> Unit,
     onEliminarTurno: (TurnoId) -> Unit,
-    onGuardarBloques: (List<AvailabilityBlock>) -> Unit,
     onGuardarCategoria: (CategoriaDisponibilidad) -> Unit,
     onCerrar: () -> Unit
 ) {
@@ -160,102 +164,101 @@ fun DialogoDisponibilidad(
     var horasInicio by remember(seleccionId) { mutableStateOf(turnosDeLaCategoria.firstOrNull()?.horaInicio ?: LocalTime.of(9, 0)) }
     var horasFin by remember(seleccionId) { mutableStateOf(turnosDeLaCategoria.firstOrNull()?.horaFin ?: LocalTime.of(10, 0)) }
     var horasTodoElDia by remember(seleccionId) { mutableStateOf(false) }
+    // «Repetir o borrar en otros días»: al activarlo, fechasRepetir son los días MARCADOS
+    // (los que ya tenían la categoría más los que se añadan); los que estaban y se desmarquen
+    // se borran al guardar. Los círculos L-D no guardan nada propio: se deducen de ellas.
     var fechasRepetir by remember(seleccionId) { mutableStateOf(setOf(fecha)) }
     var repetirActivo by remember(seleccionId) { mutableStateOf(false) }
-    // Días de la semana (L-D) marcados para repetir la ocupación cada semana, además del
-    // calendario manual: al marcar uno se añaden a fechasRepetir sus apariciones hasta
-    // hastaRepetir; al desmarcarlo se quitan esas mismas fechas.
-    var diasSemanaRepetir by remember(seleccionId) { mutableStateOf(emptySet<DayOfWeek>()) }
-    // Hasta qué día llega el patrón semanal; por defecto, 3 meses.
+    // Si ya se ha tocado el calendario a mano, no se vuelve a rellenar solo con lo existente.
+    var calendarioTocado by remember(seleccionId) { mutableStateOf(false) }
+    // Hasta qué día llega el patrón semanal (fecha de vencimiento); por defecto, 3 meses.
     var hastaRepetir by remember(seleccionId) { mutableStateOf(fecha.plusMonths(3)) }
-
-    fun alternarDiaSemana(dia: DayOfWeek) {
-        val activando = dia !in diasSemanaRepetir
-        diasSemanaRepetir = if (activando) diasSemanaRepetir + dia else diasSemanaRepetir - dia
-        val fechasDelDia = fechasParaDiaSemanaHoja(fecha, dia, hastaRepetir).toSet()
-        fechasRepetir = if (activando) {
-            fechasRepetir + fechasDelDia
-        } else {
-            (fechasRepetir - fechasDelDia).ifEmpty { setOf(fecha) }
-        }
-    }
-
-    // Al cambiar "Hasta": se recalculan las fechas que venían del patrón semanal (con el
-    // rango antiguo) y se sustituyen por las del rango nuevo, sin tocar las que el
-    // usuario haya marcado a mano en el calendario.
-    fun cambiarHastaRepetir(nuevaHasta: LocalDate) {
-        val hastaAnterior = hastaRepetir
-        hastaRepetir = nuevaHasta
-        if (diasSemanaRepetir.isEmpty()) return
-        val antiguas = diasSemanaRepetir.flatMap { dia -> fechasParaDiaSemanaHoja(fecha, dia, hastaAnterior) }.toSet()
-        val nuevas = diasSemanaRepetir.flatMap { dia -> fechasParaDiaSemanaHoja(fecha, dia, nuevaHasta) }.toSet()
-        fechasRepetir = (fechasRepetir - antiguas) + nuevas
-    }
     var horasEtiqueta by remember(seleccionId) { mutableStateOf("") }
     var guardarComoHorario by remember(seleccionId) { mutableStateOf(false) }
     var nombreHorario by remember(seleccionId) { mutableStateOf("") }
     var rangoDesde by remember(seleccionId) { mutableStateOf(fecha) }
     var rangoHasta by remember(seleccionId) { mutableStateOf(fecha) }
+    var creandoHorario by remember { mutableStateOf(false) }
+    var confirmandoGuardado by remember { mutableStateOf(false) }
 
-    val horasFechas = fechasRepetir.sorted()
+    // Los días en que estas personas ya tienen esta categoría, con cualquier horario.
+    var existentes by remember(seleccionId) { mutableStateOf(emptySet<LocalDate>()) }
+    LaunchedEffect(seleccionId) {
+        val cat = seleccionada
+        existentes = if (cat == null) emptySet()
+        else runCatching { buscarDeCategoria(cat) }.getOrDefault(emptyList()).map { it.fecha }.toSet()
+    }
+
+    val rangoFechas = fechasEntre(rangoDesde, rangoHasta)
+    // Qué se guarda y qué se borra al pulsar Guardar.
+    val guardarFechas: Set<LocalDate> = when {
+        repetirActivo -> fechasRepetir
+        porHoras -> setOf(fecha)
+        else -> rangoFechas.toSet()
+    }
+    val borrarFechas: Set<LocalDate> = if (repetirActivo) existentes - fechasRepetir else emptySet()
+    val sustituidas = guardarFechas.count { it in existentes }
     val horasValidas = horasTodoElDia || horasInicio != horasFin
     val (inicioAGuardar, finAGuardar) =
         if (horasTodoElDia) AvailabilityBlock.INICIO_DIA to AvailabilityBlock.FIN_DIA else horasInicio to horasFin
-    val rangoFechas = fechasEntre(rangoDesde, rangoHasta)
-    val puedeGuardarHoras = porHoras && horasFechas.isNotEmpty() && horasValidas &&
-        (!guardarComoHorario || horasTodoElDia || nombreHorario.isNotBlank())
-    val puedeGuardarRango = seleccionada != null && !porHoras && rangoFechas.size <= MAX_DIAS_RANGO
-
-    // Si la ocupación que se edita pertenece a una serie (se creó junto a otros días), se
-    // ofrecen dos formas de guardar: solo esta, o toda la serie.
-    var ocurrenciasSerie by remember { mutableStateOf<List<AvailabilityBlock>>(emptyList()) }
-    LaunchedEffect(bloqueEnEdicion) {
-        val bloque = bloqueEnEdicion
-        ocurrenciasSerie = if (bloque == null) emptyList()
-        else runCatching { buscarOcurrencias(bloque) }.getOrDefault(emptyList())
+    val formularioValido = if (porHoras) {
+        horasValidas && (!guardarComoHorario || horasTodoElDia || nombreHorario.isNotBlank())
+    } else {
+        repetirActivo || rangoFechas.size <= MAX_DIAS_RANGO
     }
-    val tieneSerie = ocurrenciasSerie.map { it.fecha }.distinct().size > 1
-    // Qué se pide confirmar: false = solo esta ocupación, true = la serie completa.
-    var confirmarGuardadoSerie by remember { mutableStateOf<Boolean?>(null) }
+    // Todo desmarcado y algo que borrar: se guarda sin mirar el horario del formulario.
+    val soloBorrar = repetirActivo && guardarFechas.isEmpty() && borrarFechas.isNotEmpty()
+    val puedeGuardar = seleccionada != null && (soloBorrar || (formularioValido && guardarFechas.isNotEmpty()))
+    val necesitaConfirmar = repetirActivo && (borrarFechas.isNotEmpty() || sustituidas > 1)
 
-    fun guardarHoras(serieCompleta: Boolean = false) {
+    // Los círculos L-D están encendidos si TODAS las fechas de ese día de la semana, desde
+    // este día hasta la fecha de vencimiento, están marcadas (al menos dos, para que sea un patrón).
+    val diasSemanaActivos: Set<DayOfWeek> =
+        if (repetirActivo) diasSemanaCompletos(fecha, hastaRepetir, fechasRepetir) else emptySet()
+    val diasSemanaAMedias: Set<DayOfWeek> =
+        if (repetirActivo) diasSemanaParciales(fecha, hastaRepetir, fechasRepetir) else emptySet()
+
+    fun alternarDiaSemana(dia: DayOfWeek) {
+        calendarioTocado = true
+        val fs = fechasParaDiaSemanaHoja(fecha, dia, hastaRepetir).toSet()
+        // Encendido o a medias: se quitan sus fechas; apagado: se añaden todas.
+        fechasRepetir = if (dia in diasSemanaActivos || dia in diasSemanaAMedias) fechasRepetir - fs else fechasRepetir + fs
+    }
+
+    // Al cambiar el vencimiento se recalculan las fechas de los días de la semana encendidos
+    // (las de más allá se quitan, las nuevas se añaden), sin tocar las marcadas a mano.
+    fun cambiarHastaRepetir(nuevaHasta: LocalDate) {
+        val hastaAnterior = hastaRepetir
+        val activos = diasSemanaActivos
+        hastaRepetir = nuevaHasta
+        calendarioTocado = true
+        if (activos.isEmpty()) return
+        val antiguas = activos.flatMap { dia -> fechasParaDiaSemanaHoja(fecha, dia, hastaAnterior) }.toSet()
+        val nuevas = activos.flatMap { dia -> fechasParaDiaSemanaHoja(fecha, dia, nuevaHasta) }.toSet()
+        fechasRepetir = (fechasRepetir - antiguas) + nuevas
+    }
+
+    // Si «Repetir o borrar» se activó antes de acabar de leer los días existentes, se completan
+    // cuando llegan (siempre que no se haya tocado ya el calendario).
+    LaunchedEffect(existentes) {
+        if (repetirActivo && !calendarioTocado) {
+            fechasRepetir = existentes + (if (porHoras) setOf(fecha) else rangoFechas.toSet())
+            hastaRepetir = hastaInicialRepeticion(existentes, fecha)
+        }
+    }
+
+    fun guardar() {
         val cat = seleccionada ?: return
-        if (guardarComoHorario && !horasTodoElDia && nombreHorario.isNotBlank() &&
+        if (porHoras && guardarComoHorario && !horasTodoElDia && nombreHorario.isNotBlank() &&
             turnoConHoras(turnosDeLaCategoria, horasInicio, horasFin) == null
         ) {
             onCrearTurno(nombreHorario.trim(), horasInicio, horasFin, cat.id)
         }
-        val original = bloqueEnEdicion
-        if (serieCompleta && original != null) {
-            onGuardarSerie(ocurrenciasSerie, destinatarios, cat, inicioAGuardar, finAGuardar, horasEtiqueta.trim().ifBlank { null }, original.grupoRepeticionId)
-        } else {
-            original?.let { onEliminar(it) }
-            onGuardarHoras(
-                destinatarios, cat, horasFechas, inicioAGuardar, finAGuardar, false,
-                horasEtiqueta.trim().ifBlank { null }, original?.grupoRepeticionId
-            )
-        }
+        val (ini, fin) =
+            if (porHoras) inicioAGuardar to finAGuardar else AvailabilityBlock.INICIO_DIA to AvailabilityBlock.FIN_DIA
+        onGuardar(cat, guardarFechas, borrarFechas, ini, fin, horasEtiqueta.trim().ifBlank { null }, bloqueEnEdicion)
         bloqueEnEdicion = null
-    }
-
-    fun guardarRango(serieCompleta: Boolean = false) {
-        val cat = seleccionada ?: return
-        val original = bloqueEnEdicion
-        val etiquetaRango = horasEtiqueta.trim().ifBlank { null }
-        if (serieCompleta && original != null) {
-            onGuardarSerie(ocurrenciasSerie, destinatarios, cat, AvailabilityBlock.INICIO_DIA, AvailabilityBlock.FIN_DIA, etiquetaRango, original.grupoRepeticionId)
-        } else {
-            original?.let { onEliminar(it) }
-            // Varios días de golpe forman una serie; si ya era de una, sigue en ella.
-            val grupo = original?.grupoRepeticionId
-                ?: if (rangoFechas.size > 1) java.util.UUID.randomUUID().toString() else null
-            onGuardarBloques(destinatarios.flatMap { caregiverId ->
-                rangoFechas.map { dia ->
-                    bloqueDeCategoria(cat, caregiverId, dia, AvailabilityBlock.INICIO_DIA, AvailabilityBlock.FIN_DIA, etiquetaRango, grupo)
-                }
-            })
-        }
-        bloqueEnEdicion = null
+        onCerrar()
     }
 
     // Al tocar el lápiz de un bloque: se elige su categoría y, una vez el formulario se ha
@@ -267,7 +270,7 @@ fun DialogoDisponibilidad(
         horasEtiqueta = bloque.etiqueta.orEmpty()
         fechasRepetir = setOf(bloque.fecha)
         repetirActivo = false
-        diasSemanaRepetir = emptySet()
+        calendarioTocado = false
         hastaRepetir = bloque.fecha.plusMonths(3)
         rangoDesde = bloque.fecha
         rangoHasta = bloque.fecha
@@ -407,15 +410,14 @@ fun DialogoDisponibilidad(
                         TituloSeccionHoja("Horarios", "Define el horario de esta actividad")
                         Spacer(Modifier.height(10.dp))
                         TarjetaSeccionHoja(padding = 0.dp) {
-                            if (turnosDeLaCategoria.isNotEmpty()) {
-                                HorariosGuardados(
-                                    turnos = turnosDeLaCategoria,
-                                    elegido = if (horasTodoElDia) null else turnoConHoras(turnosDeLaCategoria, horasInicio, horasFin),
-                                    onElegir = { horasTodoElDia = false; horasInicio = it.horaInicio; horasFin = it.horaFin },
-                                    onEliminar = { onEliminarTurno(it.id) }
-                                )
-                                SeparadorHoja()
-                            }
+                            HorariosGuardados(
+                                turnos = turnosDeLaCategoria,
+                                elegido = if (horasTodoElDia) null else turnoConHoras(turnosDeLaCategoria, horasInicio, horasFin),
+                                onElegir = { horasTodoElDia = false; horasInicio = it.horaInicio; horasFin = it.horaFin },
+                                onEliminar = { onEliminarTurno(it.id) },
+                                onNuevo = { creandoHorario = true }
+                            )
+                            SeparadorHoja()
                             FilaConInterruptorHoja(
                                 icono = Icons.Default.Schedule,
                                 titulo = "Todo el día",
@@ -461,94 +463,123 @@ fun DialogoDisponibilidad(
                             FilaDetalle(valor = horasEtiqueta, onCambiar = { horasEtiqueta = it })
                         }
 
-                        Spacer(Modifier.height(16.dp))
-                        // Repetir en otros días: interruptor (apagado por defecto) que despliega
-                        // el calendario mensual para marcar los días que se quieran.
-                        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            IconoEnCirculoHoja(Icons.Default.CalendarMonth, fondo = lavandaHoja, tinta = indigoHoja)
-                            Spacer(Modifier.width(12.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text("Repetir en otros días", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = tintaHoja)
-                                Text(
-                                    if (repetirActivo) "Toca los días del calendario" else "Solo este día",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = tintaSuaveHoja
-                                )
-                            }
-                            Switch(
-                                checked = repetirActivo,
-                                onCheckedChange = { activo ->
-                                    repetirActivo = activo
-                                    if (!activo) {
-                                        fechasRepetir = setOf(fecha)
-                                        diasSemanaRepetir = emptySet()
-                                        hastaRepetir = fecha.plusMonths(3)
-                                    }
-                                },
-                                colors = coloresInterruptorEncaja()
-                            )
-                        }
-                        if (repetirActivo) {
-                            Spacer(Modifier.height(12.dp))
-                            TarjetaSeccionHoja(padding = 10.dp) {
-                                CalendarioMultipleHoja(
-                                    mesInicial = YearMonth.from(fecha),
-                                    seleccionadas = fechasRepetir,
-                                    onAlternar = { dia ->
-                                        fechasRepetir = if (dia in fechasRepetir) {
-                                            if (fechasRepetir.size > 1) fechasRepetir - dia else fechasRepetir
-                                        } else {
-                                            fechasRepetir + dia
-                                        }
-                                    }
-                                )
-                                Spacer(Modifier.height(14.dp))
-                                SeparadorHoja()
-                                Spacer(Modifier.height(10.dp))
-                                Text(
-                                    "O cada semana en",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = tintaSuaveHoja
-                                )
-                                Spacer(Modifier.height(8.dp))
-                                SelectorDiasSemanaHoja(
-                                    seleccionados = diasSemanaRepetir,
-                                    onAlternar = { dia -> alternarDiaSemana(dia) }
-                                )
-                                if (diasSemanaRepetir.isNotEmpty()) {
-                                    Spacer(Modifier.height(10.dp))
-                                    CajaFechaHoja("Hasta", hastaRepetir, Modifier.fillMaxWidth()) { cambiarHastaRepetir(it) }
-                                }
-                            }
-                            Spacer(Modifier.height(8.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Info, contentDescription = null, tint = tintaSuaveHoja, modifier = Modifier.size(16.dp))
-                                Spacer(Modifier.width(8.dp))
-                                Text(
-                                    (if (horasFechas.size == 1) "1 día" else "${horasFechas.size} días") +
-                                        ". Si alguno ya tenía ${seleccionada.nombre}, se sustituye.",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = tintaSuaveHoja
-                                )
-                            }
-                        }
                     } else {
-                        TituloSeccionHoja("Fechas", "Uno o varios días completos")
+                        TituloSeccionHoja(if (repetirActivo) "Detalle" else "Fechas", if (repetirActivo) "Opcional" else "Uno o varios días completos")
                         Spacer(Modifier.height(10.dp))
                         TarjetaSeccionHoja(padding = 0.dp) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                CajaFechaHoja("Desde", rangoDesde, Modifier.weight(1f)) { rangoDesde = it; if (rangoHasta.isBefore(it)) rangoHasta = it }
-                                CajaFechaHoja("Hasta", rangoHasta, Modifier.weight(1f)) { rangoHasta = it }
+                            // Con «Repetir o borrar» activo, las fechas se eligen en su calendario.
+                            if (!repetirActivo) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    CajaFechaHoja("Desde", rangoDesde, Modifier.weight(1f)) { rangoDesde = it; if (rangoHasta.isBefore(it)) rangoHasta = it }
+                                    CajaFechaHoja("Hasta", rangoHasta, Modifier.weight(1f)) { rangoHasta = it }
+                                }
+                                NotaSeccionHoja(
+                                    if (rangoFechas.size == 1) "1 día completo" else "${rangoFechas.size} días completos",
+                                    error = rangoFechas.size > MAX_DIAS_RANGO
+                                )
+                                SeparadorHoja()
                             }
-                            NotaSeccionHoja(
-                                if (rangoFechas.size == 1) "1 día completo" else "${rangoFechas.size} días completos",
-                                error = rangoFechas.size > MAX_DIAS_RANGO
-                            )
-                            SeparadorHoja()
                             FilaDetalle(valor = horasEtiqueta, onCambiar = { horasEtiqueta = it })
+                        }
+                    }
+
+                    // ── Repetir o borrar en otros días (todas las categorías) ─────────────
+                    // Al activarlo se marcan en el calendario TODOS los días en que esta persona
+                    // tiene ya esta categoría, con el horario que tengan: los marcados quedan (o
+                    // se sustituyen por lo del formulario), los que se desmarquen se borran.
+                    Spacer(Modifier.height(16.dp))
+                    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        IconoEnCirculoHoja(Icons.Default.CalendarMonth, fondo = lavandaHoja, tinta = indigoHoja)
+                        Spacer(Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Repetir o borrar en otros días", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = tintaHoja)
+                            Text(
+                                if (repetirActivo) "Marcado = se guarda · desmarcado = se borra" else "Solo este día",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = tintaSuaveHoja
+                            )
+                        }
+                        Switch(
+                            checked = repetirActivo,
+                            onCheckedChange = { activo ->
+                                repetirActivo = activo
+                                calendarioTocado = false
+                                if (activo) {
+                                    fechasRepetir = existentes + (if (porHoras) setOf(fecha) else rangoFechas.toSet())
+                                    hastaRepetir = hastaInicialRepeticion(existentes, fecha)
+                                } else {
+                                    fechasRepetir = setOf(fecha)
+                                    hastaRepetir = fecha.plusMonths(3)
+                                }
+                            },
+                            colors = coloresInterruptorEncaja()
+                        )
+                    }
+                    if (repetirActivo) {
+                        Spacer(Modifier.height(12.dp))
+                        TarjetaSeccionHoja(padding = 10.dp) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    if (existentes.isEmpty()) "${seleccionada.nombre}: ningún día apuntado para $titulo."
+                                    else "${seleccionada.nombre}: ${textoDias(existentes.size)} apuntados para $titulo (ya marcados).",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = tintaSuaveHoja,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                TextButton(
+                                    onClick = { fechasRepetir = emptySet(); calendarioTocado = true },
+                                    enabled = fechasRepetir.isNotEmpty()
+                                ) { Text("Quitar todos", color = acentoHoja, fontWeight = FontWeight.Bold) }
+                            }
+                            Spacer(Modifier.height(6.dp))
+                            CalendarioMultipleHoja(
+                                mesInicial = YearMonth.from(fecha),
+                                seleccionadas = fechasRepetir,
+                                onAlternar = { dia ->
+                                    calendarioTocado = true
+                                    fechasRepetir = if (dia in fechasRepetir) fechasRepetir - dia else fechasRepetir + dia
+                                }
+                            )
+                            Spacer(Modifier.height(14.dp))
+                            SeparadorHoja()
+                            Spacer(Modifier.height(10.dp))
+                            Text(
+                                "O cada semana en (lleno: todas las semanas · a medias: faltan algunas · toca para quitarlo)",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = tintaSuaveHoja
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            SelectorDiasSemanaHoja(
+                                seleccionados = diasSemanaActivos,
+                                parciales = diasSemanaAMedias,
+                                onAlternar = { dia -> alternarDiaSemana(dia) }
+                            )
+                            Spacer(Modifier.height(10.dp))
+                            CajaFechaHoja("Repetir hasta", hastaRepetir, Modifier.fillMaxWidth()) { cambiarHastaRepetir(it) }
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        Row(verticalAlignment = Alignment.Top) {
+                            Icon(Icons.Default.Info, contentDescription = null, tint = tintaSuaveHoja, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Column {
+                                Text(
+                                    if (guardarFechas.isEmpty()) "Ningún día marcado para guardar."
+                                    else "Se guardará en ${textoDias(guardarFechas.size)}" +
+                                        (if (sustituidas > 0) " (${textoDias(sustituidas)} ya tenían ${seleccionada.nombre}: se sustituyen)." else "."),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = tintaSuaveHoja
+                                )
+                                if (borrarFechas.isNotEmpty()) {
+                                    Text(
+                                        "Se borrará ${seleccionada.nombre} de ${textoDias(borrarFechas.size)}.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -575,49 +606,59 @@ fun DialogoDisponibilidad(
                         onClick = { onEliminar(bloque); onCerrar() }
                     )
                 }
-                val puedeGuardar = puedeGuardarHoras || puedeGuardarRango
                 val fondoGuardar = if (puedeGuardar) acentoHoja else acentoHoja.copy(alpha = 0.35f)
                 BotonCuadradoHoja(
                     icono = Icons.Default.Save,
-                    descripcion = if (tieneSerie) "Guardar solo esta" else "Guardar",
+                    descripcion = "Guardar",
                     fondo = fondoGuardar,
                     tinta = onAcentoHoja,
                     habilitado = puedeGuardar,
-                    // Con serie, primero se pide confirmación de qué se guarda.
-                    onClick = {
-                        if (tieneSerie) {
-                            confirmarGuardadoSerie = false
-                        } else {
-                            if (porHoras) guardarHoras() else guardarRango()
-                            onCerrar()
-                        }
-                    }
+                    // Si hay que borrar días o sustituir varios, antes se pide confirmación.
+                    onClick = { if (necesitaConfirmar) confirmandoGuardado = true else guardar() }
                 )
-                if (tieneSerie) {
-                    BotonVariosDisquetesHoja(
-                        descripcion = "Guardar toda la serie",
-                        fondo = fondoGuardar,
-                        tinta = onAcentoHoja,
-                        habilitado = puedeGuardar,
-                        onClick = { confirmarGuardadoSerie = true }
-                    )
-                }
             }
         }
     }
 
-    confirmarGuardadoSerie?.let { serieCompleta ->
-        ConfirmarGuardadoHoja(
-            titulo = if (serieCompleta) "Guardar la serie completa de la ocupación" else "Guardar sólo esta ocupación",
-            detalle = if (serieCompleta) "Los cambios se aplicarán a todas las veces que se repite esta ocupación."
-            else "Los cambios solo afectarán a esta ocupación; el resto de la serie no se toca.",
-            onConfirmar = {
-                confirmarGuardadoSerie = null
-                if (porHoras) guardarHoras(serieCompleta) else guardarRango(serieCompleta)
-                onCerrar()
+    if (confirmandoGuardado) {
+        val nombreCat = seleccionada?.nombre.orEmpty()
+        val lineas = mutableListOf<String>()
+        if (guardarFechas.isNotEmpty()) {
+            lineas += "Se guardará $nombreCat en ${textoDias(guardarFechas.size)}" +
+                if (sustituidas > 0) ". En ${textoDias(sustituidas)} ya lo había y se sustituye." else "."
+        }
+        if (borrarFechas.isNotEmpty()) lineas += "Se borrará $nombreCat de ${textoDias(borrarFechas.size)}."
+        AvisoHoja(
+            icono = if (soloBorrar) Icons.Default.Delete else Icons.Default.Save,
+            titulo = if (soloBorrar) "¿Borrar ${textoDias(borrarFechas.size)}?" else "Aplicar los cambios",
+            texto = lineas.joinToString("\n"),
+            peligro = soloBorrar,
+            acciones = listOf(
+                AccionAvisoHoja(
+                    if (soloBorrar) "Borrar" else "Confirmar",
+                    if (soloBorrar) EstiloAccionAviso.PELIGRO else EstiloAccionAviso.PRIMARIO
+                ) {
+                    confirmandoGuardado = false
+                    guardar()
+                },
+                AccionAvisoHoja("Volver", EstiloAccionAviso.BORDE) { confirmandoGuardado = false }
+            ),
+            onCerrar = { confirmandoGuardado = false }
+        )
+    }
+
+    if (creandoHorario && seleccionada != null) {
+        DialogoNuevoHorario(
+            inicioInicial = horasInicio,
+            finInicial = horasFin,
+            onCrear = { nombre, ini, fin ->
+                onCrearTurno(nombre, ini, fin, seleccionada.id)
+                horasTodoElDia = false
+                horasInicio = ini
+                horasFin = fin
+                creandoHorario = false
             },
-            onCancelar = { confirmarGuardadoSerie = null },
-            serie = serieCompleta
+            onCerrar = { creandoHorario = false }
         )
     }
 
@@ -743,20 +784,23 @@ private fun CasillaNuevaCategoria(modifier: Modifier = Modifier, onClick: () -> 
     }
 }
 
-/** Los horarios guardados de la categoría, como chips; con "Editar" se borran de un toque. */
+/** Los horarios guardados de la categoría, como chips; «Nuevo horario» crea otro y con «Editar» se borran de un toque. */
 @Composable
 private fun HorariosGuardados(
     turnos: List<TurnoTrabajo>,
     elegido: TurnoTrabajo?,
     onElegir: (TurnoTrabajo) -> Unit,
-    onEliminar: (TurnoTrabajo) -> Unit
+    onEliminar: (TurnoTrabajo) -> Unit,
+    onNuevo: () -> Unit
 ) {
     var editando by remember { mutableStateOf(false) }
     Column(modifier = Modifier.padding(start = 14.dp, end = 14.dp, top = 10.dp, bottom = 6.dp)) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text("Horarios guardados", style = MaterialTheme.typography.labelLarge, color = tintaSuaveHoja, modifier = Modifier.weight(1f))
-            TextButton(onClick = { editando = !editando }, contentPadding = PaddingValues(horizontal = 8.dp)) {
-                Text(if (editando) "Hecho" else "Editar", color = acentoHoja)
+            if (turnos.isNotEmpty()) {
+                TextButton(onClick = { editando = !editando }, contentPadding = PaddingValues(horizontal = 8.dp)) {
+                    Text(if (editando) "Hecho" else "Editar", color = acentoHoja)
+                }
             }
         }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -771,8 +815,59 @@ private fun HorariosGuardados(
                     colors = FilterChipDefaults.filterChipColors(selectedContainerColor = acentoHoja, selectedLabelColor = onAcentoHoja)
                 )
             }
+            if (!editando) {
+                AssistChip(
+                    onClick = onNuevo,
+                    label = { Text("Nuevo horario") },
+                    leadingIcon = { Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                )
+            }
         }
     }
+}
+
+/** Ventana para crear un horario con nombre («Tarde», «Central»...) y sus horas, sin tocar nada más. */
+@Composable
+private fun DialogoNuevoHorario(
+    inicioInicial: LocalTime,
+    finInicial: LocalTime,
+    onCrear: (nombre: String, inicio: LocalTime, fin: LocalTime) -> Unit,
+    onCerrar: () -> Unit
+) {
+    var nombre by remember { mutableStateOf("") }
+    var inicio by remember { mutableStateOf(inicioInicial) }
+    var fin by remember { mutableStateOf(finInicial) }
+    AvisoHoja(
+        icono = Icons.Default.Schedule,
+        titulo = "Nuevo horario",
+        texto = "Ponle un nombre y las horas; luego lo eliges con un toque.",
+        peligro = false,
+        conX = true,
+        accionesEnFila = true,
+        acciones = listOf(
+            AccionAvisoHoja("Cancelar", EstiloAccionAviso.BORDE) { onCerrar() },
+            AccionAvisoHoja("Crear", EstiloAccionAviso.PRIMARIO, habilitada = nombre.isNotBlank() && inicio != fin) {
+                onCrear(nombre.trim(), inicio, fin)
+            }
+        ),
+        onCerrar = onCerrar,
+        contenido = {
+            CampoTextoConIconoHoja(nombre, { nombre = it.take(24) }, "Nombre (p.ej. Tarde)", Icons.Default.Schedule)
+            Spacer(Modifier.height(10.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                CajaHoraHoja("Desde", inicio, Modifier.weight(1f)) { inicio = it }
+                CajaHoraHoja("Hasta", fin, Modifier.weight(1f)) { fin = it }
+            }
+            if (inicio == fin) {
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "La hora de fin debe ser distinta de la de inicio.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+        }
+    )
 }
 
 /** "Detalle (opcional)" con su icono y el campo de texto debajo. */

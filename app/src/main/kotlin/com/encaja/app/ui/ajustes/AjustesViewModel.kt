@@ -127,8 +127,14 @@ class AjustesViewModel @Inject constructor(
         }
     }
 
+    /** Quita al momento de la pantalla lo que se está borrando; el `cargar()` posterior lo confirma. */
+    private fun quitarDeLaPantalla(transformar: (AjustesPantallaEstado.ConDatos) -> AjustesPantallaEstado.ConDatos) {
+        (_pantalla.value as? AjustesPantallaEstado.ConDatos)?.let { _pantalla.value = transformar(it) }
+    }
+
     fun eliminarNino(childId: ChildId) {
         val familyId = familyIdActual ?: return
+        quitarDeLaPantalla { d -> d.copy(ninos = d.ninos.filter { it.id != childId }) }
         lanzarSeguro {
             childRepository.eliminarNino(familyId, childId)
             cargar()
@@ -155,6 +161,12 @@ class AjustesViewModel @Inject constructor(
 
     fun eliminarCuidador(caregiverId: CaregiverId) {
         val familyId = familyIdActual ?: return
+        quitarDeLaPantalla { d ->
+            d.copy(
+                cuidadores = d.cuidadores.filter { it.id != caregiverId },
+                unidades = d.unidades.filter { caregiverId !in it.miembros }
+            )
+        }
         lanzarSeguro {
             // 1) Si tenía una cuenta vinculada, se desvincula primero: así deja de tener acceso
             //    a la familia aunque conserve su sesión abierta en otro dispositivo. Si no la
@@ -217,6 +229,7 @@ class AjustesViewModel @Inject constructor(
 
     fun eliminarUnidad(unidadId: FamilyUnitId) {
         val familyId = familyIdActual ?: return
+        quitarDeLaPantalla { d -> d.copy(unidades = d.unidades.filter { it.id != unidadId }) }
         lanzarSeguro {
             familyUnitRepository.eliminarUnidad(familyId, unidadId)
             limpiarAsignaciones(familyId, setOf(unidadId.value), emptySet())

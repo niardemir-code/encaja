@@ -141,4 +141,69 @@ class DisponibilidadEdicionTest {
         assertTrue(deVictor.mismaOcupacionQue(deSilvia))
         assertFalse(deVictor.mismaOcupacionQue(otra))
     }
+
+    // ── «Repetir o borrar en otros días» ──────────────────────────────────────────
+
+    @Test
+    fun `miercoles y viernes marcados hasta el vencimiento encienden esos dos circulos`() {
+        val hasta = lunes.plusDays(20) // 11 oct
+        val miercoles = listOf(23, 30).map { LocalDate.of(2026, 9, it) } + LocalDate.of(2026, 10, 7)
+        val viernes = listOf(LocalDate.of(2026, 9, 25), LocalDate.of(2026, 10, 2), LocalDate.of(2026, 10, 9))
+        val marcadas = (miercoles + viernes).toSet()
+        assertEquals(setOf(DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY), diasSemanaCompletos(lunes, hasta, marcadas))
+    }
+
+    @Test
+    fun `si falta un solo miercoles ese circulo no se enciende`() {
+        val hasta = lunes.plusDays(20)
+        val marcadas = setOf(
+            LocalDate.of(2026, 9, 23), LocalDate.of(2026, 10, 7), // falta el 30 de septiembre
+            LocalDate.of(2026, 9, 25), LocalDate.of(2026, 10, 2), LocalDate.of(2026, 10, 9)
+        )
+        assertEquals(setOf(DayOfWeek.FRIDAY), diasSemanaCompletos(lunes, hasta, marcadas))
+    }
+
+    @Test
+    fun `un dia suelto no cuenta como repeticion semanal`() {
+        // Entre el lunes y el domingo siguiente cada día de la semana aparece una sola vez.
+        assertTrue(diasSemanaCompletos(lunes, lunes.plusDays(6), setOf(lunes, lunes.plusDays(2))).isEmpty())
+    }
+
+    @Test
+    fun `las fechas marcadas antes del dia de partida no cuentan para los circulos`() {
+        val hasta = lunes.plusDays(20)
+        val marcadas = setOf(LocalDate.of(2026, 9, 16)) // un miércoles anterior, irrelevante
+        assertTrue(diasSemanaCompletos(lunes, hasta, marcadas).isEmpty())
+    }
+
+    @Test
+    fun `el vencimiento propuesto es el ultimo dia ya apuntado o tres meses`() {
+        val existentes = setOf(lunes.minusDays(7), lunes.plusDays(10), lunes.plusDays(40))
+        assertEquals(lunes.plusDays(40), hastaInicialRepeticion(existentes, lunes))
+        assertEquals(lunes.plusMonths(3), hastaInicialRepeticion(setOf(lunes.minusDays(7)), lunes))
+        assertEquals(lunes.plusMonths(3), hastaInicialRepeticion(emptySet(), lunes))
+    }
+
+    @Test
+    fun `un miercoles borrado a mano deja ese circulo a medias, no apagado ni encendido`() {
+        val hasta = lunes.plusDays(20)
+        val marcadas = setOf(LocalDate.of(2026, 9, 23), LocalDate.of(2026, 10, 7)) // falta el 30
+        assertFalse(DayOfWeek.WEDNESDAY in diasSemanaCompletos(lunes, hasta, marcadas))
+        assertEquals(setOf(DayOfWeek.WEDNESDAY), diasSemanaParciales(lunes, hasta, marcadas))
+    }
+
+    @Test
+    fun `un dia completo no es parcial y uno sin fechas tampoco`() {
+        val hasta = lunes.plusDays(20)
+        val todosLosViernes = setOf(LocalDate.of(2026, 9, 25), LocalDate.of(2026, 10, 2), LocalDate.of(2026, 10, 9))
+        assertTrue(diasSemanaParciales(lunes, hasta, todosLosViernes).isEmpty())
+        assertTrue(diasSemanaParciales(lunes, hasta, emptySet()).isEmpty())
+    }
+
+    @Test
+    fun `el propio dia de partida no cuenta para dejar un circulo a medias`() {
+        val miercoles = LocalDate.of(2026, 9, 23)
+        assertTrue(diasSemanaParciales(miercoles, miercoles.plusMonths(3), setOf(miercoles)).isEmpty())
+    }
 }
+
