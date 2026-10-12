@@ -85,7 +85,15 @@ fun fechaCortaHoja(fecha: LocalDate): String =
  * que se quieran; los marcados van en color de acento y el de hoy lleva borde.
  */
 @Composable
-fun CalendarioMultipleHoja(mesInicial: YearMonth, seleccionadas: Set<LocalDate>, onAlternar: (LocalDate) -> Unit) {
+fun CalendarioMultipleHoja(
+    mesInicial: YearMonth,
+    seleccionadas: Set<LocalDate>,
+    onAlternar: (LocalDate) -> Unit,
+    /** Días que llevan un puntito (p.ej. los que ya tienen algo apuntado), estén o no marcados. */
+    conPunto: Set<LocalDate> = emptySet(),
+    colorSeleccion: Color = acentoHoja,
+    tintaSeleccion: Color = onAcentoHoja
+) {
     var mes by remember { mutableStateOf(mesInicial) }
     val hoy = LocalDate.now()
 
@@ -132,7 +140,7 @@ fun CalendarioMultipleHoja(mesInicial: YearMonth, seleccionadas: Set<LocalDate>,
                             modifier = Modifier
                                 .size(38.dp)
                                 .clip(CircleShape)
-                                .background(if (marcado) acentoHoja else Color.Transparent)
+                                .background(if (marcado) colorSeleccion else Color.Transparent)
                                 .border(
                                     width = if (dia == hoy) 2.dp else 0.dp,
                                     color = if (dia == hoy) acentoHoja else Color.Transparent,
@@ -145,8 +153,18 @@ fun CalendarioMultipleHoja(mesInicial: YearMonth, seleccionadas: Set<LocalDate>,
                                 dia.dayOfMonth.toString(),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = if (marcado) FontWeight.ExtraBold else FontWeight.Medium,
-                                color = if (marcado) onAcentoHoja else tintaHoja
+                                color = if (marcado) tintaSeleccion else tintaHoja
                             )
+                            if (dia in conPunto) {
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.BottomCenter)
+                                        .padding(bottom = 4.dp)
+                                        .size(5.dp)
+                                        .clip(CircleShape)
+                                        .background(if (marcado) tintaSeleccion else acentoHoja)
+                                )
+                            }
                         }
                     }
                 }
@@ -198,7 +216,7 @@ fun SelectorDiasSemanaHoja(
                         .background(
                             when {
                                 marcado -> acentoHoja
-                                aMedias -> acentoHoja.copy(alpha = 0.18f)
+                                aMedias -> acentoHoja.copy(alpha = 0.35f)
                                 else -> Color.Transparent
                             }
                         )

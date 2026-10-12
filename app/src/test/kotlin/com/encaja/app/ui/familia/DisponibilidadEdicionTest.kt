@@ -177,14 +177,6 @@ class DisponibilidadEdicionTest {
     }
 
     @Test
-    fun `el vencimiento propuesto es el ultimo dia ya apuntado o tres meses`() {
-        val existentes = setOf(lunes.minusDays(7), lunes.plusDays(10), lunes.plusDays(40))
-        assertEquals(lunes.plusDays(40), hastaInicialRepeticion(existentes, lunes))
-        assertEquals(lunes.plusMonths(3), hastaInicialRepeticion(setOf(lunes.minusDays(7)), lunes))
-        assertEquals(lunes.plusMonths(3), hastaInicialRepeticion(emptySet(), lunes))
-    }
-
-    @Test
     fun `un miercoles borrado a mano deja ese circulo a medias, no apagado ni encendido`() {
         val hasta = lunes.plusDays(20)
         val marcadas = setOf(LocalDate.of(2026, 9, 23), LocalDate.of(2026, 10, 7)) // falta el 30
@@ -204,6 +196,39 @@ class DisponibilidadEdicionTest {
     fun `el propio dia de partida no cuenta para dejar un circulo a medias`() {
         val miercoles = LocalDate.of(2026, 9, 23)
         assertTrue(diasSemanaParciales(miercoles, miercoles.plusMonths(3), setOf(miercoles)).isEmpty())
+    }
+
+    @Test
+    fun `en modo borrar solo cuentan los dias que existen`() {
+        val hasta = lunes.plusDays(20)
+        val existentes = setOf(LocalDate.of(2026, 9, 23), LocalDate.of(2026, 9, 30), LocalDate.of(2026, 9, 25))
+        val marcadas = setOf(LocalDate.of(2026, 9, 23), LocalDate.of(2026, 9, 30))
+        assertEquals(setOf(DayOfWeek.WEDNESDAY), diasSemanaCompletos(lunes, hasta, marcadas, existentes))
+        assertTrue(diasSemanaParciales(lunes, hasta, marcadas, existentes).isEmpty())
+    }
+
+    @Test
+    fun `en modo borrar un miercoles sin marcar deja el circulo a medias y un dia sin fechas no se enciende`() {
+        val hasta = lunes.plusDays(20)
+        val existentes = setOf(LocalDate.of(2026, 9, 23), LocalDate.of(2026, 9, 30), LocalDate.of(2026, 9, 25))
+        val marcadas = setOf(LocalDate.of(2026, 9, 23))
+        assertTrue(diasSemanaCompletos(lunes, hasta, marcadas, existentes).isEmpty())
+        assertEquals(setOf(DayOfWeek.WEDNESDAY), diasSemanaParciales(lunes, hasta, marcadas, existentes))
+        // El sábado no tiene ningún día apuntado: ni lleno ni a medias.
+        assertFalse(DayOfWeek.SATURDAY in diasSemanaCompletos(lunes, hasta, existentes, existentes))
+    }
+
+    @Test
+    fun `las fechas de un dia de la semana se limitan al rango y al universo`() {
+        val hasta = lunes.plusDays(20)
+        assertEquals(
+            listOf(LocalDate.of(2026, 9, 23), LocalDate.of(2026, 9, 30), LocalDate.of(2026, 10, 7)),
+            fechasDelDiaSemana(lunes, hasta, DayOfWeek.WEDNESDAY)
+        )
+        assertEquals(
+            listOf(LocalDate.of(2026, 9, 30)),
+            fechasDelDiaSemana(lunes, hasta, DayOfWeek.WEDNESDAY, setOf(LocalDate.of(2026, 9, 30)))
+        )
     }
 }
 

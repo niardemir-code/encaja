@@ -116,37 +116,52 @@ fun List<AvailabilityBlock>.sinRepetirEntrePersonas(): List<AvailabilityBlock> {
 }
 
 /**
- * Vencimiento que se propone al abrir «Repetir o borrar en otros días»: el último día ya
- * apuntado después de [fecha] (así los días de la semana que ya se repetían salen
- * encendidos), o 3 meses más tarde si no hay nada apuntado más adelante.
+ * Las fechas de [dia] (lunes, martes...) desde [desde] hasta [hasta], ambas incluidas. Con
+ * [universo] solo las que estén en él (p.ej. los días que ya tienen la categoría apuntada).
  */
-fun hastaInicialRepeticion(existentes: Set<LocalDate>, fecha: LocalDate): LocalDate =
-    existentes.filter { it.isAfter(fecha) }.maxOrNull() ?: fecha.plusMonths(3)
-
-/**
- * Los días de la semana (círculos L-D) que están «encendidos»: aquellos cuyas fechas, desde
- * [desde] hasta [hasta] (ambas incluidas), están TODAS en [marcadas]. Se piden al menos dos
- * fechas para que cuente como repetición semanal y no como un día suelto.
- */
-fun diasSemanaCompletos(desde: LocalDate, hasta: LocalDate, marcadas: Set<LocalDate>): Set<DayOfWeek> =
-    DayOfWeek.values().filter { dia ->
-        val fechas = generateSequence(desde.with(TemporalAdjusters.nextOrSame(dia))) { it.plusWeeks(1) }
-            .takeWhile { !it.isAfter(hasta) }
-            .toList()
-        fechas.size >= 2 && fechas.all { it in marcadas }
-    }.toSet()
-
-/**
- * Los días de la semana «a medias»: tienen alguna fecha marcada entre [desde] (sin contar
- * el propio [desde], que es el día que se está editando) y [hasta], pero no todas. Un toque
- * en su círculo quita las que haya; para rellenar los huecos hay que volver a tocarlo.
- */
-fun diasSemanaParciales(desde: LocalDate, hasta: LocalDate, marcadas: Set<LocalDate>): Set<DayOfWeek> {
-    val completos = diasSemanaCompletos(desde, hasta, marcadas)
-    return DayOfWeek.values().filter { dia ->
-        dia !in completos && generateSequence(desde.with(TemporalAdjusters.nextOrSame(dia))) { it.plusWeeks(1) }
-            .takeWhile { !it.isAfter(hasta) }
-            .any { it != desde && it in marcadas }
-    }.toSet()
+fun fechasDelDiaSemana(
+    desde: LocalDate,
+    hasta: LocalDate,
+    dia: DayOfWeek,
+    universo: Set<LocalDate>? = null
+): List<LocalDate> {
+    val todas = generateSequence(desde.with(TemporalAdjusters.nextOrSame(dia))) { it.plusWeeks(1) }
+        .takeWhile { !it.isAfter(hasta) }
+        .toList()
+    return if (universo == null) todas else todas.filter { it in universo }
 }
 
+/**
+ * Los días de la semana (círculos L-D) «llenos»: aquellos cuyas fechas, desde [desde] hasta
+ * [hasta], están TODAS en [marcadas]. Sin [universo] se piden al menos dos fechas, para que
+ * cuente como repetición semanal y no como un día suelto; con [universo] (modo borrar: solo
+ * cuentan los días que existen) basta una, y un día de la semana sin fechas no se enciende.
+ */
+fun diasSemanaCompletos(
+    desde: LocalDate,
+    hasta: LocalDate,
+    marcadas: Set<LocalDate>,
+    universo: Set<LocalDate>? = null
+): Set<DayOfWeek> =
+    DayOfWeek.values().filter { dia ->
+        val fechas = fechasDelDiaSemana(desde, hasta, dia, universo)
+        fechas.size >= (if (universo == null) 2 else 1) && fechas.all { it in marcadas }
+    }.toSet()
+
+/**
+ * Los días de la semana «a medias»: tienen alguna fecha marcada pero no todas. Sin
+ * [universo] no cuenta el propio [desde] (el día que se está editando), para que un toque
+ * en el círculo no lo quite sin querer. Un toque en un círculo a medias quita lo marcado.
+ */
+fun diasSemanaParciales(
+    desde: LocalDate,
+    hasta: LocalDate,
+    marcadas: Set<LocalDate>,
+    universo: Set<LocalDate>? = null
+): Set<DayOfWeek> {
+    val completos = diasSemanaCompletos(desde, hasta, marcadas, universo)
+    return DayOfWeek.values().filter { dia ->
+        dia !in completos && fechasDelDiaSemana(desde, hasta, dia, universo)
+            .any { (universo != null || it != desde) && it in marcadas }
+    }.toSet()
+}

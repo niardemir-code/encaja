@@ -12,10 +12,11 @@ package com.encaja.app.ui.familia
 //    con un check) y "Nueva categoría" con borde discontinuo.
 //  - "Horarios" (categorías por horas): todo el día, desde/hasta, guardar como horario,
 //    detalle; las categorías por días llevan "Fechas" (desde/hasta) y detalle. Debajo,
-//    en todas, "Repetir o borrar en otros días": un interruptor que despliega un calendario
-//    con TODOS los días que esa persona ya tiene de esa categoría marcados; marcar añade o
-//    sustituye, desmarcar borra, y los círculos L-D con su fecha de vencimiento repiten
-//    (o dejan de repetir) un día de la semana.
+//    en todas, "Repetir o borrar en otros días": un interruptor con dos modos. «Guardar en
+//    estos días» pone el horario del formulario en los días que se toquen (sustituyendo lo
+//    que hubiera); «Borrar estos días» solo deja marcar los que ya tienen la categoría. Los
+//    días con la categoría llevan un punto y los que no se tocan no cambian. Los círculos
+//    L-D (vacío, a medias, lleno) y «Repetir hasta» sirven para días de la semana enteros.
 //  - Abajo, Cancelar, papelera (si se está editando) y disquete (guardar). Nada se
 //    guarda ni se borra hasta pulsar uno de los dos.
 // Las categorías se editan desde la tarjeta "Categorías" de la pantalla.
@@ -24,6 +25,7 @@ import com.encaja.app.ui.theme.AccionAvisoHoja
 import com.encaja.app.ui.theme.AvisoHoja
 import com.encaja.app.ui.theme.BotonCuadradoHoja
 import com.encaja.app.ui.theme.CampoTextoConIconoHoja
+import com.encaja.app.ui.theme.ChipFiltroHoja
 import com.encaja.app.ui.theme.EstiloAccionAviso
 import com.encaja.app.ui.theme.BotonRedondoSuaveHoja
 import com.encaja.app.ui.theme.CajaFechaHoja
@@ -40,7 +42,6 @@ import com.encaja.app.ui.theme.TituloSeccionHoja
 import com.encaja.app.ui.theme.acentoHoja
 import com.encaja.app.ui.theme.bordeHoja
 import com.encaja.app.ui.theme.casillaHoja
-import com.encaja.app.ui.theme.fechasParaDiaSemanaHoja
 import com.encaja.app.ui.theme.indigoHoja
 import com.encaja.app.ui.theme.lavandaHoja
 import com.encaja.app.ui.theme.onAcentoHoja
@@ -153,14 +154,14 @@ fun DialogoDisponibilidad(
     var horasInicio by remember(seleccionId) { mutableStateOf(turnosDeLaCategoria.firstOrNull()?.horaInicio ?: LocalTime.of(9, 0)) }
     var horasFin by remember(seleccionId) { mutableStateOf(turnosDeLaCategoria.firstOrNull()?.horaFin ?: LocalTime.of(10, 0)) }
     var horasTodoElDia by remember(seleccionId) { mutableStateOf(false) }
-    // «Repetir o borrar en otros días»: al activarlo, fechasRepetir son los días MARCADOS
-    // (los que ya tenían la categoría más los que se añadan); los que estaban y se desmarquen
-    // se borran al guardar. Los círculos L-D no guardan nada propio: se deducen de ellas.
-    var fechasRepetir by remember(seleccionId) { mutableStateOf(setOf(fecha)) }
+    // «Repetir o borrar en otros días». Dos listas independientes: fechasAplicar (donde se
+    // guarda el horario del formulario; por defecto solo este día) y fechasBorrar (días que ya
+    // tienen la categoría y se quieren quitar). Lo que existe y no se toca, no cambia.
+    var fechasAplicar by remember(seleccionId) { mutableStateOf(setOf(fecha)) }
+    var fechasBorrar by remember(seleccionId) { mutableStateOf(emptySet<LocalDate>()) }
+    var modoBorrar by remember(seleccionId) { mutableStateOf(false) }
     var repetirActivo by remember(seleccionId) { mutableStateOf(false) }
-    // Si ya se ha tocado el calendario a mano, no se vuelve a rellenar solo con lo existente.
-    var calendarioTocado by remember(seleccionId) { mutableStateOf(false) }
-    // Hasta qué día llega el patrón semanal (fecha de vencimiento); por defecto, 3 meses.
+    // Hasta qué día llega el patrón semanal al guardar (fecha de vencimiento); por defecto, 3 meses.
     var hastaRepetir by remember(seleccionId) { mutableStateOf(fecha.plusMonths(3)) }
     var horasEtiqueta by remember(seleccionId) { mutableStateOf("") }
     var guardarComoHorario by remember(seleccionId) { mutableStateOf(false) }
@@ -181,11 +182,12 @@ fun DialogoDisponibilidad(
     val rangoFechas = fechasEntre(rangoDesde, rangoHasta)
     // Qué se guarda y qué se borra al pulsar Guardar.
     val guardarFechas: Set<LocalDate> = when {
-        repetirActivo -> fechasRepetir
+        repetirActivo -> fechasAplicar
         porHoras -> setOf(fecha)
         else -> rangoFechas.toSet()
     }
-    val borrarFechas: Set<LocalDate> = if (repetirActivo) existentes - fechasRepetir else emptySet()
+    // Si un día está en las dos listas, gana guardar.
+    val borrarFechas: Set<LocalDate> = if (repetirActivo) fechasBorrar - fechasAplicar else emptySet()
     val sustituidas = guardarFechas.count { it in existentes }
     val horasValidas = horasTodoElDia || horasInicio != horasFin
     val (inicioAGuardar, finAGuardar) =
@@ -200,40 +202,39 @@ fun DialogoDisponibilidad(
     val puedeGuardar = seleccionada != null && (soloBorrar || (formularioValido && guardarFechas.isNotEmpty()))
     val necesitaConfirmar = repetirActivo && (borrarFechas.isNotEmpty() || sustituidas > 1)
 
-    // Los círculos L-D están encendidos si TODAS las fechas de ese día de la semana, desde
-    // este día hasta la fecha de vencimiento, están marcadas (al menos dos, para que sea un patrón).
+    // Círculos L-D, según el modo: al guardar, sobre las fechas a guardar hasta el vencimiento;
+    // al borrar, sobre los días que ya existen de aquí en adelante. Lleno = todas las fechas de
+    // ese día de la semana, a medias = algunas, vacío = ninguna.
+    val marcadasModo = if (modoBorrar) fechasBorrar else fechasAplicar
+    val universoModo: Set<LocalDate>? = if (modoBorrar) existentes else null
+    val hastaModo = if (modoBorrar) (existentes.maxOrNull() ?: fecha) else hastaRepetir
     val diasSemanaActivos: Set<DayOfWeek> =
-        if (repetirActivo) diasSemanaCompletos(fecha, hastaRepetir, fechasRepetir) else emptySet()
+        if (repetirActivo) diasSemanaCompletos(fecha, hastaModo, marcadasModo, universoModo) else emptySet()
     val diasSemanaAMedias: Set<DayOfWeek> =
-        if (repetirActivo) diasSemanaParciales(fecha, hastaRepetir, fechasRepetir) else emptySet()
+        if (repetirActivo) diasSemanaParciales(fecha, hastaModo, marcadasModo, universoModo) else emptySet()
 
     fun alternarDiaSemana(dia: DayOfWeek) {
-        calendarioTocado = true
-        val fs = fechasParaDiaSemanaHoja(fecha, dia, hastaRepetir).toSet()
-        // Encendido o a medias: se quitan sus fechas; apagado: se añaden todas.
-        fechasRepetir = if (dia in diasSemanaActivos || dia in diasSemanaAMedias) fechasRepetir - fs else fechasRepetir + fs
+        val fs = fechasDelDiaSemana(fecha, hastaModo, dia, universoModo).toSet()
+        if (fs.isEmpty()) return
+        // Lleno o a medias: se quitan sus fechas; vacío: se añaden todas.
+        val quitar = dia in diasSemanaActivos || dia in diasSemanaAMedias
+        if (modoBorrar) {
+            fechasBorrar = if (quitar) fechasBorrar - fs else fechasBorrar + fs
+        } else {
+            fechasAplicar = if (quitar) fechasAplicar - fs else fechasAplicar + fs
+        }
     }
 
-    // Al cambiar el vencimiento se recalculan las fechas de los días de la semana encendidos
-    // (las de más allá se quitan, las nuevas se añaden), sin tocar las marcadas a mano.
+    // Al cambiar el vencimiento (solo al guardar) se recalculan las fechas de los días de la
+    // semana llenos: las de más allá se quitan y las nuevas se añaden; las demás no se tocan.
     fun cambiarHastaRepetir(nuevaHasta: LocalDate) {
         val hastaAnterior = hastaRepetir
         val activos = diasSemanaActivos
         hastaRepetir = nuevaHasta
-        calendarioTocado = true
         if (activos.isEmpty()) return
-        val antiguas = activos.flatMap { dia -> fechasParaDiaSemanaHoja(fecha, dia, hastaAnterior) }.toSet()
-        val nuevas = activos.flatMap { dia -> fechasParaDiaSemanaHoja(fecha, dia, nuevaHasta) }.toSet()
-        fechasRepetir = (fechasRepetir - antiguas) + nuevas
-    }
-
-    // Si «Repetir o borrar» se activó antes de acabar de leer los días existentes, se completan
-    // cuando llegan (siempre que no se haya tocado ya el calendario).
-    LaunchedEffect(existentes) {
-        if (repetirActivo && !calendarioTocado) {
-            fechasRepetir = existentes + (if (porHoras) setOf(fecha) else rangoFechas.toSet())
-            hastaRepetir = hastaInicialRepeticion(existentes, fecha)
-        }
+        val antiguas = activos.flatMap { dia -> fechasDelDiaSemana(fecha, hastaAnterior, dia) }.toSet()
+        val nuevas = activos.flatMap { dia -> fechasDelDiaSemana(fecha, nuevaHasta, dia) }.toSet()
+        fechasAplicar = (fechasAplicar - antiguas) + nuevas
     }
 
     fun guardar() {
@@ -257,9 +258,10 @@ fun DialogoDisponibilidad(
         horasTodoElDia = bloque.todoElDia
         if (!bloque.todoElDia) { horasInicio = bloque.horaInicio; horasFin = bloque.horaFin }
         horasEtiqueta = bloque.etiqueta.orEmpty()
-        fechasRepetir = setOf(bloque.fecha)
+        fechasAplicar = setOf(bloque.fecha)
+        fechasBorrar = emptySet()
+        modoBorrar = false
         repetirActivo = false
-        calendarioTocado = false
         hastaRepetir = bloque.fecha.plusMonths(3)
         rangoDesde = bloque.fecha
         rangoHasta = bloque.fecha
@@ -476,9 +478,9 @@ fun DialogoDisponibilidad(
                     }
 
                     // ── Repetir o borrar en otros días (todas las categorías) ─────────────
-                    // Al activarlo se marcan en el calendario TODOS los días en que esta persona
-                    // tiene ya esta categoría, con el horario que tengan: los marcados quedan (o
-                    // se sustituyen por lo del formulario), los que se desmarquen se borran.
+                    // Dos modos: «Guardar en estos días» (los días tocados reciben el horario del
+                    // formulario, sustituyendo lo que tuvieran) y «Borrar estos días» (solo se pueden
+                    // tocar los que ya tienen esta categoría). Lo que no se toca no cambia.
                     Spacer(Modifier.height(16.dp))
                     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         IconoEnCirculoHoja(Icons.Default.CalendarMonth, fondo = lavandaHoja, tinta = indigoHoja)
@@ -486,7 +488,7 @@ fun DialogoDisponibilidad(
                         Column(modifier = Modifier.weight(1f)) {
                             Text("Repetir o borrar en otros días", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = tintaHoja)
                             Text(
-                                if (repetirActivo) "Marcado = se guarda · desmarcado = se borra" else "Solo este día",
+                                if (repetirActivo) "Solo cambia lo que toques" else "Solo este día",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = tintaSuaveHoja
                             )
@@ -495,48 +497,68 @@ fun DialogoDisponibilidad(
                             checked = repetirActivo,
                             onCheckedChange = { activo ->
                                 repetirActivo = activo
-                                calendarioTocado = false
-                                if (activo) {
-                                    fechasRepetir = existentes + (if (porHoras) setOf(fecha) else rangoFechas.toSet())
-                                    hastaRepetir = hastaInicialRepeticion(existentes, fecha)
-                                } else {
-                                    fechasRepetir = setOf(fecha)
-                                    hastaRepetir = fecha.plusMonths(3)
-                                }
+                                modoBorrar = false
+                                fechasBorrar = emptySet()
+                                fechasAplicar = if (activo && !porHoras) rangoFechas.toSet() else setOf(fecha)
+                                hastaRepetir = fecha.plusMonths(3)
                             },
                             colors = coloresInterruptorEncaja()
                         )
                     }
                     if (repetirActivo) {
                         Spacer(Modifier.height(12.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            ChipFiltroHoja("Guardar en estos días", !modoBorrar) { modoBorrar = false }
+                            ChipFiltroHoja("Borrar estos días", modoBorrar) { modoBorrar = true }
+                        }
+                        Spacer(Modifier.height(10.dp))
                         TarjetaSeccionHoja(padding = 10.dp) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    if (existentes.isEmpty()) "${seleccionada.nombre}: ningún día apuntado para $titulo."
-                                    else "${seleccionada.nombre}: ${textoDias(existentes.size)} apuntados para $titulo (ya marcados).",
+                                    if (modoBorrar) {
+                                        if (existentes.isEmpty()) "No hay ningún día con ${seleccionada.nombre} para $titulo."
+                                        else "${textoDias(existentes.size)} con ${seleccionada.nombre} para $titulo. Toca los que quieras borrar."
+                                    } else {
+                                        "Toca los días donde guardar ${seleccionada.nombre} con el horario de arriba. El punto marca los que ya tienen algo: los que no toques no cambian."
+                                    },
                                     style = MaterialTheme.typography.bodySmall,
                                     color = tintaSuaveHoja,
                                     modifier = Modifier.weight(1f)
                                 )
-                                TextButton(
-                                    onClick = { fechasRepetir = emptySet(); calendarioTocado = true },
-                                    enabled = fechasRepetir.isNotEmpty()
-                                ) { Text("Quitar todos", color = acentoHoja, fontWeight = FontWeight.Bold) }
+                                if (modoBorrar) {
+                                    val todosMarcados = existentes.isNotEmpty() && fechasBorrar.containsAll(existentes)
+                                    TextButton(
+                                        onClick = { fechasBorrar = if (todosMarcados) emptySet() else existentes },
+                                        enabled = existentes.isNotEmpty()
+                                    ) { Text(if (todosMarcados) "Quitar marcas" else "Marcar todos", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold) }
+                                } else {
+                                    TextButton(
+                                        onClick = { fechasAplicar = emptySet() },
+                                        enabled = fechasAplicar.isNotEmpty()
+                                    ) { Text("Quitar todos", color = acentoHoja, fontWeight = FontWeight.Bold) }
+                                }
                             }
                             Spacer(Modifier.height(6.dp))
                             CalendarioMultipleHoja(
                                 mesInicial = YearMonth.from(fecha),
-                                seleccionadas = fechasRepetir,
+                                seleccionadas = marcadasModo,
+                                conPunto = existentes,
+                                colorSeleccion = if (modoBorrar) MaterialTheme.colorScheme.error else acentoHoja,
+                                tintaSeleccion = if (modoBorrar) MaterialTheme.colorScheme.onError else onAcentoHoja,
                                 onAlternar = { dia ->
-                                    calendarioTocado = true
-                                    fechasRepetir = if (dia in fechasRepetir) fechasRepetir - dia else fechasRepetir + dia
+                                    if (modoBorrar) {
+                                        // Al borrar solo se pueden marcar días que ya tienen la categoría.
+                                        if (dia in existentes) fechasBorrar = if (dia in fechasBorrar) fechasBorrar - dia else fechasBorrar + dia
+                                    } else {
+                                        fechasAplicar = if (dia in fechasAplicar) fechasAplicar - dia else fechasAplicar + dia
+                                    }
                                 }
                             )
                             Spacer(Modifier.height(14.dp))
                             SeparadorHoja()
                             Spacer(Modifier.height(10.dp))
                             Text(
-                                "O cada semana en (lleno: todas las semanas · a medias: faltan algunas · toca para quitarlo)",
+                                if (modoBorrar) "O quitar un día de la semana (de este día en adelante)" else "O cada semana en",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = tintaSuaveHoja
                             )
@@ -546,8 +568,16 @@ fun DialogoDisponibilidad(
                                 parciales = diasSemanaAMedias,
                                 onAlternar = { dia -> alternarDiaSemana(dia) }
                             )
-                            Spacer(Modifier.height(10.dp))
-                            CajaFechaHoja("Repetir hasta", hastaRepetir, Modifier.fillMaxWidth()) { cambiarHastaRepetir(it) }
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                "Círculo lleno: todas las semanas · con borde grueso: solo algunas · vacío: ninguna. Toca uno lleno o a medias para quitarlo.",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = tintaSuaveHoja
+                            )
+                            if (!modoBorrar) {
+                                Spacer(Modifier.height(10.dp))
+                                CajaFechaHoja("Repetir hasta", hastaRepetir, Modifier.fillMaxWidth()) { cambiarHastaRepetir(it) }
+                            }
                         }
                         Spacer(Modifier.height(8.dp))
                         Row(verticalAlignment = Alignment.Top) {
