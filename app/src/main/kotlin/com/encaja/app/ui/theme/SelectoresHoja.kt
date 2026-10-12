@@ -144,7 +144,7 @@ fun CalendarioMultipleHoja(mesInicial: YearMonth, seleccionadas: Set<LocalDate>,
                             Text(
                                 dia.dayOfMonth.toString(),
                                 style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = if (marcado || aMedias) FontWeight.ExtraBold else FontWeight.Medium,
+                                fontWeight = if (marcado) FontWeight.ExtraBold else FontWeight.Medium,
                                 color = if (marcado) onAcentoHoja else tintaHoja
                             )
                         }
