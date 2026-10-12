@@ -10,8 +10,8 @@ import com.encaja.app.domain.repository.ChildRepository
 import com.encaja.app.domain.repository.CoverageNeedRepository
 import com.encaja.app.domain.repository.FamilyMembershipRepository
 import com.encaja.app.domain.repository.FamilyUnitRepository
-import com.encaja.app.domain.usecase.TipoAviso
-import com.encaja.app.domain.usecase.debeAvisarA
+import com.encaja.app.domain.usecase.planDeAvisos
+import com.encaja.app.domain.usecase.sellarCreadorDe
 import kotlinx.coroutines.sync.Mutex
 import java.time.LocalDate
 import javax.inject.Inject
@@ -44,8 +44,7 @@ class SincronizadorDeAvisos @Inject constructor(
     /** Pone a las actividades nuevas (sin creador) el cuidador de este móvil como creador. */
     suspend fun sellarCreador(needs: List<CoverageNeed>): List<CoverageNeed> {
         if (needs.none { it.creadoPorId == null }) return needs
-        val yo = miCaregiverId()?.value ?: return needs
-        return needs.map { if (it.creadoPorId == null) it.copy(creadoPorId = yo) else it }
+        return sellarCreadorDe(needs, miCaregiverId())
     }
 
     /** Programa en este móvil los avisos que le tocan de [needs] y quita los que no. */
@@ -54,10 +53,8 @@ class SincronizadorDeAvisos @Inject constructor(
         val yo = miCaregiverId()
         val unidades = familyUnitRepository.obtenerUnidades(familyId)
         val nombres = childRepository.obtenerNinos(familyId).associate { it.id to it.nombre }
-        needs.forEach { need ->
-            val llevar = yo == null || debeAvisarA(need, TipoAviso.LLEVAR, yo, unidades)
-            val recoger = yo == null || debeAvisarA(need, TipoAviso.RECOGER, yo, unidades)
-            programador.programar(need, nombres[need.childId], llevar, recoger)
+        planDeAvisos(needs, yo, unidades).forEach { aviso ->
+            programador.programar(aviso.need, nombres[aviso.need.childId], aviso.llevar, aviso.recoger)
         }
     }
 
