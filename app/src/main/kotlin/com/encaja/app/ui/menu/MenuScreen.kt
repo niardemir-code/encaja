@@ -158,9 +158,9 @@ private fun CabeceraMenu(
         Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
             Text(
                 stringResource(R.string.menu_titulo),
-                style = MaterialTheme.typography.headlineSmall,
+                style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                maxLines = 1,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
             Spacer(Modifier.height(2.dp))
@@ -168,7 +168,7 @@ private fun CabeceraMenu(
                 stringResource(R.string.menu_subtitulo),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
         }
