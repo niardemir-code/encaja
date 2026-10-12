@@ -1,4 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Encaja</string>
+    <string name="comun_cancelar">Cancel</string>
+    <string name="comun_eliminar">Delete</string>
+    <string name="comun_anadir">Add</string>
+    <string name="comun_sin_familia_ver">Link to a family from the Week tab to see this screen.</string>
+    <string name="comun_sin_familia_gestionar">Link to a family from the Week tab to manage its data.</string>
+    <string name="comun_semana_anterior">Previous week</string>
+    <string name="comun_semana_siguiente">Next week</string>
+    <string name="comun_ir_a_semana">Go to a week</string>
+    <string name="comun_ir_semana_actual">Go to the current week</string>
+    <string name="menu_titulo">Weekly menu</string>
+    <string name="menu_subtitulo">Plan, organise and enjoy</string>
+    <string name="menu_comida">Lunch</string>
+    <string name="menu_cena">Dinner</string>
+    <string name="menu_sin_planificar">Not planned</string>
+    <string name="menu_confirmar">Confirm %1$s</string>
+    <string name="menu_editar">Edit %1$s</string>
+    <string name="ninos_titulo">Children</string>
+    <string name="ninos_subtitulo">The family\'s children, to organise their activities.</string>
+    <string name="ninos_eliminar_titulo">Remove %1$s?</string>
+    <string name="ninos_eliminar_texto">They will be removed from the family\'s list of children. This can\'t be undone.</string>
+    <string name="ninos_vacio">You haven\'t added any children yet.</string>
+    <string name="ninos_eliminar_a">Remove %1$s</string>
+    <string name="ninos_nuevo">New child</string>
+    <string name="ninos_anadir_titulo">Add a child</string>
+    <string name="ninos_nombre">Child\'s name</string>
 </resources>

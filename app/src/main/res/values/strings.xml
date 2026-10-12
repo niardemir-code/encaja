@@ -2,4 +2,29 @@
 <resources>
     <!-- Idioma de origen: castellano. El nombre de la app cambia según el idioma. -->
     <string name="app_name">Encaja</string>
+    <string name="comun_cancelar">Cancelar</string>
+    <string name="comun_eliminar">Eliminar</string>
+    <string name="comun_anadir">Añadir</string>
+    <string name="comun_sin_familia_ver">Vincúlate a una familia desde la pestaña Semana para ver esta pantalla.</string>
+    <string name="comun_sin_familia_gestionar">Vincúlate a una familia desde la pestaña Semana para gestionar sus datos.</string>
+    <string name="comun_semana_anterior">Semana anterior</string>
+    <string name="comun_semana_siguiente">Semana siguiente</string>
+    <string name="comun_ir_a_semana">Ir a una semana</string>
+    <string name="comun_ir_semana_actual">Ir a la semana actual</string>
+    <string name="menu_titulo">Menú semanal</string>
+    <string name="menu_subtitulo">Planifica, organiza y disfruta</string>
+    <string name="menu_comida">Comida</string>
+    <string name="menu_cena">Cena</string>
+    <string name="menu_sin_planificar">Sin planificar</string>
+    <string name="menu_confirmar">Confirmar %1$s</string>
+    <string name="menu_editar">Editar %1$s</string>
+    <string name="ninos_titulo">Niños</string>
+    <string name="ninos_subtitulo">Los niños de la familia, para organizar sus actividades.</string>
+    <string name="ninos_eliminar_titulo">¿Eliminar a %1$s?</string>
+    <string name="ninos_eliminar_texto">Se quitará de la lista de niños de la familia. No se puede deshacer.</string>
+    <string name="ninos_vacio">Todavía no has añadido ningún niño.</string>
+    <string name="ninos_eliminar_a">Eliminar a %1$s</string>
+    <string name="ninos_nuevo">Nuevo niño</string>
+    <string name="ninos_anadir_titulo">Añadir un niño</string>
+    <string name="ninos_nombre">Nombre del niño</string>
 </resources>

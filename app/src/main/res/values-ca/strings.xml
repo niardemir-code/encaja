@@ -1,4 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Encaixa</string>
+    <string name="comun_cancelar">Cancel·la</string>
+    <string name="comun_eliminar">Elimina</string>
+    <string name="comun_anadir">Afegeix</string>
+    <string name="comun_sin_familia_ver">Vincula\'t a una família des de la pestanya Setmana per veure aquesta pantalla.</string>
+    <string name="comun_sin_familia_gestionar">Vincula\'t a una família des de la pestanya Setmana per gestionar-ne les dades.</string>
+    <string name="comun_semana_anterior">Setmana anterior</string>
+    <string name="comun_semana_siguiente">Setmana següent</string>
+    <string name="comun_ir_a_semana">Ves a una setmana</string>
+    <string name="comun_ir_semana_actual">Ves a la setmana actual</string>
+    <string name="menu_titulo">Menú setmanal</string>
+    <string name="menu_subtitulo">Planifica, organitza i gaudeix</string>
+    <string name="menu_comida">Dinar</string>
+    <string name="menu_cena">Sopar</string>
+    <string name="menu_sin_planificar">Sense planificar</string>
+    <string name="menu_confirmar">Confirma %1$s</string>
+    <string name="menu_editar">Edita %1$s</string>
+    <string name="ninos_titulo">Nens</string>
+    <string name="ninos_subtitulo">Els nens de la família, per organitzar-ne les activitats.</string>
+    <string name="ninos_eliminar_titulo">Vols eliminar %1$s?</string>
+    <string name="ninos_eliminar_texto">Se\'n traurà de la llista de nens de la família. No es pot desfer.</string>
+    <string name="ninos_vacio">Encara no has afegit cap nen.</string>
+    <string name="ninos_eliminar_a">Elimina %1$s</string>
+    <string name="ninos_nuevo">Nou nen</string>
+    <string name="ninos_anadir_titulo">Afegeix un nen</string>
+    <string name="ninos_nombre">Nom del nen</string>
 </resources>

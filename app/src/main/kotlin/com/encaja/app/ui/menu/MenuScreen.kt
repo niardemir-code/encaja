@@ -11,6 +11,9 @@ package com.encaja.app.ui.menu
 // Cena (icono sol/luna + texto + lápiz de edición), todo dentro de un
 // único recuadro para que quede bien delimitado y alineado.
 
+import androidx.annotation.StringRes
+import androidx.compose.ui.res.stringResource
+import com.encaja.app.R
 import com.encaja.app.ui.common.nombreDiaCorto
 import com.encaja.app.ui.common.nombreMesCorto
 import com.encaja.app.ui.theme.SelectorFechaHoja
@@ -76,7 +79,7 @@ fun MenuScreen(viewModel: MenuViewModel = hiltViewModel()) {
         is MenuPantallaEstado.SinFamilia -> {
             Box(modifier = Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
                 Text(
-                    "Vincúlate a una familia desde la pestaña Semana para ver esta pantalla.",
+                    stringResource(R.string.comun_sin_familia_ver),
                     textAlign = TextAlign.Center
                 )
             }
@@ -154,7 +157,7 @@ private fun CabeceraMenu(
         // pareciera que faltaba el botón de avanzar semana al añadir un cuarto icono).
         Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
             Text(
-                "Menú semanal",
+                stringResource(R.string.menu_titulo),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
@@ -162,7 +165,7 @@ private fun CabeceraMenu(
             )
             Spacer(Modifier.height(2.dp))
             Text(
-                "Planifica, organiza y disfruta",
+                stringResource(R.string.menu_subtitulo),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
@@ -172,10 +175,10 @@ private fun CabeceraMenu(
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onSemanaAnterior) {
-                Icon(Icons.Default.ChevronLeft, contentDescription = "Semana anterior")
+                Icon(Icons.Default.ChevronLeft, contentDescription = stringResource(R.string.comun_semana_anterior))
             }
             IconButton(onClick = { calendarioAbierto = true }) {
-                Icon(Icons.Default.CalendarMonth, contentDescription = "Ir a una semana")
+                Icon(Icons.Default.CalendarMonth, contentDescription = stringResource(R.string.comun_ir_a_semana))
             }
             // Botones de ir adelante/atrás ya cubren cambiar de semana; este vuelve
             // directo a la actual sin acumular los pasos dados con las flechas. Mismo
@@ -183,12 +186,12 @@ private fun CabeceraMenu(
             IconButton(onClick = onIrASemanaActual, enabled = !esSemanaActual) {
                 Icon(
                     Icons.Default.MyLocation,
-                    contentDescription = "Ir a la semana actual",
+                    contentDescription = stringResource(R.string.comun_ir_semana_actual),
                     tint = if (esSemanaActual) LocalContentColor.current.copy(alpha = 0.38f) else LocalContentColor.current
                 )
             }
             IconButton(onClick = onSemanaSiguiente) {
-                Icon(Icons.Default.ChevronRight, contentDescription = "Semana siguiente")
+                Icon(Icons.Default.ChevronRight, contentDescription = stringResource(R.string.comun_semana_siguiente))
             }
         }
     }
@@ -227,14 +230,14 @@ private fun TarjetaDia(
         ) {
             FilaComida(
                 icono = Icons.Default.WbSunny,
-                etiqueta = "Comida",
+                etiquetaId = R.string.menu_comida,
                 valorActual = dia.comida,
                 onGuardar = onGuardarComida
             )
             HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
             FilaComida(
                 icono = Icons.Default.NightsStay,
-                etiqueta = "Cena",
+                etiquetaId = R.string.menu_cena,
                 valorActual = dia.cena,
                 onGuardar = onGuardarCena
             )
@@ -267,10 +270,11 @@ private fun PanelDelDia(fecha: LocalDate, color: Color) {
 @Composable
 private fun FilaComida(
     icono: androidx.compose.ui.graphics.vector.ImageVector,
-    etiqueta: String,
+    @StringRes etiquetaId: Int,
     valorActual: String?,
     onGuardar: (String?) -> Unit
 ) {
+    val etiqueta = stringResource(etiquetaId)
     var editando by remember(valorActual) { mutableStateOf(false) }
     var texto by remember(valorActual) { mutableStateOf(valorActual ?: "") }
 
@@ -294,7 +298,7 @@ private fun FilaComida(
                 modifier = Modifier.weight(1f)
             )
             Spacer(Modifier.width(4.dp))
-            BotonCompactoMenu(Icons.Default.Check, "Confirmar $etiqueta", 24) {
+            BotonCompactoMenu(Icons.Default.Check, stringResource(R.string.menu_confirmar, etiqueta), 24) {
                 onGuardar(texto.ifBlank { null })
                 editando = false
             }
@@ -302,11 +306,11 @@ private fun FilaComida(
             Column(modifier = Modifier.weight(1f)) {
                 Text(etiqueta, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(
-                    valorActual ?: "Sin planificar",
+                    valorActual ?: stringResource(R.string.menu_sin_planificar),
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
-            BotonCompactoMenu(Icons.Default.Edit, "Editar $etiqueta", 18) { editando = true }
+            BotonCompactoMenu(Icons.Default.Edit, stringResource(R.string.menu_editar, etiqueta), 18) { editando = true }
         }
     }
 }

@@ -2,6 +2,8 @@ package com.encaja.app.ui.ajustes
 
 // NOTA: depende de Jetpack Compose y Hilt, no compilado en este entorno.
 
+import androidx.compose.ui.res.stringResource
+import com.encaja.app.R
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -49,12 +51,12 @@ fun AjustesNinosScreen(viewModel: AjustesViewModel = hiltViewModel()) {
                 .padding(horizontal = 20.dp)
                 .padding(bottom = 32.dp)
         ) {
-            CabeceraPantalla("Niños", "Los niños de la familia, para organizar sus actividades.")
+            CabeceraPantalla(stringResource(R.string.ninos_titulo), stringResource(R.string.ninos_subtitulo))
 
             when (val estadoActual = pantalla) {
                 is AjustesPantallaEstado.Cargando -> CircularProgressIndicator()
                 is AjustesPantallaEstado.SinFamilia -> {
-                    MensajePantalla("Vincúlate a una familia desde la pestaña Semana para gestionar sus datos.")
+                    MensajePantalla(stringResource(R.string.comun_sin_familia_gestionar))
                 }
                 is AjustesPantallaEstado.ConDatos -> {
                     SeccionNinos(
@@ -90,14 +92,14 @@ private fun SeccionNinos(
     ninoAEliminar?.let { nino ->
         AvisoHoja(
             icono = Icons.Default.Delete,
-            titulo = "¿Eliminar a ${nino.nombre}?",
-            texto = "Se quitará de la lista de niños de la familia. No se puede deshacer.",
+            titulo = stringResource(R.string.ninos_eliminar_titulo, nino.nombre),
+            texto = stringResource(R.string.ninos_eliminar_texto),
             acciones = listOf(
-                AccionAvisoHoja("Eliminar", EstiloAccionAviso.PELIGRO) {
+                AccionAvisoHoja(stringResource(R.string.comun_eliminar), EstiloAccionAviso.PELIGRO) {
                     onEliminar(nino.id)
                     ninoAEliminar = null
                 },
-                AccionAvisoHoja("Cancelar", EstiloAccionAviso.BORDE) { ninoAEliminar = null }
+                AccionAvisoHoja(stringResource(R.string.comun_cancelar), EstiloAccionAviso.BORDE) { ninoAEliminar = null }
             ),
             onCerrar = { ninoAEliminar = null }
         )
@@ -105,7 +107,7 @@ private fun SeccionNinos(
 
     Column(modifier = Modifier.fillMaxWidth()) {
         if (ninos.isEmpty()) {
-            MensajePantalla("Todavía no has añadido ningún niño.")
+            MensajePantalla(stringResource(R.string.ninos_vacio))
         }
         ninos.forEach { nino ->
             TarjetaFilaHoja {
@@ -118,7 +120,7 @@ private fun SeccionNinos(
                 )
                 BotonRedondoSuaveHoja(
                     Icons.Default.Delete,
-                    "Eliminar a ${nino.nombre}",
+                    stringResource(R.string.ninos_eliminar_a, nino.nombre),
                     { ninoAEliminar = nino },
                     tinta = MaterialTheme.colorScheme.error
                 )
@@ -126,7 +128,7 @@ private fun SeccionNinos(
             Spacer(Modifier.height(10.dp))
         }
         Spacer(Modifier.height(6.dp))
-        BotonPildoraHoja("Nuevo niño", onClick = { nuevoAbierto = true }, icono = Icons.Default.Add)
+        BotonPildoraHoja(stringResource(R.string.ninos_nuevo), onClick = { nuevoAbierto = true }, icono = Icons.Default.Add)
     }
 }
 
@@ -136,20 +138,20 @@ private fun DialogoNuevoNino(onCrear: (String) -> Unit, onCerrar: () -> Unit) {
     var nombre by remember { mutableStateOf("") }
     AvisoHoja(
         icono = Icons.Default.ChildCare,
-        titulo = "Añadir un niño",
+        titulo = stringResource(R.string.ninos_anadir_titulo),
         texto = null,
         peligro = false,
         conX = true,
         accionesEnFila = true,
         acciones = listOf(
-            AccionAvisoHoja("Cancelar", EstiloAccionAviso.BORDE) { onCerrar() },
-            AccionAvisoHoja("Añadir", EstiloAccionAviso.PRIMARIO, habilitada = nombre.isNotBlank()) {
+            AccionAvisoHoja(stringResource(R.string.comun_cancelar), EstiloAccionAviso.BORDE) { onCerrar() },
+            AccionAvisoHoja(stringResource(R.string.comun_anadir), EstiloAccionAviso.PRIMARIO, habilitada = nombre.isNotBlank()) {
                 onCrear(nombre.trim())
             }
         ),
         onCerrar = onCerrar,
         contenido = {
-            CampoTextoConIconoHoja(nombre, { nombre = it }, "Nombre del niño", Icons.Default.ChildCare)
+            CampoTextoConIconoHoja(nombre, { nombre = it }, stringResource(R.string.ninos_nombre), Icons.Default.ChildCare)
         }
     )
 }
