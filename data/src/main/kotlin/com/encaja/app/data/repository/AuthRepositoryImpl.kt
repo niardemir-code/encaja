@@ -58,13 +58,19 @@ class AuthRepositoryImpl @Inject constructor(
     private fun verificada(user: com.google.firebase.auth.FirebaseUser): Boolean =
         user.isEmailVerified || user.providerData.none { it.providerId == EmailAuthProvider.PROVIDER_ID }
 
-    override suspend fun enviarVerificacion(): Result<Unit> = try {
-        val user = firebaseAuth.currentUser ?: return Result.failure(IllegalStateException("Sin sesión"))
-        firebaseAuth.useAppLanguage()   // el correo sale en el idioma de la app
-        user.sendEmailVerification().await()
-        Result.success(Unit)
-    } catch (e: Exception) {
-        Result.failure(e)
+    override suspend fun enviarVerificacion(): Result<Unit> {
+        return try {
+            val user = firebaseAuth.currentUser
+            if (user == null) {
+                Result.failure(IllegalStateException("Sin sesión"))
+            } else {
+                firebaseAuth.useAppLanguage()   // el correo sale en el idioma de la app
+                user.sendEmailVerification().await()
+                Result.success(Unit)
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 
     override suspend fun correoVerificado(): Boolean = try {
