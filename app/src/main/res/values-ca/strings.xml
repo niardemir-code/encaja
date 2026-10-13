@@ -540,4 +540,5 @@
     <string name="baja_titulo">Compte donat de baixa</string>
     <string name="baja_texto">Un administrador ha donat de baixa el teu compte en aquesta família. Per seguretat, s\'esborraran totes les dades d\'Encaja d\'aquest dispositiu, inclosos els avisos programats, i l\'aplicació es tancarà.</string>
     <string name="error_accion">No s\'ha pogut completar l\'acció. Revisa la connexió i torna-ho a provar.</string>
+    <string name="ayuda_subtitulo">Com funciona Encaja, pantalla per pantalla. Toca un tema per obrir-lo.</string>
 </resources>

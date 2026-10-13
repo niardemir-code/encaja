@@ -1,5 +1,7 @@
 package com.encaja.app.ui.informacion
 
+import androidx.compose.ui.res.stringResource
+import com.encaja.app.R
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,7 +16,7 @@ import com.encaja.app.ui.theme.CabeceraPantalla
 import com.encaja.app.ui.theme.FondoPantalla
 import com.encaja.app.ui.theme.RotuloSeccionPantalla
 
-/** Ajustes > Ayuda: instrucciones de uso de la app. El contenido está en [SECCIONES_AYUDA]. */
+/** Ajustes > Ayuda: instrucciones de uso de la app. El contenido está en [seccionesAyuda]. */
 @Composable
 fun AyudaScreen() {
     FondoPantalla {
@@ -25,9 +27,9 @@ fun AyudaScreen() {
                 .padding(horizontal = 20.dp)
                 .padding(bottom = 32.dp)
         ) {
-            CabeceraPantalla("Ayuda", "Cómo funciona Encaja, pantalla por pantalla. Toca un tema para abrirlo.")
+            CabeceraPantalla(stringResource(R.string.ajustes_ayuda_titulo), stringResource(R.string.ayuda_subtitulo))
 
-            SECCIONES_AYUDA.forEach { seccion ->
+            seccionesAyuda().forEach { seccion ->
                 RotuloSeccionPantalla(seccion.titulo)
                 seccion.temas.forEach { tema ->
                     TarjetaPlegable(titulo = tema.titulo) { ContenidoTemaAyuda(tema) }

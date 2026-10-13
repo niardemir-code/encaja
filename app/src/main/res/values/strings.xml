@@ -541,4 +541,5 @@
     <string name="baja_titulo">Cuenta dada de baja</string>
     <string name="baja_texto">Un administrador ha dado de baja tu cuenta en esta familia. Por seguridad, se borrarán todos los datos de Encaja de este dispositivo, incluidos los avisos programados, y la aplicación se cerrará.</string>
     <string name="error_accion">No se pudo completar la acción. Revisa la conexión e inténtalo de nuevo.</string>
+    <string name="ayuda_subtitulo">Cómo funciona Encaja, pantalla por pantalla. Toca un tema para abrirlo.</string>
 </resources>
