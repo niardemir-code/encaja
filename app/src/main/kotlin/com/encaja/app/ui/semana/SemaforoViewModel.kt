@@ -74,7 +74,8 @@ class SemaforoViewModel @Inject constructor(
     private var familyIdActual: FamilyId? = null
 
     /** Nombre del cuidador actual, para firmar los anuncios que publique. */
-    private var nombreCuidadorActual: String = "Alguien de la familia"
+    // Vacío si aún no se conoce: la pantalla y la notificación muestran entonces "Alguien de la familia" en el idioma del móvil.
+    private var nombreCuidadorActual: String = ""
 
     /** Lunes de la semana que se está mostrando. */
     private var lunesActual: LocalDate = LocalDate.now().lunesDeEstaSemana()

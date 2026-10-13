@@ -89,10 +89,13 @@ exports.avisarAnuncio = onDocumentCreated(
     const uids = await uidsDeFamilia(event.params.familyId);
     if (anuncio.autorUid) uids.delete(anuncio.autorUid); // el autor ya lo sabe
     const texto = String(anuncio.texto || "").slice(0, 200);
-    const autor = anuncio.autorNombre || "Alguien de la familia";
+    const autor = anuncio.autorNombre || "";
+    // "autor" lo usa la app para redactar el título en el idioma del móvil; "titulo" se mantiene
+    // sólo para las versiones anteriores de la app, que lo mostraban tal cual.
     await enviar(await tokensDe(uids), {
       tipo: "anuncio",
-      titulo: `${autor} en el tablón`,
+      autor,
+      titulo: `${autor || "Alguien de la familia"} en el tablón`,
       texto,
     });
   }

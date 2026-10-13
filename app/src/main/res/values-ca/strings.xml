@@ -541,4 +541,24 @@
     <string name="baja_texto">Un administrador ha donat de baixa el teu compte en aquesta família. Per seguretat, s\'esborraran totes les dades d\'Encaja d\'aquest dispositiu, inclosos els avisos programats, i l\'aplicació es tancarà.</string>
     <string name="error_accion">No s\'ha pogut completar l\'acció. Revisa la connexió i torna-ho a provar.</string>
     <string name="ayuda_subtitulo">Com funciona Encaja, pantalla per pantalla. Toca un tema per obrir-lo.</string>
+    <string name="aviso_llevar_a">Portar a %1$s · %2$s</string>
+    <string name="aviso_recoger_a">Recollir a %1$s · %2$s</string>
+    <string name="aviso_llevar">Portar · %1$s</string>
+    <string name="aviso_recoger">Recollir · %1$s</string>
+    <string name="aviso_empieza">Comença · %1$s</string>
+    <string name="aviso_termina">Acaba · %1$s</string>
+    <string name="aviso_texto_empieza">Comença a les %1$s (d\'aquí a %2$s).</string>
+    <string name="aviso_texto_termina">Acaba a les %1$s (d\'aquí a %2$s).</string>
+    <string name="aviso_dur_min">%1$d min</string>
+    <string name="aviso_dur_h_min">%1$d h %2$d min</string>
+    <string name="canal_avisos_nombre">Avisos d\'activitats</string>
+    <string name="canal_avisos_desc">Recordatoris de portar o recollir els nens</string>
+    <string name="canal_tablon_nombre">Tauler de la família</string>
+    <string name="canal_tablon_desc">Avisos quan algú publica al tauler</string>
+    <string name="notif_tablon_de">%1$s al tauler</string>
+    <string name="notif_alguien">Algú de la família</string>
+    <plurals name="aviso_dur_horas">
+        <item quantity="one">%d hora</item>
+        <item quantity="other">%d hores</item>
+    </plurals>
 </resources>

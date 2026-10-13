@@ -542,4 +542,24 @@
     <string name="baja_texto">Un administrador ha dado de baja tu cuenta en esta familia. Por seguridad, se borrarán todos los datos de Encaja de este dispositivo, incluidos los avisos programados, y la aplicación se cerrará.</string>
     <string name="error_accion">No se pudo completar la acción. Revisa la conexión e inténtalo de nuevo.</string>
     <string name="ayuda_subtitulo">Cómo funciona Encaja, pantalla por pantalla. Toca un tema para abrirlo.</string>
+    <string name="aviso_llevar_a">Llevar a %1$s · %2$s</string>
+    <string name="aviso_recoger_a">Recoger a %1$s · %2$s</string>
+    <string name="aviso_llevar">Llevar · %1$s</string>
+    <string name="aviso_recoger">Recoger · %1$s</string>
+    <string name="aviso_empieza">Empieza · %1$s</string>
+    <string name="aviso_termina">Termina · %1$s</string>
+    <string name="aviso_texto_empieza">Empieza a las %1$s (dentro de %2$s).</string>
+    <string name="aviso_texto_termina">Termina a las %1$s (dentro de %2$s).</string>
+    <string name="aviso_dur_min">%1$d min</string>
+    <string name="aviso_dur_h_min">%1$d h %2$d min</string>
+    <string name="canal_avisos_nombre">Avisos de actividades</string>
+    <string name="canal_avisos_desc">Recordatorios de llevar o recoger a los niños</string>
+    <string name="canal_tablon_nombre">Tablón de la familia</string>
+    <string name="canal_tablon_desc">Avisos cuando alguien publica en el tablón</string>
+    <string name="notif_tablon_de">%1$s en el tablón</string>
+    <string name="notif_alguien">Alguien de la familia</string>
+    <plurals name="aviso_dur_horas">
+        <item quantity="one">%d hora</item>
+        <item quantity="other">%d horas</item>
+    </plurals>
 </resources>

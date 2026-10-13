@@ -40,7 +40,16 @@ class EncajaMessagingService : FirebaseMessagingService() {
     override fun onMessageReceived(mensaje: RemoteMessage) {
         val datos = mensaje.data
         when (datos["tipo"]) {
-            "anuncio" -> mostrarAnuncio(datos["titulo"] ?: "Tablón de la familia", datos["texto"] ?: "")
+            "anuncio" -> {
+                // El título se redacta aquí, en el idioma del móvil. "titulo" sólo lo manda el
+                // servidor por compatibilidad con versiones anteriores de la app.
+                val autor = datos["autor"]
+                val titulo = when {
+                    autor != null -> getString(R.string.notif_tablon_de, autor.ifBlank { getString(R.string.notif_alguien) })
+                    else -> datos["titulo"] ?: getString(R.string.canal_tablon_nombre)
+                }
+                mostrarAnuncio(titulo, datos["texto"] ?: "")
+            }
             "sync_avisos" -> runBlocking { runCatching { sincronizador.reprogramar() } }
         }
     }
@@ -78,8 +87,8 @@ class EncajaMessagingService : FirebaseMessagingService() {
 
     private fun crearCanal(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
-        val canal = NotificationChannel(CANAL_TABLON, "Tablón de la familia", NotificationManager.IMPORTANCE_HIGH).apply {
-            description = "Avisos cuando alguien publica en el tablón"
+        val canal = NotificationChannel(CANAL_TABLON, context.getString(R.string.canal_tablon_nombre), NotificationManager.IMPORTANCE_HIGH).apply {
+            description = context.getString(R.string.canal_tablon_desc)
         }
         context.getSystemService(NotificationManager::class.java)?.createNotificationChannel(canal)
     }

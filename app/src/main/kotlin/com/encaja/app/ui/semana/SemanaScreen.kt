@@ -788,7 +788,7 @@ private fun FilaAnuncio(anuncio: Anuncio, onEliminar: () -> Unit) {
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                "${anuncio.autorNombre} · ${formatearFechaAnuncio(anuncio.publicadoEn)}",
+                "${anuncio.autorNombre.ifBlank { stringResource(R.string.notif_alguien) }} · ${formatearFechaAnuncio(anuncio.publicadoEn)}",
                 style = MaterialTheme.typography.labelMedium,
                 color = TINTA_SUAVE
             )

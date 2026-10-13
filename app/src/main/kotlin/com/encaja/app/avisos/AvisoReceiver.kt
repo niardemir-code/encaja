@@ -19,8 +19,22 @@ class AvisoReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         val id = intent.getIntExtra(EXTRA_ID, 0)
-        val titulo = intent.getStringExtra(EXTRA_TITULO) ?: return
-        val texto = intent.getStringExtra(EXTRA_TEXTO) ?: ""
+        val tipoAviso = intent.getStringExtra(EXTRA_TIPO)?.let { runCatching { ProgramadorDeAvisos.Tipo.valueOf(it) }.getOrNull() }
+        val (titulo, texto) = if (tipoAviso != null) {
+            // El texto se redacta ahora, en el idioma que tenga el móvil.
+            TextosDeAviso.construir(
+                contexto = context,
+                tipo = tipoAviso,
+                nombreNino = intent.getStringExtra(EXTRA_NINO),
+                descripcion = intent.getStringExtra(EXTRA_DESCRIPCION) ?: "",
+                acompanar = intent.getBooleanExtra(EXTRA_ACOMPANAR, true),
+                hora = intent.getStringExtra(EXTRA_HORA) ?: "",
+                minutosAntes = intent.getIntExtra(EXTRA_MINUTOS, 0)
+            )
+        } else {
+            // Alarma programada por una versión anterior, que ya traía el texto hecho.
+            (intent.getStringExtra(EXTRA_TITULO) ?: return) to (intent.getStringExtra(EXTRA_TEXTO) ?: "")
+        }
         val fecha = intent.getStringExtra(EXTRA_FECHA)
         val necesidadId = intent.getStringExtra(EXTRA_NECESIDAD)
 
@@ -60,8 +74,8 @@ class AvisoReceiver : BroadcastReceiver() {
 
     private fun crearCanal(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
-        val canal = NotificationChannel(CANAL, "Avisos de actividades", NotificationManager.IMPORTANCE_HIGH).apply {
-            description = "Recordatorios de llevar o recoger a los niños"
+        val canal = NotificationChannel(CANAL, context.getString(R.string.canal_avisos_nombre), NotificationManager.IMPORTANCE_HIGH).apply {
+            description = context.getString(R.string.canal_avisos_desc)
         }
         context.getSystemService(NotificationManager::class.java)?.createNotificationChannel(canal)
     }
@@ -71,6 +85,12 @@ class AvisoReceiver : BroadcastReceiver() {
         const val EXTRA_ID = "id"
         const val EXTRA_TITULO = "titulo"
         const val EXTRA_TEXTO = "texto"
+        const val EXTRA_TIPO = "tipo"
+        const val EXTRA_NINO = "nino"
+        const val EXTRA_DESCRIPCION = "descripcion"
+        const val EXTRA_ACOMPANAR = "acompanar"
+        const val EXTRA_HORA = "hora"
+        const val EXTRA_MINUTOS = "minutos"
         const val EXTRA_FECHA = "fecha"
         const val EXTRA_NECESIDAD = "necesidad"
     }

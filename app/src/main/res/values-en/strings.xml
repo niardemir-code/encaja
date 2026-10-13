@@ -541,4 +541,24 @@
     <string name="baja_texto">An administrator has removed your account from this family. For security, all Encaja data on this device, including scheduled alerts, will be deleted and the app will close.</string>
     <string name="error_accion">The action couldn\'t be completed. Check your connection and try again.</string>
     <string name="ayuda_subtitulo">How Encaja works, screen by screen. Tap a topic to open it.</string>
+    <string name="aviso_llevar_a">Drop off %1$s · %2$s</string>
+    <string name="aviso_recoger_a">Pick up %1$s · %2$s</string>
+    <string name="aviso_llevar">Drop off · %1$s</string>
+    <string name="aviso_recoger">Pick up · %1$s</string>
+    <string name="aviso_empieza">Starts · %1$s</string>
+    <string name="aviso_termina">Ends · %1$s</string>
+    <string name="aviso_texto_empieza">Starts at %1$s (in %2$s).</string>
+    <string name="aviso_texto_termina">Ends at %1$s (in %2$s).</string>
+    <string name="aviso_dur_min">%1$d min</string>
+    <string name="aviso_dur_h_min">%1$d h %2$d min</string>
+    <string name="canal_avisos_nombre">Activity alerts</string>
+    <string name="canal_avisos_desc">Reminders to drop off or pick up the children</string>
+    <string name="canal_tablon_nombre">Family notice board</string>
+    <string name="canal_tablon_desc">Alerts when someone posts on the notice board</string>
+    <string name="notif_tablon_de">%1$s on the notice board</string>
+    <string name="notif_alguien">Someone in the family</string>
+    <plurals name="aviso_dur_horas">
+        <item quantity="one">%d hour</item>
+        <item quantity="other">%d hours</item>
+    </plurals>
 </resources>

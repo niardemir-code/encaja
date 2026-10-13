@@ -57,24 +57,9 @@ class ProgramadorDeAvisos @Inject constructor(@ApplicationContext private val co
         val instante = need.fecha.atTime(hora).minusMinutes(minutosAntes.toLong())
         if (instante.isBefore(LocalDateTime.now())) return
 
-        // Si la actividad requiere que alguien la acompañe, el título lo deja claro
-        // ("Llevar a…"/"Recoger a…"); si no, es solo un recordatorio genérico de que
-        // empieza o termina.
-        val quien = nombreNino?.let { " a $it" } ?: ""
-        val titulo = if (need.requiereDesplazamiento) {
-            if (tipo == Tipo.LLEVAR) "Llevar$quien · ${need.descripcion}" else "Recoger$quien · ${need.descripcion}"
-        } else {
-            if (tipo == Tipo.LLEVAR) "Empieza · ${need.descripcion}" else "Termina · ${need.descripcion}"
-        }
-        val texto = if (tipo == Tipo.LLEVAR) {
-            "Empieza a las ${hora.formatoCorto()} (dentro de ${textoMinutos(minutosAntes)})."
-        } else {
-            "Termina a las ${hora.formatoCorto()} (dentro de ${textoMinutos(minutosAntes)})."
-        }
-
         val millis = instante.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
         val alarmas = contexto.getSystemService(AlarmManager::class.java) ?: return
-        val pi = pendingIntent(need.id, tipo, titulo, texto, need.fecha.toString())
+        val pi = pendingIntent(need.id, tipo, need, nombreNino, minutosAntes)
         // Alarma exacta si el sistema lo permite (Android 12+ puede exigir permiso);
         // si no, una aproximada, que puede retrasarse unos minutos.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarmas.canScheduleExactAlarms()) {
@@ -84,14 +69,25 @@ class ProgramadorDeAvisos @Inject constructor(@ApplicationContext private val co
         }
     }
 
-    private fun pendingIntent(id: CoverageNeedId, tipo: Tipo, titulo: String?, texto: String?, fecha: String?): PendingIntent {
+    /**
+     * Los extras llevan los datos en bruto, no el texto: la notificación se redacta al saltar la
+     * alarma ([TextosDeAviso]), en el idioma que tenga el móvil en ese momento. [need] es null
+     * al cancelar, donde solo cuenta la identidad del PendingIntent.
+     */
+    private fun pendingIntent(id: CoverageNeedId, tipo: Tipo, need: CoverageNeed?, nombreNino: String?, minutosAntes: Int?): PendingIntent {
         val intent = Intent(contexto, AvisoReceiver::class.java).apply {
             action = "com.encaja.app.AVISO_ACTIVIDAD"
             putExtra(AvisoReceiver.EXTRA_ID, codigo(id, tipo))
-            putExtra(AvisoReceiver.EXTRA_TITULO, titulo)
-            putExtra(AvisoReceiver.EXTRA_TEXTO, texto)
+            if (need != null) {
+                putExtra(AvisoReceiver.EXTRA_TIPO, tipo.name)
+                putExtra(AvisoReceiver.EXTRA_NINO, nombreNino)
+                putExtra(AvisoReceiver.EXTRA_DESCRIPCION, need.descripcion)
+                putExtra(AvisoReceiver.EXTRA_ACOMPANAR, need.requiereDesplazamiento)
+                putExtra(AvisoReceiver.EXTRA_HORA, (if (tipo == Tipo.LLEVAR) need.horaInicio else need.horaFin).formatoCorto())
+                putExtra(AvisoReceiver.EXTRA_MINUTOS, minutosAntes ?: 0)
+            }
             // Para que al tocar la notificación se abra la Guía en esa actividad.
-            putExtra(AvisoReceiver.EXTRA_FECHA, fecha)
+            putExtra(AvisoReceiver.EXTRA_FECHA, need?.fecha?.toString())
             putExtra(AvisoReceiver.EXTRA_NECESIDAD, id.value)
         }
         return PendingIntent.getBroadcast(
@@ -104,10 +100,4 @@ class ProgramadorDeAvisos @Inject constructor(@ApplicationContext private val co
     private fun codigo(id: CoverageNeedId, tipo: Tipo): Int = (id.value + "#" + tipo.name).hashCode()
 
     private fun LocalTime.formatoCorto() = "${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}"
-
-    private fun textoMinutos(min: Int): String = when {
-        min < 60 -> "$min min"
-        min % 60 == 0 -> if (min == 60) "1 hora" else "${min / 60} horas"
-        else -> "${min / 60} h ${min % 60} min"
-    }
 }
