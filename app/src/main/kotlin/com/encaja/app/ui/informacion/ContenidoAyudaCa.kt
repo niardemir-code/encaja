@@ -9,9 +9,9 @@ internal val SECCIONES_AYUDA_CA: List<SeccionAyuda> = listOf(
         titulo = "Guia d'ús",
         temas = listOf(
             TemaAyuda(
-                titulo = "Què és Encaja",
+                titulo = "Què és Encaixa",
                 parrafos = listOf(
-                    "Encaja serveix per organitzar la logística d'una família amb nens: qui porta i qui recull cada nen a les seves activitats, quan no pot estar cada persona, el menú de la setmana i la llista de la compra.",
+                    "Encaixa serveix per organitzar la logística d'una família amb nens: qui porta i qui recull cada nen a les seves activitats, quan no pot estar cada persona, el menú de la setmana i la llista de la compra.",
                     "L'app t'avisa del que falta (activitats sense ningú assignat) i del que xoca (algú assignat que té una altra cosa apuntada a aquella hora), i cada persona rep al mòbil els avisos que li toquen."
                 ),
                 puntos = listOf(
@@ -24,7 +24,7 @@ internal val SECCIONES_AYUDA_CA: List<SeccionAyuda> = listOf(
                 puntos = listOf(
                     "1. Entra amb el teu correu i contrasenya o amb el teu compte de Google.",
                     "2. Si comences de zero, tria «Crea la meva família» i escriu el teu nom i cognoms: seràs la primera persona de la família, amb rol d'administrador.",
-                    "3. Si algú de la teva família ja fa servir Encaja, demana-li un codi d'invitació i escriu-lo a «Uneix-me a una família». Quedaràs vinculat a la teva persona, amb tot el seu historial.",
+                    "3. Si algú de la teva família ja fa servir Encaixa, demana-li un codi d'invitació i escriu-lo a «Uneix-me a una família». Quedaràs vinculat a la teva persona, amb tot el seu historial.",
                     "4. A Configuració > Nens, afegeix els nens. A Configuració > Cuidadors, afegeix les persones que els cuiden i, si vols, grups com «els avis».",
                     "5. Si has creat la teva pròpia persona a mà, ves a Configuració > Cuidadors i prem la icona de persona al costat del teu nom per vincular-hi el teu compte.",
                     "6. Comença a apuntar activitats a la pestanya Guia."
@@ -61,7 +61,7 @@ internal val SECCIONES_AYUDA_CA: List<SeccionAyuda> = listOf(
                 puntos = listOf(
                     "1. Tria a quina persona de la llista correspon la invitació (primer ha d'existir a Configuració > Cuidadors).",
                     "2. Es genera un codi de 6 caràcters. Prem «Copia el codi» i comparteix-lo amb aquesta persona.",
-                    "3. La persona instal·la Encaja, crea el seu compte o hi entra i escriu el codi a «Uneix-me a una família».",
+                    "3. La persona instal·la Encaixa, crea el seu compte o hi entra i escriu el codi a «Uneix-me a una família».",
                     "4. Des d'aquell moment el seu compte queda vinculat a aquesta persona, amb tot el seu historial."
                 ),
                 nota = "El codi només serveix una vegada i caduca als 14 dies. Si aquesta persona ja té un compte vinculat, no es pot generar un altre codi."

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Encaja</string>
+    <string name="app_wordmark">encaja</string>
     <string name="comun_cancelar">Cancel</string>
     <string name="comun_eliminar">Delete</string>
     <string name="comun_anadir">Add</string>

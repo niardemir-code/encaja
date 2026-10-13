@@ -249,7 +249,7 @@ fun EncajaApp(
                             modifier = Modifier.height(34.dp).aspectRatio(640f / 576f)
                         )
                         Text(
-                            "encaja",
+                            stringResource(R.string.app_wordmark),
                             modifier = Modifier.padding(start = 10.dp),
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.ExtraBold,

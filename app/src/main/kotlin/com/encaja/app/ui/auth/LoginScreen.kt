@@ -81,7 +81,7 @@ fun LoginScreen(
             )
             Spacer(Modifier.height(6.dp))
             Text(
-                "encaja",
+                stringResource(R.string.app_wordmark),
                 color = colores.primary,
                 fontSize = 30.sp,
                 fontWeight = FontWeight.ExtraBold

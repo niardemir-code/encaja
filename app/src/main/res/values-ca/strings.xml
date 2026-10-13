@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Encaixa</string>
+    <string name="app_wordmark">encaixa</string>
     <string name="comun_cancelar">Cancel·la</string>
     <string name="comun_eliminar">Elimina</string>
     <string name="comun_anadir">Afegeix</string>
@@ -538,9 +539,9 @@
         <item quantity="other">%d dies complets</item>
     </plurals>
     <string name="baja_titulo">Compte donat de baixa</string>
-    <string name="baja_texto">Un administrador ha donat de baixa el teu compte en aquesta família. Per seguretat, s\'esborraran totes les dades d\'Encaja d\'aquest dispositiu, inclosos els avisos programats, i l\'aplicació es tancarà.</string>
+    <string name="baja_texto">Un administrador ha donat de baixa el teu compte en aquesta família. Per seguretat, s\'esborraran totes les dades d\'Encaixa d\'aquest dispositiu, inclosos els avisos programats, i l\'aplicació es tancarà.</string>
     <string name="error_accion">No s\'ha pogut completar l\'acció. Revisa la connexió i torna-ho a provar.</string>
-    <string name="ayuda_subtitulo">Com funciona Encaja, pantalla per pantalla. Toca un tema per obrir-lo.</string>
+    <string name="ayuda_subtitulo">Com funciona Encaixa, pantalla per pantalla. Toca un tema per obrir-lo.</string>
     <string name="aviso_llevar_a">Portar a %1$s · %2$s</string>
     <string name="aviso_recoger_a">Recollir a %1$s · %2$s</string>
     <string name="aviso_llevar">Portar · %1$s</string>
