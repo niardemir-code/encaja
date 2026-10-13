@@ -2,6 +2,8 @@ package com.encaja.app.ui.ajustes
 
 // NOTA: depende de Jetpack Compose y Hilt, no compilado en este entorno.
 
+import androidx.compose.foundation.layout.Box
+import com.encaja.app.ui.ayuda.ayudaObjetivo
 import android.app.AlarmManager
 import android.content.Intent
 import android.net.Uri
@@ -113,19 +115,23 @@ fun AjustesScreen(
             viewModel.emailUsuarioActual?.let { stringResource(R.string.ajustes_sesion_como, it) }
         )
 
-        FilaAjuste(
-            icono = Icons.Default.ChildCare,
-            titulo = stringResource(R.string.ninos_titulo),
-            subtitulo = stringResource(R.string.ajustes_ninos_sub),
-            onClick = onAbrirNinos
-        )
+        Box(Modifier.ayudaObjetivo("ajustes_ninos", alTocar = onAbrirNinos)) {
+            FilaAjuste(
+                icono = Icons.Default.ChildCare,
+                titulo = stringResource(R.string.ninos_titulo),
+                subtitulo = stringResource(R.string.ajustes_ninos_sub),
+                onClick = onAbrirNinos
+            )
+        }
         Spacer(Modifier.height(12.dp))
-        FilaAjuste(
-            icono = Icons.Default.Group,
-            titulo = stringResource(R.string.ajustes_cuidadores_titulo),
-            subtitulo = stringResource(R.string.ajustes_cuidadores_sub),
-            onClick = onAbrirCuidadores
-        )
+        Box(Modifier.ayudaObjetivo("ajustes_cuidadores", alTocar = onAbrirCuidadores)) {
+            FilaAjuste(
+                icono = Icons.Default.Group,
+                titulo = stringResource(R.string.ajustes_cuidadores_titulo),
+                subtitulo = stringResource(R.string.ajustes_cuidadores_sub),
+                onClick = onAbrirCuidadores
+            )
+        }
         Spacer(Modifier.height(12.dp))
         FilaAjuste(
             icono = Icons.Default.CalendarViewWeek,

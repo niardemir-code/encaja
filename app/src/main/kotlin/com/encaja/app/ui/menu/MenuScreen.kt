@@ -116,14 +116,16 @@ private fun ContenidoMenuSemanal(
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         item {
-            CabeceraMenu(
-                primerDia = dias.firstOrNull()?.fecha,
-                esSemanaActual = esSemanaActual,
-                onSemanaAnterior = onSemanaAnterior,
-                onSemanaSiguiente = onSemanaSiguiente,
-                onIrASemanaActual = onIrASemanaActual,
-                onIrASemanaDe = onIrASemanaDe
-            )
+            Box(Modifier.ayudaObjetivo("menu_cabecera")) {
+                CabeceraMenu(
+                    primerDia = dias.firstOrNull()?.fecha,
+                    esSemanaActual = esSemanaActual,
+                    onSemanaAnterior = onSemanaAnterior,
+                    onSemanaSiguiente = onSemanaSiguiente,
+                    onIrASemanaActual = onIrASemanaActual,
+                    onIrASemanaDe = onIrASemanaDe
+                )
+            }
         }
 
         items(dias.size) { index ->

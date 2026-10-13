@@ -16,7 +16,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.annotation.StringRes
 import android.content.Context
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.runtime.remember
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -99,17 +103,39 @@ object PreferenciaTour {
 class DatosTour(
     val etapa: Int,
     val total: Int,
-    val hayMas: Boolean,
+    /** Último globo de todo el tour: en vez de "Siguiente" pone "Entendido". */
+    val esUltimo: Boolean,
     val alTerminar: () -> Unit,
     val alSaltar: () -> Unit
 )
 
 /** Un paso de la visita: [clave] del elemento a iluminar (null = globo centrado, sin foco). */
-data class PasoAyuda(val clave: String?, @StringRes val titulo: Int, @StringRes val texto: Int)
+data class PasoAyuda(
+    val clave: String?,
+    @StringRes val titulo: Int,
+    @StringRes val texto: Int,
+    /** El usuario debe tocar el elemento iluminado para continuar (no hay botón "Siguiente"). */
+    val tocar: Boolean = false
+)
 
 class AyudaState {
     /** Posición en pantalla (coordenadas de la ventana) de cada elemento marcado. */
     val posiciones: SnapshotStateMap<String, Rect> = mutableStateMapOf()
+
+    /** Qué hacer cuando el usuario toca el elemento iluminado de un paso "tocar". */
+    val acciones: MutableMap<String, () -> Unit> = mutableMapOf()
+
+    /** Cómo desplazar la pantalla hasta que el elemento marcado quede a la vista. */
+    private val traedores: MutableMap<String, suspend () -> Unit> = mutableMapOf()
+
+    fun registrarTraedor(clave: String, traer: suspend () -> Unit) {
+        traedores[clave] = traer
+    }
+
+    /** Desplaza la lista (si hace falta) para que el elemento [clave] se vea entero. */
+    suspend fun traerAVista(clave: String) {
+        runCatching { traedores[clave]?.invoke() }
+    }
 
     var pasos by mutableStateOf<List<PasoAyuda>>(emptyList())
         private set
@@ -164,10 +190,14 @@ class AyudaState {
 val LocalAyuda = staticCompositionLocalOf<AyudaState?> { null }
 
 /** Marca un elemento con una [clave] para que un paso de la ayuda pueda iluminarlo. */
-fun Modifier.ayudaObjetivo(clave: String): Modifier = composed {
+@OptIn(ExperimentalFoundationApi::class)
+fun Modifier.ayudaObjetivo(clave: String, alTocar: (() -> Unit)? = null): Modifier = composed {
     val ayuda = LocalAyuda.current
-    onGloballyPositioned { coordenadas ->
+    val traer = remember { BringIntoViewRequester() }
+    ayuda?.registrarTraedor(clave) { traer.bringIntoView() }
+    bringIntoViewRequester(traer).onGloballyPositioned { coordenadas ->
         if (ayuda != null) {
+            if (alTocar != null) ayuda.acciones[clave] = alTocar
             val rect = coordenadas.boundsInRoot()
             if (ayuda.posiciones[clave] != rect) ayuda.posiciones[clave] = rect
         }
@@ -200,13 +230,20 @@ fun CapaAyuda(ayuda: AyudaState) {
     val paso = ayuda.pasos[ayuda.indice]
     val objetivo = paso.clave?.let { ayuda.posiciones[it] }
     val datosTour = ayuda.tour
-    val ultimo = ayuda.indice == ayuda.pasos.lastIndex && datosTour?.hayMas != true
+    val ultimo = ayuda.indice == ayuda.pasos.lastIndex && (datosTour == null || datosTour.esUltimo)
 
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
             // Absorbe los toques: mientras dura la ayuda no se pulsa nada de debajo.
-            .pointerInput(Unit) { detectTapGestures { } }
+            // En un paso "tocar", un toque sobre el elemento iluminado ejecuta su acción.
+            .pointerInput(paso, objetivo) {
+                detectTapGestures { punto ->
+                    if (paso.tocar && paso.clave != null && objetivo != null && objetivo.inflate(6.dp.toPx()).contains(punto)) {
+                        ayuda.acciones[paso.clave]?.invoke()
+                    }
+                }
+            }
     ) {
         val density = LocalDensity.current
         val altoPx = with(density) { maxHeight.toPx() }
@@ -266,8 +303,10 @@ fun CapaAyuda(ayuda: AyudaState) {
                         TextButton(onClick = { ayuda.saltar() }) { Text(stringResource(R.string.intro_saltar)) }
                         Spacer(Modifier.width(4.dp))
                     }
-                    Button(onClick = { ayuda.siguiente() }, shape = RoundedCornerShape(14.dp)) {
-                        Text(stringResource(if (ultimo) R.string.comun_entendido else R.string.intro_siguiente), fontWeight = FontWeight.Bold)
+                    if (!paso.tocar) {
+                        Button(onClick = { ayuda.siguiente() }, shape = RoundedCornerShape(14.dp)) {
+                            Text(stringResource(if (ultimo) R.string.comun_entendido else R.string.intro_siguiente), fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }

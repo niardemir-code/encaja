@@ -76,7 +76,7 @@ import com.encaja.app.ui.ayuda.CapaAyuda
 import com.encaja.app.ui.ayuda.LocalAyuda
 import com.encaja.app.ui.ayuda.ayudaObjetivo
 import com.encaja.app.ui.ayuda.EtapaTour
-import com.encaja.app.ui.ayuda.PasoAyuda
+import com.encaja.app.ui.ayuda.PasoTour
 import com.encaja.app.ui.ayuda.TourInicioHost
 import com.encaja.app.ui.ajustes.AjustesCuidadoresScreen
 import com.encaja.app.ui.ajustes.AjustesNinosScreen
@@ -129,36 +129,55 @@ private val RUTAS_CON_ATRAS = setOf(
     RUTA_AYUDA, RUTA_CONTACTO, RUTA_LEGAL
 )
 
-/** Tour de "Primeros pasos": 1 niños, 2 cuidadores, 3 invitar, 4 Guía, 5 Familia, 6 Semana, 7 Menú, 8 Compra. */
+/** Tour de introducción: 1 niños, 2 cuidadores, 3 invitar, 4 Guía, 5 Familia, 6 Semana, 7 Menú, 8 Compra. */
 private val ETAPAS_TOUR = listOf(
-    EtapaTour(RUTA_AJUSTES_NINOS, RUTA_AJUSTES_NINOS, listOf(
-        PasoAyuda("ninos_nuevo", R.string.tour_ninos_t, R.string.tour_ninos_d)
+    // 1) Crear los niños: engranaje -> Niños -> botón de nuevo niño.
+    EtapaTour(listOf(
+        PasoTour(null, "barra_ajustes", R.string.tour_ajustes_t, R.string.tour_ajustes_d, tocar = true),
+        PasoTour(setOf(RUTA_AJUSTES), "ajustes_ninos", R.string.tour_ir_ninos_t, R.string.tour_ir_ninos_d, tocar = true),
+        PasoTour(setOf(RUTA_AJUSTES_NINOS), "ninos_nuevo", R.string.tour_ninos_t, R.string.tour_ninos_d)
     )),
-    EtapaTour(RUTA_AJUSTES_CUIDADORES, RUTA_AJUSTES_CUIDADORES, listOf(
-        PasoAyuda("cuidadores_nuevo", R.string.tour_cuid_t, R.string.tour_cuid_d),
-        PasoAyuda(null, R.string.tour_vinc_t, R.string.tour_vinc_d)
+    // 2) Añadir los cuidadores: engranaje -> Cuidadores -> botón de nuevo cuidador -> vincularse.
+    EtapaTour(listOf(
+        PasoTour(null, "barra_ajustes", R.string.tour_ajustes_t, R.string.tour_ajustes_d, tocar = true),
+        PasoTour(setOf(RUTA_AJUSTES), "ajustes_cuidadores", R.string.tour_ir_cuid_t, R.string.tour_ir_cuid_d, tocar = true),
+        PasoTour(setOf(RUTA_AJUSTES_CUIDADORES), "cuidadores_nuevo", R.string.tour_cuid_t, R.string.tour_cuid_d),
+        PasoTour(setOf(RUTA_AJUSTES_CUIDADORES), null, R.string.tour_vinc_t, R.string.tour_vinc_d)
     )),
-    EtapaTour(RUTA_AJUSTES_CUIDADORES, RUTA_AJUSTES_CUIDADORES, listOf(
-        PasoAyuda("barra_invitar", R.string.tour_inv_t, R.string.tour_inv_d)
+    // 3) Invitar a los cuidadores: el botón de la barra superior, visible en cualquier pantalla.
+    EtapaTour(listOf(
+        PasoTour(null, "barra_invitar", R.string.tour_inv_t, R.string.tour_inv_d)
     )),
-    EtapaTour(Destino.Guia.ruta, Destino.Guia.rutaNavegacion, listOf(
-        PasoAyuda("guia_nueva", R.string.tour_guia_nueva_t, R.string.tour_guia_nueva_d),
-        PasoAyuda(null, R.string.tour_guia_linea_t, R.string.tour_guia_linea_d)
+    // 4) Guía: pestaña -> botón + -> cómo leer el día.
+    EtapaTour(listOf(
+        PasoTour(null, "tab_guia", R.string.tour_tab_guia_t, R.string.tour_tab_guia_d, tocar = true),
+        PasoTour(setOf(Destino.Guia.ruta), "guia_nueva", R.string.tour_guia_nueva_t, R.string.tour_guia_nueva_d),
+        PasoTour(setOf(Destino.Guia.ruta), null, R.string.tour_guia_linea_t, R.string.tour_guia_linea_d)
     )),
-    EtapaTour(Destino.Familia.ruta, Destino.Familia.rutaNavegacion, listOf(
-        PasoAyuda("familia_disponibilidad", R.string.tour_fam_disp_t, R.string.tour_fam_disp_d),
-        PasoAyuda("familia_categorias", R.string.tour_fam_cat_t, R.string.tour_fam_cat_d)
+    // 5) Familia: pestaña -> disponibilidad -> tipos.
+    EtapaTour(listOf(
+        PasoTour(null, "tab_familia", R.string.tour_tab_familia_t, R.string.tour_tab_familia_d, tocar = true),
+        PasoTour(setOf(Destino.Familia.ruta), "familia_fila", R.string.tour_fam_disp_t, R.string.tour_fam_disp_d),
+        PasoTour(setOf(Destino.Familia.ruta), "familia_categorias", R.string.tour_fam_cat_t, R.string.tour_fam_cat_d)
     )),
-    EtapaTour(Destino.Semana.ruta, Destino.Semana.rutaNavegacion, listOf(
-        PasoAyuda("semana_tarjeta", R.string.ayuda_semana_semaforo_t, R.string.ayuda_semana_semaforo_d),
-        PasoAyuda("semana_tablon", R.string.ayuda_semana_tablon_t, R.string.ayuda_semana_tablon_d),
-        PasoAyuda("barra_inferior", R.string.ayuda_semana_pestanas_t, R.string.ayuda_semana_pestanas_d)
+    // 6) Semana: pestaña -> semáforo -> tablón -> pestañas.
+    EtapaTour(listOf(
+        PasoTour(null, "tab_semana", R.string.tour_tab_semana_t, R.string.tour_tab_semana_d, tocar = true),
+        PasoTour(setOf(Destino.Semana.ruta), "semana_tarjeta", R.string.ayuda_semana_semaforo_t, R.string.ayuda_semana_semaforo_d),
+        PasoTour(setOf(Destino.Semana.ruta), "semana_tablon", R.string.ayuda_semana_tablon_t, R.string.ayuda_semana_tablon_d),
+        PasoTour(setOf(Destino.Semana.ruta), "barra_inferior", R.string.ayuda_semana_pestanas_t, R.string.ayuda_semana_pestanas_d)
     )),
-    EtapaTour(Destino.Menu.ruta, Destino.Menu.rutaNavegacion, listOf(
-        PasoAyuda("menu_dia", R.string.tour_menu_t, R.string.tour_menu_d)
+    // 7) Menú.
+    EtapaTour(listOf(
+        PasoTour(null, "tab_menu", R.string.tour_tab_menu_t, R.string.tour_tab_menu_d, tocar = true),
+        PasoTour(setOf(Destino.Menu.ruta), "menu_cabecera", R.string.tour_menu_sem_t, R.string.tour_menu_sem_d),
+        PasoTour(setOf(Destino.Menu.ruta), "menu_dia", R.string.tour_menu_t, R.string.tour_menu_d)
     )),
-    EtapaTour(Destino.Compra.ruta, Destino.Compra.rutaNavegacion, listOf(
-        PasoAyuda("compra_panel", R.string.tour_compra_t, R.string.tour_compra_d)
+    // 8) Compra.
+    EtapaTour(listOf(
+        PasoTour(null, "tab_compra", R.string.tour_tab_compra_t, R.string.tour_tab_compra_d, tocar = true),
+        PasoTour(setOf(Destino.Compra.ruta), "compra_panel", R.string.tour_compra_t, R.string.tour_compra_d),
+        PasoTour(setOf(Destino.Compra.ruta), "compra_tienda", R.string.tour_compra_tienda_t, R.string.tour_compra_tienda_d)
     ))
 )
 
@@ -318,9 +337,17 @@ fun EncajaApp(
                     if (inicialesUsuario.isNotBlank()) {
                         AvatarUsuario(inicialesUsuario)
                     }
-                    BotonBarraSuperior(Icons.Default.Settings, stringResource(R.string.ajustes_titulo)) {
-                        if (rutaActual != RUTA_AJUSTES) {
-                            navController.navigate(RUTA_AJUSTES) { launchSingleTop = true }
+                    Box(Modifier.ayudaObjetivo("barra_ajustes", alTocar = {
+                        // Desde el tour: ajustes limpio encima de Semana, vengas de donde vengas.
+                        navController.navigate(RUTA_AJUSTES) {
+                            popUpTo(navController.graph.findStartDestination().id)
+                            launchSingleTop = true
+                        }
+                    })) {
+                        BotonBarraSuperior(Icons.Default.Settings, stringResource(R.string.ajustes_titulo)) {
+                            if (rutaActual != RUTA_AJUSTES) {
+                                navController.navigate(RUTA_AJUSTES) { launchSingleTop = true }
+                            }
                         }
                     }
                     Spacer(Modifier.width(6.dp))
@@ -334,6 +361,12 @@ fun EncajaApp(
             ) {
                 destinosBarraInferior.forEach { destino ->
                     NavigationBarItem(
+                        modifier = Modifier.ayudaObjetivo("tab_" + destino.rutaNavegacion, alTocar = {
+                            navController.navigate(destino.rutaNavegacion) {
+                                popUpTo(navController.graph.findStartDestination().id)
+                                launchSingleTop = true
+                            }
+                        }),
                         // Pestaña activa: pastilla lavanda con icono y texto en índigo.
                         colors = NavigationBarItemDefaults.colors(
                             indicatorColor = MaterialTheme.colorScheme.primaryContainer,
@@ -440,7 +473,6 @@ fun EncajaApp(
     }
     // Tour de primeros pasos: espera a que no haya avisos pendientes (batería, baja de la cuenta).
     TourInicioHost(
-        navController = navController,
         rutaActual = rutaActual,
         ayuda = ayuda,
         etapas = ETAPAS_TOUR,

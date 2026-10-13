@@ -529,7 +529,7 @@ private fun LazyListScope.cuadriculaDisponibilidad(
     }
 
     itemsIndexed(cuidadores, key = { _, c -> "cuidador-" + c.caregiver.id.value }) { indice, cuidadorSemana ->
-        FilaDeCuadricula {
+        FilaDeCuadricula(if (indice == 0) Modifier.ayudaObjetivo("familia_fila") else Modifier) {
             BloqueFila(
                 nombre = cuidadorSemana.caregiver.nombreCompleto,
                 iniciales = iniciales[cuidadorSemana.caregiver.id] ?: "",
@@ -595,9 +595,9 @@ private fun LazyListScope.cuadriculaDisponibilidad(
 
 /** Una fila de la cuadrícula con el fondo de la tarjeta, para que la tarjeta parezca continua. */
 @Composable
-private fun FilaDeCuadricula(contenido: @Composable () -> Unit) {
+private fun FilaDeCuadricula(modifier: Modifier = Modifier, contenido: @Composable () -> Unit) {
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surface)
             .padding(horizontal = 10.dp, vertical = 4.dp)

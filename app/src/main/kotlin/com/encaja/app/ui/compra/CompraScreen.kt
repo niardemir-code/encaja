@@ -241,6 +241,7 @@ private fun ContenidoCompra(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(gruposVisibles, key = { it.tienda }) { grupo ->
+                  Box(if (grupo.tienda == gruposVisibles.first().tienda) Modifier.ayudaObjetivo("compra_tienda") else Modifier) {
                     TarjetaTienda(
                         grupo = grupo,
                         plegada = grupo.tienda in tiendasPlegadas,
@@ -253,6 +254,7 @@ private fun ContenidoCompra(
                         onAgregarATienda = onAgregarATienda,
                         onEliminar = onEliminar
                     )
+                  }
                 }
             }
         }
