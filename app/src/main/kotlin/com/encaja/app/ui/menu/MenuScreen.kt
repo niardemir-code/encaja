@@ -11,6 +11,8 @@ package com.encaja.app.ui.menu
 // Cena (icono sol/luna + texto + lápiz de edición), todo dentro de un
 // único recuadro para que quede bien delimitado y alineado.
 
+import androidx.compose.foundation.layout.Box
+import com.encaja.app.ui.ayuda.ayudaObjetivo
 import androidx.annotation.StringRes
 import androidx.compose.ui.res.stringResource
 import com.encaja.app.R
@@ -126,12 +128,14 @@ private fun ContenidoMenuSemanal(
 
         items(dias.size) { index ->
             val dia = dias[index]
+            Box(if (index == 0) Modifier.ayudaObjetivo("menu_dia") else Modifier) {
             TarjetaDia(
                 dia = dia,
                 color = paletaDias[index % paletaDias.size],
                 onGuardarComida = { texto -> onGuardarDia(dia.fecha, texto, dia.cena) },
                 onGuardarCena = { texto -> onGuardarDia(dia.fecha, dia.comida, texto) }
             )
+            }
         }
     }
 }

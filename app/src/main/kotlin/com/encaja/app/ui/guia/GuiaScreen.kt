@@ -11,6 +11,7 @@ package com.encaja.app.ui.guia
 // se está viendo hoy), y debajo la lista "Actividades del día", una tarjeta por niño.
 // El botón "Ahora" (punto de disparo) vuelve a la hora actual (y al día de hoy).
 
+import com.encaja.app.ui.ayuda.ayudaObjetivo
 import androidx.compose.ui.res.stringResource
 import com.encaja.app.R
 import com.encaja.app.ui.common.nombreDia
@@ -216,6 +217,7 @@ fun GuiaScreen(
                 // Cuadrado redondeado en el color de acento, como en la maqueta.
                 FloatingActionButton(
                     onClick = { actividadEnCreacion = true },
+                    modifier = Modifier.ayudaObjetivo("guia_nueva"),
                     shape = RoundedCornerShape(20.dp),
                     containerColor = extra.acento,
                     contentColor = extra.onAcento

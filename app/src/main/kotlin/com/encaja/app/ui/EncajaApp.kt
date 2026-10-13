@@ -75,6 +75,9 @@ import com.encaja.app.ui.ayuda.AyudaState
 import com.encaja.app.ui.ayuda.CapaAyuda
 import com.encaja.app.ui.ayuda.LocalAyuda
 import com.encaja.app.ui.ayuda.ayudaObjetivo
+import com.encaja.app.ui.ayuda.EtapaTour
+import com.encaja.app.ui.ayuda.PasoAyuda
+import com.encaja.app.ui.ayuda.TourInicioHost
 import com.encaja.app.ui.ajustes.AjustesCuidadoresScreen
 import com.encaja.app.ui.ajustes.AjustesNinosScreen
 import com.encaja.app.ui.ajustes.AjustesScreen
@@ -124,6 +127,39 @@ private const val RUTA_LEGAL = "ajustes/legal"
 private val RUTAS_CON_ATRAS = setOf(
     RUTA_AJUSTES, RUTA_AJUSTES_NINOS, RUTA_AJUSTES_CUIDADORES, RUTA_TODAS_ACTIVIDADES, RUTA_OCUPACIONES,
     RUTA_AYUDA, RUTA_CONTACTO, RUTA_LEGAL
+)
+
+/** Tour de "Primeros pasos": 1 niños, 2 cuidadores, 3 invitar, 4 Guía, 5 Familia, 6 Semana, 7 Menú, 8 Compra. */
+private val ETAPAS_TOUR = listOf(
+    EtapaTour(RUTA_AJUSTES_NINOS, RUTA_AJUSTES_NINOS, listOf(
+        PasoAyuda("ninos_nuevo", R.string.tour_ninos_t, R.string.tour_ninos_d)
+    )),
+    EtapaTour(RUTA_AJUSTES_CUIDADORES, RUTA_AJUSTES_CUIDADORES, listOf(
+        PasoAyuda("cuidadores_nuevo", R.string.tour_cuid_t, R.string.tour_cuid_d),
+        PasoAyuda(null, R.string.tour_vinc_t, R.string.tour_vinc_d)
+    )),
+    EtapaTour(RUTA_AJUSTES_CUIDADORES, RUTA_AJUSTES_CUIDADORES, listOf(
+        PasoAyuda("barra_invitar", R.string.tour_inv_t, R.string.tour_inv_d)
+    )),
+    EtapaTour(Destino.Guia.ruta, Destino.Guia.rutaNavegacion, listOf(
+        PasoAyuda("guia_nueva", R.string.tour_guia_nueva_t, R.string.tour_guia_nueva_d),
+        PasoAyuda(null, R.string.tour_guia_linea_t, R.string.tour_guia_linea_d)
+    )),
+    EtapaTour(Destino.Familia.ruta, Destino.Familia.rutaNavegacion, listOf(
+        PasoAyuda("familia_disponibilidad", R.string.tour_fam_disp_t, R.string.tour_fam_disp_d),
+        PasoAyuda("familia_categorias", R.string.tour_fam_cat_t, R.string.tour_fam_cat_d)
+    )),
+    EtapaTour(Destino.Semana.ruta, Destino.Semana.rutaNavegacion, listOf(
+        PasoAyuda("semana_tarjeta", R.string.ayuda_semana_semaforo_t, R.string.ayuda_semana_semaforo_d),
+        PasoAyuda("semana_tablon", R.string.ayuda_semana_tablon_t, R.string.ayuda_semana_tablon_d),
+        PasoAyuda("barra_inferior", R.string.ayuda_semana_pestanas_t, R.string.ayuda_semana_pestanas_d)
+    )),
+    EtapaTour(Destino.Menu.ruta, Destino.Menu.rutaNavegacion, listOf(
+        PasoAyuda("menu_dia", R.string.tour_menu_t, R.string.tour_menu_d)
+    )),
+    EtapaTour(Destino.Compra.ruta, Destino.Compra.rutaNavegacion, listOf(
+        PasoAyuda("compra_panel", R.string.tour_compra_t, R.string.tour_compra_d)
+    ))
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -402,6 +438,14 @@ fun EncajaApp(
             composable(RUTA_LEGAL) { com.encaja.app.ui.informacion.LegalScreen() }
         }
     }
+    // Tour de primeros pasos: espera a que no haya avisos pendientes (batería, baja de la cuenta).
+    TourInicioHost(
+        navController = navController,
+        rutaActual = rutaActual,
+        ayuda = ayuda,
+        etapas = ETAPAS_TOUR,
+        activo = !preguntarBateria && !masInfoBateria && !bajaDetectada
+    )
     CapaAyuda(ayuda)
     }
     }

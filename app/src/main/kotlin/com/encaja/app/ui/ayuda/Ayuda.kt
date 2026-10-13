@@ -81,8 +81,28 @@ object PreferenciaAyuda {
         val editor = prefs(c).edit()
         prefs(c).all.keys.filter { it.startsWith(PREFIJO) }.forEach { editor.remove(it) }
         editor.apply()
+        PreferenciaTour.reiniciar(c)
     }
 }
+
+/** Dónde va el tour de "Primeros pasos" (etapa actual; al llegar al total, terminado o saltado). */
+object PreferenciaTour {
+    private const val CLAVE = "tour_etapa"
+    private fun prefs(c: Context) = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+
+    fun etapa(c: Context): Int = prefs(c).getInt(CLAVE, 0)
+    fun guardar(c: Context, etapa: Int) = prefs(c).edit().putInt(CLAVE, etapa).apply()
+    fun reiniciar(c: Context) = prefs(c).edit().remove(CLAVE).apply()
+}
+
+/** Datos de la etapa del tour en curso: cuál es, cuántas hay, y qué hacer al terminarla o saltar. */
+class DatosTour(
+    val etapa: Int,
+    val total: Int,
+    val hayMas: Boolean,
+    val alTerminar: () -> Unit,
+    val alSaltar: () -> Unit
+)
 
 /** Un paso de la visita: [clave] del elemento a iluminar (null = globo centrado, sin foco). */
 data class PasoAyuda(val clave: String?, @StringRes val titulo: Int, @StringRes val texto: Int)
@@ -96,21 +116,48 @@ class AyudaState {
     var indice by mutableIntStateOf(0)
         private set
 
+    /** Si la visita en curso es una etapa del tour de primeros pasos. */
+    var tour by mutableStateOf<DatosTour?>(null)
+        private set
+
+    /** Sube cada vez que se pide volver a ver el tour desde el principio. */
+    var reinicios by mutableIntStateOf(0)
+        private set
+
     val activa: Boolean get() = pasos.isNotEmpty()
 
-    fun iniciar(nuevos: List<PasoAyuda>) {
+    fun iniciar(nuevos: List<PasoAyuda>, datosTour: DatosTour? = null) {
         if (activa || nuevos.isEmpty()) return
         indice = 0
+        tour = datosTour
         pasos = nuevos
     }
 
     fun siguiente() {
-        if (indice < pasos.lastIndex) indice++ else cerrar()
+        if (indice < pasos.lastIndex) {
+            indice++
+        } else {
+            val t = tour
+            cerrar()
+            t?.alTerminar?.invoke()
+        }
+    }
+
+    /** Salta lo que queda; en el tour, salta el tour entero. */
+    fun saltar() {
+        val t = tour
+        cerrar()
+        t?.alSaltar?.invoke()
+    }
+
+    fun reiniciarTour() {
+        reinicios++
     }
 
     fun cerrar() {
         pasos = emptyList()
         indice = 0
+        tour = null
     }
 }
 
@@ -148,11 +195,12 @@ fun AyudaPantalla(id: String, listo: Boolean, pasos: List<PasoAyuda>) {
 @Composable
 fun CapaAyuda(ayuda: AyudaState) {
     if (!ayuda.activa) return
-    BackHandler { ayuda.cerrar() }
+    BackHandler { ayuda.saltar() }
 
     val paso = ayuda.pasos[ayuda.indice]
     val objetivo = paso.clave?.let { ayuda.posiciones[it] }
-    val ultimo = ayuda.indice == ayuda.pasos.lastIndex
+    val datosTour = ayuda.tour
+    val ultimo = ayuda.indice == ayuda.pasos.lastIndex && datosTour?.hayMas != true
 
     BoxWithConstraints(
         modifier = Modifier
@@ -207,14 +255,15 @@ fun CapaAyuda(ayuda: AyudaState) {
                 Spacer(Modifier.height(16.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        stringResource(R.string.ayuda_paso_de, ayuda.indice + 1, ayuda.pasos.size),
+                        if (datosTour != null) stringResource(R.string.tour_paso_de, datosTour.etapa + 1, datosTour.total)
+                        else stringResource(R.string.ayuda_paso_de, ayuda.indice + 1, ayuda.pasos.size),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.weight(1f)
                     )
                     if (!ultimo) {
-                        TextButton(onClick = { ayuda.cerrar() }) { Text(stringResource(R.string.intro_saltar)) }
+                        TextButton(onClick = { ayuda.saltar() }) { Text(stringResource(R.string.intro_saltar)) }
                         Spacer(Modifier.width(4.dp))
                     }
                     Button(onClick = { ayuda.siguiente() }, shape = RoundedCornerShape(14.dp)) {

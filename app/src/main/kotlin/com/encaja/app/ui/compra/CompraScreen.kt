@@ -7,6 +7,7 @@ package com.encaja.app.ui.compra
 // un panel lavanda abajo para añadir artículos con "Artículo", "Tienda" y un botón "+".
 // Sin logotipos de comercio: el círculo lleva la inicial de la tienda.
 
+import com.encaja.app.ui.ayuda.ayudaObjetivo
 import com.encaja.app.R
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
@@ -256,7 +257,9 @@ private fun ContenidoCompra(
             }
         }
 
-        PanelNuevoArticulo(tiendas = estado.grupos.map { it.tienda }, onAgregar = onAgregar)
+        Box(Modifier.ayudaObjetivo("compra_panel")) {
+            PanelNuevoArticulo(tiendas = estado.grupos.map { it.tienda }, onAgregar = onAgregar)
+        }
     }
 }
 

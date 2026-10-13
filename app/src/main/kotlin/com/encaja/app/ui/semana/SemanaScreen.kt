@@ -83,8 +83,6 @@ import com.encaja.app.domain.usecase.AvisoConflicto
 import com.encaja.app.domain.usecase.RolResponsable
 import com.encaja.app.ui.familia.fechaAMillisUtc
 import com.encaja.app.ui.familia.millisUtcAFecha
-import com.encaja.app.ui.ayuda.AyudaPantalla
-import com.encaja.app.ui.ayuda.PasoAyuda
 import com.encaja.app.ui.ayuda.ayudaObjetivo
 import com.encaja.app.ui.guia.DialogoActividad
 import com.encaja.app.ui.intro.PreferenciaIntro
@@ -93,14 +91,6 @@ import kotlinx.coroutines.launch
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
-
-/** Visita guiada de la primera vez en Semana. */
-private val PASOS_AYUDA_SEMANA = listOf(
-    PasoAyuda("semana_tarjeta", R.string.ayuda_semana_semaforo_t, R.string.ayuda_semana_semaforo_d),
-    PasoAyuda("semana_tablon", R.string.ayuda_semana_tablon_t, R.string.ayuda_semana_tablon_d),
-    PasoAyuda("barra_invitar", R.string.ayuda_semana_invitar_t, R.string.ayuda_semana_invitar_d),
-    PasoAyuda("barra_inferior", R.string.ayuda_semana_pestanas_t, R.string.ayuda_semana_pestanas_d)
-)
 
 // Atajos a los colores del tema activo (Cálido/Nocturno) con los nombres del diseño.
 private val TINTA: Color @Composable get() = MaterialTheme.colorScheme.onBackground
@@ -255,7 +245,6 @@ fun SemanaScreen(
 
         is SemaforoPantallaEstado.ConDatos -> {
             val uiState = estadoActual.estado
-            AyudaPantalla(id = "semana", listo = true, pasos = PASOS_AYUDA_SEMANA)
             val cuidadores by viewModel.cuidadores.collectAsState()
             val ninos by viewModel.ninos.collectAsState()
             val responsables by viewModel.responsables.collectAsState()

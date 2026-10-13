@@ -2,6 +2,7 @@ package com.encaja.app.ui.ajustes
 
 // NOTA: depende de Jetpack Compose y Hilt, no compilado en este entorno.
 
+import com.encaja.app.ui.ayuda.ayudaObjetivo
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -243,7 +244,7 @@ private fun SeccionCuidadores(
         }
 
         Spacer(Modifier.height(6.dp))
-        BotonPildoraHoja(stringResource(R.string.cuidadores_nuevo), onClick = { nuevoAbierto = true }, icono = Icons.Default.PersonAdd)
+        BotonPildoraHoja(stringResource(R.string.cuidadores_nuevo), onClick = { nuevoAbierto = true }, icono = Icons.Default.PersonAdd, modifier = Modifier.ayudaObjetivo("cuidadores_nuevo"))
     }
 }
 

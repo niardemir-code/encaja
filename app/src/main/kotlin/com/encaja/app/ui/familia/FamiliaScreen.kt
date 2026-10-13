@@ -13,6 +13,7 @@ package com.encaja.app.ui.familia
 // Los colores del diseño están aquí como constantes para no tocar el tema
 // del resto de pantallas.
 
+import com.encaja.app.ui.ayuda.ayudaObjetivo
 import com.encaja.app.ui.common.nombreVisible
 import com.encaja.app.domain.model.MotivoNoDisponibilidad
 import com.encaja.app.ui.common.etiquetaCortaDeMotivo
@@ -283,7 +284,7 @@ private fun ContenidoFamilia(
             item {
                 Tarjeta {
                     Column(modifier = Modifier.padding(14.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(modifier = Modifier.ayudaObjetivo("familia_categorias"), verticalAlignment = Alignment.CenterVertically) {
                             CabeceraTarjeta(
                                 icono = Icons.AutoMirrored.Filled.Label,
                                 titulo = stringResource(R.string.familia_cat_titulo),
@@ -321,7 +322,7 @@ private fun ContenidoFamilia(
                     hayOcultosPorFiltro = totalFilas > 0 && filasVisibles == 0,
                     onCrearCuidador = { nuevoCuidadorAbierto = true },
                     cabecera = {
-                        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Row(modifier = Modifier.fillMaxWidth().ayudaObjetivo("familia_disponibilidad"), verticalAlignment = Alignment.CenterVertically) {
                             CabeceraTarjeta(
                                 icono = Icons.Default.CalendarMonth,
                                 titulo = stringResource(R.string.familia_disponibilidad),

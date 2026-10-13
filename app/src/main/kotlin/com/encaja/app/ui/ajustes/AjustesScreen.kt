@@ -166,12 +166,14 @@ fun AjustesScreen(
         Spacer(Modifier.height(12.dp))
         val contexto = LocalContext.current
         var ayudasReiniciadas by remember { mutableStateOf(false) }
+        val ayudaGlobal = com.encaja.app.ui.ayuda.LocalAyuda.current
         FilaAjuste(
             icono = Icons.Default.Info,
             titulo = stringResource(R.string.ajustes_ayudas_titulo),
             subtitulo = stringResource(if (ayudasReiniciadas) R.string.ajustes_ayudas_hecho else R.string.ajustes_ayudas_sub),
             onClick = {
                 com.encaja.app.ui.ayuda.PreferenciaAyuda.reiniciar(contexto)
+                ayudaGlobal?.reiniciarTour() // el tour de primeros pasos vuelve a empezar
                 ayudasReiniciadas = true
             }
         )
