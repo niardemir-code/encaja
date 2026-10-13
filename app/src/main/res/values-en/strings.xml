@@ -537,4 +537,7 @@
         <item quantity="one">%d full day</item>
         <item quantity="other">%d full days</item>
     </plurals>
+    <string name="baja_titulo">Account removed</string>
+    <string name="baja_texto">An administrator has removed your account from this family. For security, all Encaja data on this device, including scheduled alerts, will be deleted and the app will close.</string>
+    <string name="error_accion">The action couldn\'t be completed. Check your connection and try again.</string>
 </resources>

@@ -1,5 +1,7 @@
 package com.encaja.app.ui
 
+import androidx.compose.ui.res.stringResource
+import androidx.annotation.StringRes
 import androidx.compose.material.icons.filled.Info
 import com.encaja.app.ui.theme.EstiloAccionAviso
 import com.encaja.app.ui.theme.AccionAvisoHoja
@@ -94,17 +96,17 @@ import com.encaja.app.ui.semana.SemanaScreen
 private const val RUTA_GUIA_BASE = "guia"
 private const val RUTA_GUIA_PLANTILLA = "guia?fecha={fecha}&necesidadId={necesidadId}&quedarse={quedarse}"
 
-private sealed class Destino(val ruta: String, val rutaNavegacion: String = ruta, val etiqueta: String, val icono: ImageVector) {
-    data object Semana : Destino(ruta = "semana", etiqueta = "Semana", icono = Icons.Default.DateRange)
+private sealed class Destino(val ruta: String, val rutaNavegacion: String = ruta, @StringRes val etiqueta: Int, val icono: ImageVector) {
+    data object Semana : Destino(ruta = "semana", etiqueta = R.string.nav_semana, icono = Icons.Default.DateRange)
     data object Guia : Destino(
         ruta = RUTA_GUIA_PLANTILLA,
         rutaNavegacion = RUTA_GUIA_BASE,
-        etiqueta = "Guía",
+        etiqueta = R.string.nav_guia,
         icono = Icons.AutoMirrored.Filled.List
     )
-    data object Familia : Destino(ruta = "familia", etiqueta = "Familia", icono = Icons.Default.Group)
-    data object Menu : Destino(ruta = "menu", etiqueta = "Menú", icono = Icons.Default.Restaurant)
-    data object Compra : Destino(ruta = "compra", etiqueta = "Compra", icono = Icons.Default.ShoppingCart)
+    data object Familia : Destino(ruta = "familia", etiqueta = R.string.nav_familia, icono = Icons.Default.Group)
+    data object Menu : Destino(ruta = "menu", etiqueta = R.string.nav_menu, icono = Icons.Default.Restaurant)
+    data object Compra : Destino(ruta = "compra", etiqueta = R.string.nav_compra, icono = Icons.Default.ShoppingCart)
 }
 
 private val destinosBarraInferior = listOf(Destino.Semana, Destino.Guia, Destino.Familia, Destino.Menu, Destino.Compra)
@@ -182,9 +184,10 @@ fun EncajaApp(
 
     // Fallos de las acciones del usuario (guardar, borrar...): un aviso en vez de cerrar la app.
     val snackbarHostState = remember { SnackbarHostState() }
+    val textoErrorAccion = stringResource(R.string.error_accion)
     LaunchedEffect(Unit) {
         ErroresDeUi.eventos.collect {
-            snackbarHostState.showSnackbar("No se pudo completar la acción. Revisa la conexión e inténtalo de nuevo.")
+            snackbarHostState.showSnackbar(textoErrorAccion)
         }
     }
 
@@ -206,13 +209,11 @@ fun EncajaApp(
     if (bajaDetectada) {
         AvisoHoja(
             icono = Icons.Default.Info,
-            titulo = "Cuenta dada de baja",
-            texto = "Un administrador ha dado de baja tu cuenta en esta familia. Por seguridad, se " +
-                "borrarán todos los datos de Encaja de este dispositivo, incluidos los avisos " +
-                "programados, y la aplicación se cerrará.",
+            titulo = stringResource(R.string.baja_titulo),
+            texto = stringResource(R.string.baja_texto),
             peligro = false,
             acciones = listOf(
-                AccionAvisoHoja("Entendido", EstiloAccionAviso.PRIMARIO) { viewModel.borrarDatosDelDispositivo() }
+                AccionAvisoHoja(stringResource(R.string.comun_entendido), EstiloAccionAviso.PRIMARIO) { viewModel.borrarDatosDelDispositivo() }
             ),
             // Sin salida: la baja es definitiva y la app se cierra al pulsar "Entendido".
             onCerrar = {},
@@ -259,7 +260,7 @@ fun EncajaApp(
                 navigationIcon = {
                     if (rutaActual != null && rutaActual in RUTAS_CON_ATRAS) {
                         IconButton(onClick = { navController.popBackStack() }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.comun_volver))
                         }
                     }
                 },
@@ -281,7 +282,7 @@ fun EncajaApp(
                     if (inicialesUsuario.isNotBlank()) {
                         AvatarUsuario(inicialesUsuario)
                     }
-                    BotonBarraSuperior(Icons.Default.Settings, "Ajustes") {
+                    BotonBarraSuperior(Icons.Default.Settings, stringResource(R.string.ajustes_titulo)) {
                         if (rutaActual != RUTA_AJUSTES) {
                             navController.navigate(RUTA_AJUSTES) { launchSingleTop = true }
                         }
@@ -322,8 +323,8 @@ fun EncajaApp(
                                 }
                             }
                         },
-                        icon = { Icon(destino.icono, contentDescription = destino.etiqueta) },
-                        label = { Text(destino.etiqueta, fontWeight = FontWeight.Bold) }
+                        icon = { Icon(destino.icono, contentDescription = stringResource(destino.etiqueta)) },
+                        label = { Text(stringResource(destino.etiqueta), fontWeight = FontWeight.Bold) }
                     )
                 }
             }
