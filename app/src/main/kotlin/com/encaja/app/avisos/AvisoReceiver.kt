@@ -23,7 +23,7 @@ class AvisoReceiver : BroadcastReceiver() {
         val (titulo, texto) = if (tipoAviso != null) {
             // El texto se redacta ahora, en el idioma que tenga el móvil.
             TextosDeAviso.construir(
-                contexto = context,
+                contexto = com.encaja.app.ui.common.IdiomaApp.envolver(context),
                 tipo = tipoAviso,
                 nombreNino = intent.getStringExtra(EXTRA_NINO),
                 descripcion = intent.getStringExtra(EXTRA_DESCRIPCION) ?: "",

@@ -20,6 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.encaja.app.ui.EncajaApp
+import com.encaja.app.ui.common.IdiomaApp
 import com.encaja.app.ui.auth.AuthViewModel
 import com.encaja.app.ui.auth.LoginScreen
 import com.encaja.app.ui.intro.IntroScreen
@@ -57,6 +58,10 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun attachBaseContext(newBase: android.content.Context) {
+        super.attachBaseContext(IdiomaApp.envolver(newBase))
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
@@ -68,6 +73,7 @@ class MainActivity : ComponentActivity() {
         installSplashScreen()
         super.onCreate(savedInstanceState)
         PreferenciaTema.cargar(this)
+        IdiomaApp.cargar(this)
         leerDestino(intent)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED

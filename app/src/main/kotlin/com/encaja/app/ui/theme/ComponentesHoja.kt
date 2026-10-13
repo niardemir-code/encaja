@@ -7,6 +7,8 @@ package com.encaja.app.ui.theme
 // suaves con borde tenue, iconos en círculo, interruptores de acento...) en claro y en
 // oscuro, ya que los colores salen del tema activo (MaterialTheme / LocalEncajaExtraColors).
 
+import com.encaja.app.ui.common.rememberGuardaTeclado
+import com.encaja.app.ui.common.ObservarTeclado
 import androidx.compose.ui.res.stringResource
 import com.encaja.app.R
 import androidx.compose.foundation.background
@@ -356,14 +358,17 @@ fun AvisoHoja(
     val fondoIcono = if (peligro) MaterialTheme.colorScheme.errorContainer else lavanda
     val tintaIcono = if (peligro) MaterialTheme.colorScheme.error else indigo
 
+    // Minimizar el teclado de un formulario no debe cerrar el aviso (y perder lo escrito).
+    val guardaTeclado = rememberGuardaTeclado()
     Dialog(
-        onDismissRequest = onCerrar,
+        onDismissRequest = { if (guardaTeclado.bloqueaCierre()) guardaTeclado.ocultar() else onCerrar() },
         properties = DialogProperties(
             usePlatformDefaultWidth = false,
             dismissOnBackPress = !bloquearCierre,
             dismissOnClickOutside = !bloquearCierre
         )
     ) {
+        ObservarTeclado(guardaTeclado)
         Surface(
             shape = RoundedCornerShape(36.dp),
             color = MaterialTheme.colorScheme.background,

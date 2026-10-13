@@ -102,6 +102,54 @@ fun LoginScreen(
                 shadowElevation = 3.dp,
                 modifier = Modifier.fillMaxWidth()
             ) {
+                if (uiState.pendienteVerificar != null) {
+                    Column(Modifier.padding(16.dp)) {
+                        Text(
+                            stringResource(R.string.login_verifica_titulo),
+                            color = colores.onSurface,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            stringResource(R.string.login_verifica_texto, uiState.pendienteVerificar!!),
+                            color = colores.onSurface.copy(alpha = 0.75f),
+                            fontSize = 14.sp
+                        )
+                        uiState.error?.let {
+                            Spacer(Modifier.height(10.dp))
+                            Text(it.resolver(), color = colores.error, fontSize = 13.sp)
+                        }
+                        uiState.info?.let {
+                            Spacer(Modifier.height(10.dp))
+                            Text(it.resolver(), color = colores.primary, fontSize = 13.sp)
+                        }
+                        Spacer(Modifier.height(14.dp))
+                        Button(
+                            onClick = { viewModel.comprobarVerificado(onLoginExitoso) },
+                            enabled = !uiState.cargando,
+                            shape = RoundedCornerShape(16.dp),
+                            modifier = Modifier.fillMaxWidth().height(48.dp)
+                        ) {
+                            if (uiState.cargando) {
+                                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                            } else {
+                                Text(stringResource(R.string.login_verifica_hecho), fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                            }
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        OutlinedButton(
+                            onClick = { viewModel.reenviarVerificacion() },
+                            enabled = !uiState.cargando,
+                            shape = RoundedCornerShape(16.dp),
+                            modifier = Modifier.fillMaxWidth().height(48.dp)
+                        ) { Text(stringResource(R.string.login_verifica_reenviar), fontWeight = FontWeight.Bold) }
+                        TextButton(
+                            onClick = { viewModel.cancelarVerificacion() },
+                            modifier = Modifier.align(Alignment.CenterHorizontally)
+                        ) { Text(stringResource(R.string.login_verifica_otra), fontWeight = FontWeight.Bold) }
+                    }
+                } else {
                 Column(Modifier.padding(16.dp)) {
                     Text(
                         stringResource(if (modoRegistro) R.string.login_titulo_registro else R.string.login_titulo_entrar),
@@ -148,9 +196,20 @@ fun LoginScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
 
+                    if (!modoRegistro) {
+                        TextButton(
+                            onClick = { viewModel.recuperarPassword(email) },
+                            enabled = !uiState.cargando,
+                            modifier = Modifier.align(Alignment.End)
+                        ) { Text(stringResource(R.string.login_olvide), fontSize = 13.sp, fontWeight = FontWeight.Bold) }
+                    }
                     if (uiState.error != null) {
                         Spacer(Modifier.height(10.dp))
                         Text(uiState.error!!.resolver(), color = colores.error, fontSize = 13.sp)
+                    }
+                    uiState.info?.let {
+                        Spacer(Modifier.height(10.dp))
+                        Text(it.resolver(), color = colores.primary, fontSize = 13.sp)
                     }
                     Spacer(Modifier.height(12.dp))
 
@@ -202,6 +261,7 @@ fun LoginScreen(
                     ) {
                         Text(stringResource(R.string.login_google), fontWeight = FontWeight.Bold)
                     }
+                }
                 }
             }
 

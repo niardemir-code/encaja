@@ -15,7 +15,11 @@ import javax.inject.Inject
 
 data class LoginUiState(
     val cargando: Boolean = false,
-    val error: TextoUi? = null
+    val error: TextoUi? = null,
+    /** Correo de la cuenta que falta por verificar; si no es null se muestra esa pantalla. */
+    val pendienteVerificar: String? = null,
+    /** Mensaje informativo (correo reenviado, enlace de contraseña enviado...). */
+    val info: TextoUi? = null
 )
 
 @HiltViewModel
@@ -31,8 +35,12 @@ class LoginViewModel @Inject constructor(
         viewModelScope.launch {
             authRepository.iniciarSesion(email, password).fold(
                 onSuccess = {
-                    _uiState.value = LoginUiState(cargando = false)
-                    alConseguirlo()
+                    if (authRepository.correoVerificado()) {
+                        _uiState.value = LoginUiState(cargando = false)
+                        alConseguirlo()
+                    } else {
+                        _uiState.value = LoginUiState(pendienteVerificar = email.trim())
+                    }
                 },
                 onFailure = { error ->
                     _uiState.value = LoginUiState(cargando = false, error = mensajeDeError(error))
@@ -46,12 +54,59 @@ class LoginViewModel @Inject constructor(
         viewModelScope.launch {
             authRepository.registrarse(email, password).fold(
                 onSuccess = {
-                    _uiState.value = LoginUiState(cargando = false)
-                    alConseguirlo()
+                    // La cuenta no entra en la app hasta verificar el correo.
+                    authRepository.enviarVerificacion()
+                    _uiState.value = LoginUiState(pendienteVerificar = email.trim())
                 },
                 onFailure = { error ->
                     _uiState.value = LoginUiState(cargando = false, error = mensajeDeError(error))
                 }
+            )
+        }
+    }
+
+    /** "Ya lo he verificado": consulta a Firebase y, si consta, entra. */
+    fun comprobarVerificado(alConseguirlo: () -> Unit) {
+        val pendiente = _uiState.value.pendienteVerificar ?: return
+        _uiState.value = LoginUiState(cargando = true, pendienteVerificar = pendiente)
+        viewModelScope.launch {
+            if (authRepository.correoVerificado()) {
+                _uiState.value = LoginUiState()
+                alConseguirlo()
+            } else {
+                _uiState.value = LoginUiState(pendienteVerificar = pendiente, error = textoUi(R.string.login_verifica_aun_no))
+            }
+        }
+    }
+
+    fun reenviarVerificacion() {
+        val pendiente = _uiState.value.pendienteVerificar ?: return
+        _uiState.value = LoginUiState(cargando = true, pendienteVerificar = pendiente)
+        viewModelScope.launch {
+            authRepository.enviarVerificacion().fold(
+                onSuccess = { _uiState.value = LoginUiState(pendienteVerificar = pendiente, info = textoUi(R.string.login_verifica_reenviado)) },
+                onFailure = { _uiState.value = LoginUiState(pendienteVerificar = pendiente, error = textoUi(R.string.login_error_generico)) }
+            )
+        }
+    }
+
+    /** "Usar otra cuenta": cierra la sesión pendiente y vuelve al formulario. */
+    fun cancelarVerificacion() {
+        authRepository.cerrarSesion()
+        _uiState.value = LoginUiState()
+    }
+
+    fun recuperarPassword(email: String) {
+        if (email.isBlank()) {
+            _uiState.value = LoginUiState(error = textoUi(R.string.login_recuperar_pide_correo))
+            return
+        }
+        _uiState.value = LoginUiState(cargando = true)
+        viewModelScope.launch {
+            authRepository.recuperarPassword(email).fold(
+                // Mismo mensaje exista o no la cuenta, para no revelar qué correos están registrados.
+                onSuccess = { _uiState.value = LoginUiState(info = textoUi(R.string.login_recuperar_enviado)) },
+                onFailure = { error -> _uiState.value = LoginUiState(error = mensajeDeError(error)) }
             )
         }
     }

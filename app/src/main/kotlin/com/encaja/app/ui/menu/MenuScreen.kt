@@ -112,7 +112,7 @@ private fun ContenidoMenuSemanal(
     onIrASemanaDe: (LocalDate) -> Unit
 ) {
     LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp),
+        modifier = Modifier.fillMaxSize().imePadding().padding(horizontal = 12.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         item {

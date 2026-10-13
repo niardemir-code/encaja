@@ -8,4 +8,13 @@ interface AuthRepository {
     suspend fun iniciarSesionConGoogle(idToken: String): Result<UserSession>
     fun cerrarSesion()
     fun sesionActual(): UserSession?
+
+    /** Manda al correo de la cuenta actual el enlace para verificarlo. */
+    suspend fun enviarVerificacion(): Result<Unit>
+
+    /** Vuelve a consultar a Firebase si la cuenta actual ya verificó su correo (Google: siempre sí). */
+    suspend fun correoVerificado(): Boolean
+
+    /** Manda un enlace para elegir una contraseña nueva. */
+    suspend fun recuperarPassword(email: String): Result<Unit>
 }

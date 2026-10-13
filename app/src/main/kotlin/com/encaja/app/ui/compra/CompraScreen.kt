@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -159,7 +160,9 @@ private fun ContenidoCompra(
     onAgregarATienda: (String, String) -> Unit,
     onEliminar: (ArticuloCompraId) -> Unit
 ) {
-    Column(modifier = Modifier.fillMaxSize()) {
+    // imePadding: con el teclado abierto la lista se encoge y el panel de abajo sube con él,
+    // en vez de quedar tapados (no se veía lo que se escribía).
+    Column(modifier = Modifier.fillMaxSize().imePadding()) {
         // Cabecera: título grande y subtítulo, con el botón de filtro de comercios a la derecha.
         var filtroAbierto by remember { mutableStateOf(false) }
         val hayFiltro = tiendasOcultas.any { oculta -> estado.grupos.any { it.tienda == oculta } }

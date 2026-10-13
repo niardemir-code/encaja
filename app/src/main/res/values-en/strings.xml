@@ -48,6 +48,16 @@
     <string name="login_error_cuenta_existe">An account with that email already exists</string>
     <string name="login_error_password_corta">The password must be at least 6 characters</string>
     <string name="login_error_generico">Something went wrong, please try again</string>
+    <string name="login_verifica_titulo">Verify your email</string>
+    <string name="login_verifica_texto">We\'ve sent a link to %1$s. Open it (check spam too) and come back here.</string>
+    <string name="login_verifica_hecho">I\'ve verified it</string>
+    <string name="login_verifica_reenviar">Resend email</string>
+    <string name="login_verifica_reenviado">Email resent.</string>
+    <string name="login_verifica_aun_no">Not verified yet. Open the link in the email and try again.</string>
+    <string name="login_verifica_otra">Use another account</string>
+    <string name="login_olvide">Forgot your password?</string>
+    <string name="login_recuperar_enviado">If an account exists with that email, we\'ve sent you a link to choose a new password.</string>
+    <string name="login_recuperar_pide_correo">Type your email above so we can send you the link.</string>
     <string name="contacto_titulo">Contact</string>
     <string name="contacto_subtitulo">Got a question, found a bug or have an idea? Write to us.</string>
     <string name="contacto_correo_desarrollador">Developer\'s email</string>
@@ -96,6 +106,7 @@
     <string name="bateria_quitar">Remove restrictions</string>
     <string name="bateria_mas_info">More information (Xiaomi, Oppo, Huawei…)</string>
     <string name="tema_titulo">Theme</string>
+    <string name="idioma_titulo">Language</string>
     <string name="tema_sistema">System</string>
     <string name="tema_claro">Light</string>
     <string name="tema_oscuro">Dark</string>

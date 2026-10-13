@@ -30,6 +30,10 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class EncajaMessagingService : FirebaseMessagingService() {
 
+    override fun attachBaseContext(base: android.content.Context) {
+        super.attachBaseContext(com.encaja.app.ui.common.IdiomaApp.envolver(base))
+    }
+
     @Inject lateinit var dispositivos: DispositivoRepository
     @Inject lateinit var sincronizador: SincronizadorDeAvisos
 

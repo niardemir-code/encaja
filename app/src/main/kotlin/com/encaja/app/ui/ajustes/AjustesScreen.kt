@@ -60,6 +60,7 @@ import com.encaja.app.ui.common.TextoUi
 import com.encaja.app.ui.common.resolver
 import com.encaja.app.ui.informacion.AvisosBateria
 import com.encaja.app.ui.informacion.DialogoMasInformacionBateria
+import com.encaja.app.ui.common.IdiomaApp
 import com.encaja.app.ui.theme.PreferenciaTema
 import com.encaja.app.ui.theme.TemaPreferido
 import com.encaja.app.ui.theme.AccionAvisoHoja
@@ -192,6 +193,9 @@ fun AjustesScreen(
 
         Spacer(Modifier.height(24.dp))
         SeccionTema()
+
+        Spacer(Modifier.height(24.dp))
+        SeccionIdioma()
 
         Spacer(Modifier.height(32.dp))
         BotonPildoraBordeHoja(stringResource(R.string.ajustes_cerrar_sesion), onClick = onCerrarSesion, icono = Icons.AutoMirrored.Filled.Logout)
@@ -392,6 +396,44 @@ private fun TarjetaAviso(contenido: @Composable () -> Unit) {
             .border(1.dp, bordeHoja.copy(alpha = 0.5f), forma)
             .padding(16.dp)
     ) { contenido() }
+}
+
+/** Idioma de la app, independiente del idioma del teléfono. Los nombres van en su propio idioma. */
+@Composable
+private fun SeccionIdioma() {
+    val actividad = LocalContext.current as? android.app.Activity
+    val elegido by IdiomaApp.actual
+    val opciones = listOf(
+        IdiomaApp.SISTEMA to stringResource(R.string.tema_sistema),
+        "es" to "Español",
+        "ca" to "Català",
+        "en" to "English"
+    )
+    RotuloSeccionPantalla(stringResource(R.string.idioma_titulo))
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+        opciones.forEach { (codigo, etiqueta) ->
+            val activo = elegido == codigo
+            val forma = RoundedCornerShape(24.dp)
+            androidx.compose.foundation.layout.Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(48.dp)
+                    .clip(forma)
+                    .background(if (activo) acentoHoja else casillaHoja)
+                    .border(1.dp, if (activo) acentoHoja else bordeHoja, forma)
+                    .clickable { actividad?.let { IdiomaApp.elegir(it, codigo) } },
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    etiqueta,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    color = if (activo) onAcentoHoja else tintaHoja
+                )
+            }
+        }
+    }
 }
 
 /** Elegir entre seguir el tema del teléfono o forzar el claro/oscuro de la app. */

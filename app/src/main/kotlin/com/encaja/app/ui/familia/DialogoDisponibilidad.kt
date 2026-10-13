@@ -21,6 +21,9 @@ package com.encaja.app.ui.familia
 //    guarda ni se borra hasta pulsar uno de los dos.
 // Las categorías se editan desde la tarjeta "Categorías" de la pantalla.
 
+import com.encaja.app.ui.common.rememberGuardaTeclado
+import com.encaja.app.ui.common.ObservarTeclado
+import androidx.compose.material3.SheetValue
 import com.encaja.app.ui.common.nombreVisible
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -57,6 +60,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import com.encaja.app.ui.common.HojaFormulario
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -276,31 +280,19 @@ fun DialogoDisponibilidad(
         rangoHasta = bloque.fecha
     }
 
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     // Hueco bajo los botones para que no queden sobre la barra de navegación de Android (3
     // botones o gesto) y no se pulse «atrás» al tocar Guardar o Borrar. La hoja no siempre
     // informa de la altura de esa barra, así que se garantizan 48 dp (lo que mide la de 3
     // botones) más un margen de 28 dp, además de los 20 dp de relleno del final.
     val margenBarraNavegacion = maxOf(WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding(), 48.dp) + 28.dp
 
-    ModalBottomSheet(
-        onDismissRequest = onCerrar,
-        sheetState = sheetState,
-        // La propia hoja se corta justo debajo de la barra de estado (hora, batería,
-        // conexiones...) en vez de extenderse por detrás: si no, su fondo tapa lo que
-        // hubiera ahí antes y los iconos del sistema (su color lo decide el tema
-        // general del teléfono, no esta pantalla) pueden quedar ilegibles sobre él.
-        modifier = Modifier.statusBarsPadding(),
-        containerColor = MaterialTheme.colorScheme.background,
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
-    ) {
+    HojaFormulario(onCerrar = onCerrar) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 18.dp)
                 .padding(bottom = 20.dp + margenBarraNavegacion)
-                .imePadding()
         ) {
             // ── Título ────────────────────────────────────────────────────────────
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {

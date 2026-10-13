@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.aspectRatio
@@ -402,7 +403,10 @@ fun EncajaApp(
         NavHost(
             navController = navController,
             startDestination = Destino.Semana.ruta,
-            modifier = Modifier.padding(padding)
+            // consumeWindowInsets: el padding de la barra inferior ya cuenta como hueco bajo el
+            // contenido; sin esto, imePadding() de las pantallas lo sumaba otra vez al abrir el
+            // teclado y dejaba una franja vacía entre el campo y el teclado.
+            modifier = Modifier.padding(padding).consumeWindowInsets(padding)
         ) {
             composable(Destino.Semana.ruta) {
                 SemanaScreen(

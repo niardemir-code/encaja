@@ -49,6 +49,16 @@
     <string name="login_error_cuenta_existe">Ya existe una cuenta con ese correo</string>
     <string name="login_error_password_corta">La contraseña debe tener al menos 6 caracteres</string>
     <string name="login_error_generico">Algo ha fallado, inténtalo de nuevo</string>
+    <string name="login_verifica_titulo">Verifica tu correo</string>
+    <string name="login_verifica_texto">Te hemos enviado un enlace a %1$s. Ábrelo (mira también en spam) y vuelve aquí.</string>
+    <string name="login_verifica_hecho">Ya lo he verificado</string>
+    <string name="login_verifica_reenviar">Reenviar correo</string>
+    <string name="login_verifica_reenviado">Correo reenviado.</string>
+    <string name="login_verifica_aun_no">Todavía no consta como verificado. Abre el enlace del correo e inténtalo de nuevo.</string>
+    <string name="login_verifica_otra">Usar otra cuenta</string>
+    <string name="login_olvide">¿Has olvidado la contraseña?</string>
+    <string name="login_recuperar_enviado">Si existe una cuenta con ese correo, te hemos enviado un enlace para elegir una contraseña nueva.</string>
+    <string name="login_recuperar_pide_correo">Escribe tu correo arriba para enviarte el enlace.</string>
     <string name="contacto_titulo">Contacto</string>
     <string name="contacto_subtitulo">¿Tienes una duda, has encontrado un fallo o quieres proponer una mejora? Escríbenos.</string>
     <string name="contacto_correo_desarrollador">Correo del desarrollador</string>
@@ -97,6 +107,7 @@
     <string name="bateria_quitar">Quitar restricciones</string>
     <string name="bateria_mas_info">Más información (Xiaomi, Oppo, Huawei…)</string>
     <string name="tema_titulo">Tema</string>
+    <string name="idioma_titulo">Idioma</string>
     <string name="tema_sistema">Sistema</string>
     <string name="tema_claro">Claro</string>
     <string name="tema_oscuro">Oscuro</string>
