@@ -8,6 +8,9 @@ package com.encaja.app.ui.ocupaciones
 // una casilla por ocupación y un botón para borrar de golpe la selección. Mismo estilo
 // que "Todas las actividades".
 
+import com.encaja.app.R
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import com.encaja.app.ui.common.localeApp
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -67,27 +70,28 @@ fun OcupacionesScreen(viewModel: OcupacionesViewModel = hiltViewModel()) {
 
     FondoPantalla {
         Column(modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
-            CabeceraPantalla("Ocupaciones")
+            CabeceraPantalla(stringResource(R.string.ajustes_ocupaciones_titulo))
 
             when (val estadoActual = pantalla) {
                 is OcupacionesPantallaEstado.Cargando -> CircularProgressIndicator()
 
                 is OcupacionesPantallaEstado.SinFamilia ->
-                    MensajePantalla("Vincúlate a una familia desde la pestaña Semana para ver esta pantalla.")
+                    MensajePantalla(stringResource(R.string.comun_sin_familia_ver))
 
                 is OcupacionesPantallaEstado.ConDatos -> {
                     // Filtro por quién (Todos, cada persona, cada unidad): un solo botón que
                     // muestra la elección actual y abre una ventana para cambiarla, para no
                     // comerle sitio al listado. Encima, el buscador por texto.
-                    val opciones = listOf(OpcionFiltro(null, "Todos")) +
+                    val textoTodos = stringResource(R.string.comun_todos)
+                    val opciones = listOf(OpcionFiltro(null, textoTodos)) +
                         estadoActual.cuidadores.map { OpcionFiltro(it.id.value, it.nombre) } +
                         estadoActual.unidades.map { OpcionFiltro(it.id.value, it.nombre) }
-                    val etiquetaFiltro = opciones.firstOrNull { it.idTexto == filtroQuien }?.etiqueta ?: "Todos"
+                    val etiquetaFiltro = opciones.firstOrNull { it.idTexto == filtroQuien }?.etiqueta ?: textoTodos
 
                     CampoTextoConIconoHoja(
                         filtroTexto,
                         { filtroTexto = it },
-                        "Buscar…",
+                        stringResource(R.string.comun_buscar),
                         Icons.Default.Search,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -109,12 +113,12 @@ fun OcupacionesScreen(viewModel: OcupacionesViewModel = hiltViewModel()) {
                     if (selectorAbierto) {
                         AvisoHoja(
                             icono = Icons.Default.FilterAlt,
-                            titulo = "Mostrar ocupaciones de",
+                            titulo = stringResource(R.string.ocupaciones_filtro_titulo),
                             texto = null,
                             peligro = false,
                             conX = true,
                             acciones = listOf(
-                                AccionAvisoHoja("Cerrar", EstiloAccionAviso.BORDE) { selectorAbierto = false }
+                                AccionAvisoHoja(stringResource(R.string.comun_cerrar), EstiloAccionAviso.BORDE) { selectorAbierto = false }
                             ),
                             onCerrar = { selectorAbierto = false },
                             contenido = {
@@ -126,7 +130,7 @@ fun OcupacionesScreen(viewModel: OcupacionesViewModel = hiltViewModel()) {
                                     opciones.forEachIndexed { indice, opcion ->
                                         if (indice == 1 && estadoActual.cuidadores.isNotEmpty()) {
                                             Text(
-                                                "Personas",
+                                                stringResource(R.string.cuidadores_personas),
                                                 style = MaterialTheme.typography.labelLarge,
                                                 fontWeight = FontWeight.Bold,
                                                 color = acentoHoja,
@@ -135,7 +139,7 @@ fun OcupacionesScreen(viewModel: OcupacionesViewModel = hiltViewModel()) {
                                         }
                                         if (indice == 1 + estadoActual.cuidadores.size && estadoActual.unidades.isNotEmpty()) {
                                             Text(
-                                                "Unidades familiares",
+                                                stringResource(R.string.unidades_titulo),
                                                 style = MaterialTheme.typography.labelLarge,
                                                 fontWeight = FontWeight.Bold,
                                                 color = acentoHoja,
@@ -174,13 +178,13 @@ fun OcupacionesScreen(viewModel: OcupacionesViewModel = hiltViewModel()) {
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("${seleccionadas.size} seleccionada(s)", style = MaterialTheme.typography.labelLarge, color = tintaSuaveHoja)
+                        Text(pluralStringResource(R.plurals.comun_seleccionadas, seleccionadas.size, seleccionadas.size), style = MaterialTheme.typography.labelLarge, color = tintaSuaveHoja)
                         Row {
                             TextButton(onClick = { seleccionadas = visiblesClaves }, enabled = visibles.isNotEmpty()) {
-                                Text("Marcar todo", color = acentoHoja, fontWeight = FontWeight.Bold)
+                                Text(stringResource(R.string.comun_marcar_todo), color = acentoHoja, fontWeight = FontWeight.Bold)
                             }
                             TextButton(onClick = { seleccionadas = emptySet() }, enabled = seleccionadas.isNotEmpty()) {
-                                Text("Ninguna", color = acentoHoja, fontWeight = FontWeight.Bold)
+                                Text(stringResource(R.string.comun_ninguna), color = acentoHoja, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -188,8 +192,10 @@ fun OcupacionesScreen(viewModel: OcupacionesViewModel = hiltViewModel()) {
                     Column(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState())) {
                         if (visibles.isEmpty()) {
                             MensajePantalla(
-                                if (estadoActual.ocupaciones.isEmpty()) "Todavía no hay ninguna ocupación apuntada."
-                                else "Ninguna ocupación coincide con el filtro."
+                                stringResource(
+                                    if (estadoActual.ocupaciones.isEmpty()) R.string.ocupaciones_vacia
+                                    else R.string.ocupaciones_sin_coincidencias
+                                )
                             )
                         }
                         visibles.forEach { ocupacion ->
@@ -206,7 +212,7 @@ fun OcupacionesScreen(viewModel: OcupacionesViewModel = hiltViewModel()) {
 
                     Spacer(Modifier.height(10.dp))
                     BotonPildoraHoja(
-                        texto = "Borrar ${seleccionadas.size} ocupación(es)",
+                        texto = pluralStringResource(R.plurals.ocupaciones_borrar, seleccionadas.size, seleccionadas.size),
                         onClick = { confirmarBorrado = true },
                         icono = Icons.Default.Delete,
                         habilitado = seleccionadas.isNotEmpty(),
@@ -217,15 +223,15 @@ fun OcupacionesScreen(viewModel: OcupacionesViewModel = hiltViewModel()) {
                     if (confirmarBorrado) {
                         AvisoHoja(
                             icono = Icons.Default.Delete,
-                            titulo = "¿Borrar ${seleccionadas.size} ocupación(es)?",
-                            texto = "Se quitan de todas las personas que las tengan. No se puede deshacer.",
+                            titulo = pluralStringResource(R.plurals.ocupaciones_borrar_titulo, seleccionadas.size, seleccionadas.size),
+                            texto = stringResource(R.string.ocupaciones_borrar_texto),
                             acciones = listOf(
-                                AccionAvisoHoja("Borrar", EstiloAccionAviso.PELIGRO) {
+                                AccionAvisoHoja(stringResource(R.string.comun_borrar), EstiloAccionAviso.PELIGRO) {
                                     viewModel.eliminar(estadoActual.ocupaciones.filter { it.clave in seleccionadas })
                                     seleccionadas = emptySet()
                                     confirmarBorrado = false
                                 },
-                                AccionAvisoHoja("Cancelar", EstiloAccionAviso.BORDE) { confirmarBorrado = false }
+                                AccionAvisoHoja(stringResource(R.string.comun_cancelar), EstiloAccionAviso.BORDE) { confirmarBorrado = false }
                             ),
                             onCerrar = { confirmarBorrado = false }
                         )
@@ -252,7 +258,7 @@ private fun FilaOcupacion(ocupacion: Ocupacion, marcada: Boolean, onMarcar: (Boo
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                "${categoria.nombre} · ${textoHorario(bloque)}",
+                "${categoria.nombre} · ${if (bloque.todoElDia) stringResource(R.string.comun_todo_el_dia) else textoHorario(bloque)}",
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 color = tintaHoja

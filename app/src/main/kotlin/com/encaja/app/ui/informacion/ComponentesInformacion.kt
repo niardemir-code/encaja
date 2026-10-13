@@ -1,5 +1,7 @@
 package com.encaja.app.ui.informacion
 
+import com.encaja.app.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -72,7 +74,7 @@ fun TarjetaPlegable(
                 }
                 Icon(
                     if (abierta) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                    contentDescription = if (abierta) "Plegar" else "Desplegar",
+                    contentDescription = stringResource(if (abierta) R.string.comun_plegar else R.string.comun_desplegar),
                     tint = tintaSuaveHoja
                 )
             }

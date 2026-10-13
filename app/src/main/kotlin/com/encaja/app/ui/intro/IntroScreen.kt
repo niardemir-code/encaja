@@ -4,6 +4,7 @@ package com.encaja.app.ui.intro
 // Pantallas de bienvenida (6 páginas) que se ven al abrir la app por primera vez.
 // Usan una paleta clara fija (la del diseño), sea cual sea el tema del teléfono.
 
+import androidx.compose.ui.res.stringResource
 import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.BorderStroke
@@ -93,14 +94,14 @@ fun IntroScreen(
         ) {
             if (pager.currentPage > 0) {
                 Text(
-                    "PASO ${pager.currentPage + 1} DE $TOTAL",
+                    stringResource(R.string.intro_paso, pager.currentPage + 1, TOTAL),
                     color = Acento, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp
                 )
             }
             Spacer(Modifier.weight(1f))
             if (!ultima) {
                 TextButton(onClick = { alTerminar(false, null) }) {
-                    Text("Saltar", color = TextoSuave, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.intro_saltar), color = TextoSuave, fontWeight = FontWeight.SemiBold)
                     Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = TextoSuave, modifier = Modifier.size(18.dp))
                 }
             }
@@ -115,30 +116,30 @@ fun IntroScreen(
                     0 -> PaginaBienvenida()
                     1 -> PaginaSemaforo()
                     2 -> PaginaGenerica(
-                        "El día, hora a hora", "Una línea de tiempo clara de todo lo que pasa en casa.",
+                        stringResource(R.string.intro_dia_titulo), stringResource(R.string.intro_dia_sub),
                         R.drawable.intro_dia,
                         listOf(
-                            Fila(Icons.Default.Schedule, "Horario real", "Cada actividad en su hora exacta."),
-                            Fila(Icons.Default.DirectionsCar, "Quién la lleva y quién la recoge", "Sin dudas ni mensajes de última hora."),
-                            Fila(Icons.Default.AccessTime, "Huecos al instante", "Ves de un vistazo lo que falta por cubrir.")
+                            Fila(Icons.Default.Schedule, stringResource(R.string.intro_dia_f1), stringResource(R.string.intro_dia_f1_d)),
+                            Fila(Icons.Default.DirectionsCar, stringResource(R.string.intro_dia_f2), stringResource(R.string.intro_dia_f2_d)),
+                            Fila(Icons.Default.AccessTime, stringResource(R.string.intro_dia_f3), stringResource(R.string.intro_dia_f3_d))
                         )
                     )
                     3 -> PaginaGenerica(
-                        "Cada cual, a lo suyo", "La disponibilidad de toda la familia en un solo lugar.",
+                        stringResource(R.string.intro_disp_titulo), stringResource(R.string.intro_disp_sub),
                         R.drawable.intro_disponibilidad,
                         listOf(
-                            Fila(Icons.Default.CalendarMonth, "Todos los compromisos en un solo lugar", "Trabajo, médico, viajes, vacaciones…"),
-                            Fila(Icons.Default.Notifications, "Avisos automáticos", "Encaja detecta cuándo alguien no puede."),
-                            Fila(Icons.Default.Group, "Unidades familiares", "Abuelos, canguros… cada uno con su calendario.")
+                            Fila(Icons.Default.CalendarMonth, stringResource(R.string.intro_disp_f1), stringResource(R.string.intro_disp_f1_d)),
+                            Fila(Icons.Default.Notifications, stringResource(R.string.intro_disp_f2), stringResource(R.string.intro_disp_f2_d, stringResource(R.string.app_name))),
+                            Fila(Icons.Default.Group, stringResource(R.string.unidades_titulo), stringResource(R.string.intro_disp_f3_d))
                         )
                     )
                     4 -> PaginaGenerica(
-                        "Un aviso a tiempo", "Recordatorios justo cuando los necesitas.",
+                        stringResource(R.string.intro_avisos_titulo), stringResource(R.string.intro_avisos_sub),
                         R.drawable.intro_avisos,
                         listOf(
-                            Fila(Icons.Default.Notifications, "Recordatorios personalizados", "Elige cuánto antes quieres que te avisemos."),
-                            Fila(Icons.Default.PhoneAndroid, "Funciona aunque la app esté cerrada", "El aviso llega igualmente."),
-                            Fila(Icons.Default.Person, "Cada uno recibe lo suyo", "Solo lo que te toca a ti.")
+                            Fila(Icons.Default.Notifications, stringResource(R.string.intro_avisos_f1), stringResource(R.string.intro_avisos_f1_d)),
+                            Fila(Icons.Default.PhoneAndroid, stringResource(R.string.intro_avisos_f2), stringResource(R.string.intro_avisos_f2_d)),
+                            Fila(Icons.Default.Person, stringResource(R.string.intro_avisos_f3), stringResource(R.string.intro_avisos_f3_d))
                         )
                     )
                     else -> PaginaUnirse(
@@ -168,9 +169,9 @@ fun IntroScreen(
             if (!ultima) {
                 Spacer(Modifier.height(10.dp))
                 if (pager.currentPage == 0) {
-                    BotonPrincipal("Comenzar") { scope.launch { pager.animateScrollToPage(1) } }
+                    BotonPrincipal(stringResource(R.string.intro_comenzar)) { scope.launch { pager.animateScrollToPage(1) } }
                     TextButton(onClick = { alTerminar(false, null) }) {
-                        Text("Ya tengo una cuenta", color = Acento, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.intro_ya_tengo_cuenta), color = Acento, fontWeight = FontWeight.Bold)
                     }
                 } else {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -179,9 +180,9 @@ fun IntroScreen(
                             modifier = Modifier.weight(1f).height(52.dp),
                             shape = RoundedCornerShape(16.dp),
                             border = BorderStroke(1.dp, Lavanda)
-                        ) { Text("Anterior", color = Violeta, fontWeight = FontWeight.Bold) }
+                        ) { Text(stringResource(R.string.intro_anterior), color = Violeta, fontWeight = FontWeight.Bold) }
                         Box(Modifier.weight(1f)) {
-                            BotonPrincipal("Siguiente") { scope.launch { pager.animateScrollToPage(pager.currentPage + 1) } }
+                            BotonPrincipal(stringResource(R.string.intro_siguiente)) { scope.launch { pager.animateScrollToPage(pager.currentPage + 1) } }
                         }
                     }
                 }
@@ -249,15 +250,15 @@ private fun ColumnScope.PaginaBienvenida() {
     }
     Spacer(Modifier.height(4.dp))
     Text(
-        "Organiza la vida familiar de forma sencilla",
+        stringResource(R.string.login_lema),
         color = TextoSuave, fontSize = 16.sp, textAlign = TextAlign.Center
     )
     Spacer(Modifier.height(8.dp))
     Ilustracion(R.drawable.intro_bienvenida)
     Spacer(Modifier.height(8.dp))
-    FilaFuncion(Fila(Icons.Default.CalendarMonth, "Todas las actividades", "Colegio, extraescolares, médico… en un solo sitio."))
-    FilaFuncion(Fila(Icons.Default.Group, "Toda la familia conectada", "Padres, abuelos y cuidadores, coordinados."))
-    FilaFuncion(Fila(Icons.Default.CheckCircle, "Siempre al día", "Sabrás qué hay y qué falta por cubrir."))
+    FilaFuncion(Fila(Icons.Default.CalendarMonth, stringResource(R.string.actividades_titulo), stringResource(R.string.intro_b1_detalle)))
+    FilaFuncion(Fila(Icons.Default.Group, stringResource(R.string.intro_b2), stringResource(R.string.intro_b2_detalle)))
+    FilaFuncion(Fila(Icons.Default.CheckCircle, stringResource(R.string.intro_b3), stringResource(R.string.intro_b3_detalle)))
 }
 
 @Composable
@@ -270,13 +271,13 @@ private fun ColumnScope.PaginaGenerica(titulo: String, subtitulo: String, @Drawa
 
 @Composable
 private fun ColumnScope.PaginaSemaforo() {
-    Titulo("El semáforo de la semana", "Mira de un vistazo cómo va cada día.")
+    Titulo(stringResource(R.string.intro_sem_titulo), stringResource(R.string.intro_sem_sub))
     Ilustracion(R.drawable.intro_semaforo)
     Spacer(Modifier.height(8.dp))
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        ChipLeyenda(Modifier.weight(1f), Verde, VerdeClaro, "Todo cubierto", "Sin preocupaciones")
-        ChipLeyenda(Modifier.weight(1f), Ambar, AmbarClaro, "Hay avisos", "Revisa los detalles")
-        ChipLeyenda(Modifier.weight(1f), Rojo, RojoClaro, "Hay huecos", "Necesita tu atención")
+        ChipLeyenda(Modifier.weight(1f), Verde, VerdeClaro, stringResource(R.string.intro_sem_verde), stringResource(R.string.intro_sem_verde_d))
+        ChipLeyenda(Modifier.weight(1f), Ambar, AmbarClaro, stringResource(R.string.intro_sem_ambar), stringResource(R.string.intro_sem_ambar_d))
+        ChipLeyenda(Modifier.weight(1f), Rojo, RojoClaro, stringResource(R.string.intro_sem_rojo), stringResource(R.string.intro_sem_rojo_d))
     }
     Spacer(Modifier.height(8.dp))
     Row(
@@ -286,7 +287,7 @@ private fun ColumnScope.PaginaSemaforo() {
         Icon(Icons.Default.Lightbulb, null, tint = Ambar, modifier = Modifier.size(28.dp))
         Spacer(Modifier.width(12.dp))
         Text(
-            "La app cruza las actividades de los niños con la disponibilidad de cada persona y te avisa de lo que necesita organización.",
+            stringResource(R.string.intro_sem_consejo),
             color = Texto, fontSize = 12.sp, lineHeight = 15.sp
         )
     }
@@ -308,7 +309,7 @@ private fun ChipLeyenda(modifier: Modifier, color: Color, fondo: Color, titulo: 
 @Composable
 private fun ColumnScope.PaginaUnirse(alUnirse: (String) -> Unit, alCrearFamilia: () -> Unit, alTenerCuenta: () -> Unit) {
     var codigo by remember { mutableStateOf("") }
-    Titulo("Únete a tu familia", "Introduce el código que te han compartido.")
+    Titulo(stringResource(R.string.intro_unirse_titulo), stringResource(R.string.intro_unirse_sub))
     Ilustracion(R.drawable.intro_familia)
     Spacer(Modifier.height(8.dp))
     Column(
@@ -317,8 +318,8 @@ private fun ColumnScope.PaginaUnirse(alUnirse: (String) -> Unit, alCrearFamilia:
         OutlinedTextField(
             value = codigo,
             onValueChange = { codigo = it.uppercase().filter { c -> c.isLetterOrDigit() }.take(12) },
-            label = { Text("Código de invitación") },
-            placeholder = { Text("Introduce el código") },
+            label = { Text(stringResource(R.string.intro_codigo_label)) },
+            placeholder = { Text(stringResource(R.string.intro_codigo_placeholder)) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
             shape = RoundedCornerShape(14.dp),
@@ -331,7 +332,7 @@ private fun ColumnScope.PaginaUnirse(alUnirse: (String) -> Unit, alCrearFamilia:
             modifier = Modifier.fillMaxWidth().height(52.dp),
             shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Violeta, contentColor = Color.White)
-        ) { Text("Unirme", fontWeight = FontWeight.Bold, fontSize = 16.sp) }
+        ) { Text(stringResource(R.string.intro_unirme), fontWeight = FontWeight.Bold, fontSize = 16.sp) }
     }
     Spacer(Modifier.height(12.dp))
     Row(
@@ -341,9 +342,9 @@ private fun ColumnScope.PaginaUnirse(alUnirse: (String) -> Unit, alCrearFamilia:
         Icon(Icons.Default.Info, null, tint = Acento, modifier = Modifier.size(22.dp))
         Spacer(Modifier.width(12.dp))
         Column {
-            Text("¿Cómo consigo el código?", color = Violeta, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Text(stringResource(R.string.intro_como_codigo), color = Violeta, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             Text(
-                "Pídeselo a quien ya usa Encaja en tu familia (con el botón «Invitar a alguien»).",
+                stringResource(R.string.intro_como_codigo_texto, stringResource(R.string.app_name)),
                 color = TextoSuave, fontSize = 12.sp, lineHeight = 15.sp
             )
         }
@@ -357,7 +358,7 @@ private fun ColumnScope.PaginaUnirse(alUnirse: (String) -> Unit, alCrearFamilia:
     ) {
         Icon(Icons.Default.GroupAdd, null, modifier = Modifier.size(20.dp))
         Spacer(Modifier.width(8.dp))
-        Text("Crear una familia nueva", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+        Text(stringResource(R.string.intro_crear_familia), fontWeight = FontWeight.Bold, fontSize = 16.sp)
     }
     Spacer(Modifier.height(6.dp))
     OutlinedButton(
@@ -366,7 +367,7 @@ private fun ColumnScope.PaginaUnirse(alUnirse: (String) -> Unit, alCrearFamilia:
         shape = RoundedCornerShape(16.dp),
         border = BorderStroke(1.dp, Acento)
     ) {
-        Text("Ya tengo una cuenta", color = Acento, fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.intro_ya_tengo_cuenta), color = Acento, fontWeight = FontWeight.Bold)
         Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = Acento)
     }
 }

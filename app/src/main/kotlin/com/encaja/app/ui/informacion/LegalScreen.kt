@@ -1,5 +1,7 @@
 package com.encaja.app.ui.informacion
 
+import com.encaja.app.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -28,11 +30,11 @@ fun LegalScreen() {
                 .padding(bottom = 32.dp)
         ) {
             CabeceraPantalla(
-                "Privacidad y legal",
-                "Cómo tratamos tus datos y las condiciones de uso. Toca un apartado para leerlo."
+                stringResource(R.string.ajustes_legal_titulo),
+                stringResource(R.string.legal_subtitulo)
             )
 
-            DOCUMENTOS_LEGALES.forEach { documento ->
+            documentosLegales().forEach { documento ->
                 TarjetaPlegable(titulo = documento.titulo, subtitulo = documento.resumen) {
                     documento.apartados.forEach { ContenidoApartadoLegal(it) }
                 }
@@ -41,7 +43,7 @@ fun LegalScreen() {
 
             Spacer(Modifier.height(12.dp))
             Text(
-                "¿Dudas sobre tus datos o quieres ejercer tus derechos? Escríbenos a ${DatosLegales.EMAIL_CONTACTO}.",
+                stringResource(R.string.legal_dudas, DatosLegales.EMAIL_CONTACTO),
                 style = MaterialTheme.typography.bodySmall,
                 color = tintaSuaveHoja
             )

@@ -7,6 +7,9 @@ package com.encaja.app.ui.actividades
 // diálogo de la Guía (p.ej. porque no pertenecen a ningún grupo de repetición). Un buscador
 // por texto ayuda a marcar rápido todas las de un mismo nombre (p.ej. "Hello English").
 
+import com.encaja.app.R
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import com.encaja.app.ui.common.localeApp
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -73,7 +76,7 @@ fun TodasActividadesScreen(viewModel: TodasActividadesViewModel = hiltViewModel(
                 .fillMaxSize()
                 .padding(horizontal = 20.dp)
         ) {
-            CabeceraPantalla("Todas las actividades")
+            CabeceraPantalla(stringResource(R.string.actividades_titulo))
 
             when (val estadoActual = pantalla) {
                 is TodasActividadesPantallaEstado.Cargando -> {
@@ -81,14 +84,14 @@ fun TodasActividadesScreen(viewModel: TodasActividadesViewModel = hiltViewModel(
                 }
 
                 is TodasActividadesPantallaEstado.SinFamilia -> {
-                    MensajePantalla("Vincúlate a una familia desde la pestaña Semana para ver esta pantalla.")
+                    MensajePantalla(stringResource(R.string.comun_sin_familia_ver))
                 }
 
                 is TodasActividadesPantallaEstado.ConDatos -> {
                     CampoTextoConIconoHoja(
                         filtro,
                         { filtro = it },
-                        "Buscar por texto…",
+                        stringResource(R.string.comun_buscar_texto),
                         Icons.Default.Search,
                         modifier = Modifier.fillMaxWidth(0.75f)
                     )
@@ -98,7 +101,7 @@ fun TodasActividadesScreen(viewModel: TodasActividadesViewModel = hiltViewModel(
                             modifier = Modifier.horizontalScroll(rememberScrollState()),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            ChipFiltroHoja("Todos", filtroNino == null) { filtroNino = null }
+                            ChipFiltroHoja(stringResource(R.string.comun_todos), filtroNino == null) { filtroNino = null }
                             estadoActual.grupos.forEach { grupo ->
                                 ChipFiltroHoja(grupo.child.nombre, filtroNino == grupo.child.id) {
                                     filtroNino = grupo.child.id
@@ -124,16 +127,16 @@ fun TodasActividadesScreen(viewModel: TodasActividadesViewModel = hiltViewModel(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            "${seleccionadas.size} seleccionada(s)",
+                            pluralStringResource(R.plurals.comun_seleccionadas, seleccionadas.size, seleccionadas.size),
                             style = MaterialTheme.typography.labelLarge,
                             color = tintaSuaveHoja
                         )
                         Row {
                             TextButton(onClick = { seleccionadas = visiblesIds }, enabled = hayActividadesVisibles) {
-                                Text("Marcar todo", color = acentoHoja, fontWeight = FontWeight.Bold)
+                                Text(stringResource(R.string.comun_marcar_todo), color = acentoHoja, fontWeight = FontWeight.Bold)
                             }
                             TextButton(onClick = { seleccionadas = emptySet() }, enabled = seleccionadas.isNotEmpty()) {
-                                Text("Ninguna", color = acentoHoja, fontWeight = FontWeight.Bold)
+                                Text(stringResource(R.string.comun_ninguna), color = acentoHoja, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -145,8 +148,8 @@ fun TodasActividadesScreen(viewModel: TodasActividadesViewModel = hiltViewModel(
                     ) {
                         if (!hayActividadesVisibles) {
                             MensajePantalla(
-                                if (filtro.isBlank()) "Todavía no hay actividades."
-                                else "Ninguna actividad coincide con \"$filtro\"."
+                                if (filtro.isBlank()) stringResource(R.string.actividades_vacia)
+                                else stringResource(R.string.actividades_sin_coincidencias, filtro)
                             )
                         }
                         gruposFiltrados.forEach { grupo ->
@@ -169,7 +172,7 @@ fun TodasActividadesScreen(viewModel: TodasActividadesViewModel = hiltViewModel(
 
                     Spacer(Modifier.height(10.dp))
                     BotonPildoraHoja(
-                        texto = "Borrar ${seleccionadas.size} actividad(es)",
+                        texto = pluralStringResource(R.plurals.actividades_borrar, seleccionadas.size, seleccionadas.size),
                         onClick = { confirmarBorrado = true },
                         icono = Icons.Default.Delete,
                         habilitado = seleccionadas.isNotEmpty(),
@@ -180,15 +183,15 @@ fun TodasActividadesScreen(viewModel: TodasActividadesViewModel = hiltViewModel(
                     if (confirmarBorrado) {
                         AvisoHoja(
                             icono = Icons.Default.Delete,
-                            titulo = "¿Borrar ${seleccionadas.size} actividad(es)?",
-                            texto = "No se puede deshacer.",
+                            titulo = pluralStringResource(R.plurals.actividades_borrar_titulo, seleccionadas.size, seleccionadas.size),
+                            texto = stringResource(R.string.comun_no_deshacer),
                             acciones = listOf(
-                                AccionAvisoHoja("Borrar", EstiloAccionAviso.PELIGRO) {
+                                AccionAvisoHoja(stringResource(R.string.comun_borrar), EstiloAccionAviso.PELIGRO) {
                                     viewModel.eliminarSeleccionadas(seleccionadas)
                                     seleccionadas = emptySet()
                                     confirmarBorrado = false
                                 },
-                                AccionAvisoHoja("Cancelar", EstiloAccionAviso.BORDE) { confirmarBorrado = false }
+                                AccionAvisoHoja(stringResource(R.string.comun_cancelar), EstiloAccionAviso.BORDE) { confirmarBorrado = false }
                             ),
                             onCerrar = { confirmarBorrado = false }
                         )
@@ -219,7 +222,7 @@ private fun FilaActividad(actividad: CoverageNeed, marcada: Boolean, onMarcar: (
             )
             if (actividad.grupoRepeticionId != null) {
                 Text(
-                    "Se repite cada semana",
+                    stringResource(R.string.actividades_se_repite),
                     style = MaterialTheme.typography.labelSmall,
                     color = tintaSuaveHoja
                 )

@@ -7,6 +7,9 @@ package com.encaja.app.ui.compra
 // un panel lavanda abajo para añadir artículos con "Artículo", "Tienda" y un botón "+".
 // Sin logotipos de comercio: el círculo lleva la inicial de la tienda.
 
+import com.encaja.app.R
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.material.icons.filled.Store
 import com.encaja.app.ui.theme.EstiloAccionAviso
 import com.encaja.app.ui.theme.AccionAvisoHoja
@@ -107,18 +110,18 @@ fun CompraScreen(viewModel: CompraViewModel = hiltViewModel()) {
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text("No se pudo cargar la lista de la compra", fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center)
+                Text(stringResource(R.string.compra_error_titulo), fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center)
                 Spacer(Modifier.height(8.dp))
-                Text("Revisa la conexión a internet y vuelve a intentarlo.", textAlign = TextAlign.Center)
+                Text(stringResource(R.string.compra_error_texto), textAlign = TextAlign.Center)
                 Spacer(Modifier.height(16.dp))
-                androidx.compose.material3.Button(onClick = { viewModel.recargar() }) { Text("Reintentar") }
+                androidx.compose.material3.Button(onClick = { viewModel.recargar() }) { Text(stringResource(R.string.comun_reintentar)) }
             }
         }
 
         is CompraPantallaEstado.SinFamilia -> {
             Box(modifier = Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
                 Text(
-                    "Vincúlate a una familia desde la pestaña Semana para ver la lista de la compra.",
+                    stringResource(R.string.comun_sin_familia_ver),
                     textAlign = TextAlign.Center
                 )
             }
@@ -167,14 +170,14 @@ private fun ContenidoCompra(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    "Compra",
+                    stringResource(R.string.compra_titulo),
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.ExtraBold,
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
-                    if (hayFiltro) "Mostrando ${gruposVisibles.size} de ${estado.grupos.size} comercios"
-                    else "Lista de la compra familiar",
+                    if (hayFiltro) stringResource(R.string.compra_mostrando, gruposVisibles.size, estado.grupos.size)
+                    else stringResource(R.string.compra_subtitulo),
                     style = MaterialTheme.typography.bodyMedium,
                     color = if (hayFiltro) LocalEncajaExtraColors.current.acento else MaterialTheme.colorScheme.onSurfaceVariant,
                     fontWeight = if (hayFiltro) FontWeight.Bold else null
@@ -192,7 +195,7 @@ private fun ContenidoCompra(
                 ) {
                     Icon(
                         Icons.Default.FilterList,
-                        contentDescription = "Filtrar comercios",
+                        contentDescription = stringResource(R.string.compra_filtrar),
                         tint = if (hayFiltro) extra.onAcento else MaterialTheme.colorScheme.primary
                     )
                 }
@@ -210,7 +213,7 @@ private fun ContenidoCompra(
         if (estado.grupos.isEmpty()) {
             Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 32.dp), contentAlignment = Alignment.Center) {
                 Text(
-                    "Todavía no hay nada en la lista de la compra.\nAñade el primer artículo abajo.",
+                    stringResource(R.string.compra_vacia),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
@@ -223,12 +226,12 @@ private fun ContenidoCompra(
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(
-                    "Has ocultado todos los comercios.",
+                    stringResource(R.string.compra_todo_oculto),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
                 )
-                TextButton(onClick = { tiendasOcultas.clear() }) { Text("Mostrar todos", fontWeight = FontWeight.Bold) }
+                TextButton(onClick = { tiendasOcultas.clear() }) { Text(stringResource(R.string.compra_mostrar_todos), fontWeight = FontWeight.Bold) }
             }
         } else {
             LazyColumn(
@@ -329,7 +332,7 @@ private fun TarjetaTienda(
             }
             Icon(
                 if (plegada) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowUp,
-                contentDescription = if (plegada) "Desplegar ${grupo.tienda}" else "Plegar ${grupo.tienda}",
+                contentDescription = stringResource(if (plegada) R.string.compra_desplegar else R.string.compra_plegar, grupo.tienda),
                 tint = MaterialTheme.colorScheme.onSurface
             )
         }
@@ -391,14 +394,14 @@ private fun FilaNuevoArticuloEnTienda(onAgregar: (String) -> Unit) {
                 Icon(Icons.Default.Add, contentDescription = null, tint = LocalEncajaExtraColors.current.onAcento, modifier = Modifier.size(18.dp))
             }
             Spacer(Modifier.width(14.dp))
-            Text("Añadir artículo", color = acento, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyLarge)
+            Text(stringResource(R.string.compra_anadir_articulo), color = acento, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyLarge)
         }
     } else {
         LaunchedEffect(Unit) { foco.requestFocus() }
         OutlinedTextField(
             value = texto,
             onValueChange = { texto = it },
-            placeholder = { Text("Nuevo artículo", maxLines = 1) },
+            placeholder = { Text(stringResource(R.string.compra_nuevo_articulo), maxLines = 1) },
             singleLine = true,
             shape = RoundedCornerShape(16.dp),
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Done),
@@ -406,10 +409,10 @@ private fun FilaNuevoArticuloEnTienda(onAgregar: (String) -> Unit) {
             trailingIcon = {
                 Row {
                     IconButton(onClick = { confirmar() }, enabled = texto.isNotBlank()) {
-                        Icon(Icons.Default.Check, contentDescription = "Añadir", tint = if (texto.isNotBlank()) acento else MaterialTheme.colorScheme.onSurfaceVariant)
+                        Icon(Icons.Default.Check, contentDescription = stringResource(R.string.comun_anadir), tint = if (texto.isNotBlank()) acento else MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     IconButton(onClick = { abierta = false; texto = "" }) {
-                        Icon(Icons.Default.Close, contentDescription = "Cerrar", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.comun_cerrar), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             },
@@ -427,14 +430,14 @@ private fun DialogoFiltroComercios(
 ) {
     AvisoHoja(
         icono = Icons.Default.Store,
-        titulo = "Comercios a mostrar",
+        titulo = stringResource(R.string.compra_filtro_titulo),
         texto = null,
         peligro = false,
         conX = true,
         accionesEnFila = true,
         acciones = listOf(
-            AccionAvisoHoja("Todos", EstiloAccionAviso.SUAVE) { ocultas.clear() },
-            AccionAvisoHoja("Listo", EstiloAccionAviso.PRIMARIO) { onCerrar() }
+            AccionAvisoHoja(stringResource(R.string.comun_todos), EstiloAccionAviso.SUAVE) { ocultas.clear() },
+            AccionAvisoHoja(stringResource(R.string.comun_listo), EstiloAccionAviso.PRIMARIO) { onCerrar() }
         ),
         onCerrar = onCerrar,
         contenido = {
@@ -462,7 +465,7 @@ private fun DialogoFiltroComercios(
                             maxLines = 1
                         )
                         Text(
-                            if (pendientes == 1) "1 por comprar" else "$pendientes por comprar",
+                            stringResource(R.string.compra_por_comprar, pendientes),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.labelSmall
                         )
@@ -475,9 +478,12 @@ private fun DialogoFiltroComercios(
 }
 
 /** "1 artículo", "3 artículos" o, si ya hay comprados, "3 artículos · 1 por comprar". */
+@Composable
 private fun textoArticulos(total: Int, pendientes: Int): String {
-    val base = if (total == 1) "1 artículo" else "$total artículos"
-    return if (pendientes in 1 until total) "$base · $pendientes por comprar" else base
+    val base = pluralStringResource(R.plurals.compra_articulos, total, total)
+    return if (pendientes in 1 until total) {
+        stringResource(R.string.compra_articulos_con_pendientes, base, stringResource(R.string.compra_por_comprar, pendientes))
+    } else base
 }
 
 @Composable
@@ -493,14 +499,14 @@ private fun FilaArticulo(
     if (editando) {
         AvisoHoja(
             icono = Icons.Default.Edit,
-            titulo = "Cambiar nombre",
+            titulo = stringResource(R.string.compra_cambiar_nombre),
             texto = null,
             peligro = false,
             conX = true,
             accionesEnFila = true,
             acciones = listOf(
-                AccionAvisoHoja("Cancelar", EstiloAccionAviso.BORDE) { editando = false },
-                AccionAvisoHoja("Guardar", EstiloAccionAviso.PRIMARIO, habilitada = nombreEditado.isNotBlank()) { onRenombrar(nombreEditado); editando = false }
+                AccionAvisoHoja(stringResource(R.string.comun_cancelar), EstiloAccionAviso.BORDE) { editando = false },
+                AccionAvisoHoja(stringResource(R.string.comun_guardar), EstiloAccionAviso.PRIMARIO, habilitada = nombreEditado.isNotBlank()) { onRenombrar(nombreEditado); editando = false }
             ),
             onCerrar = { editando = false },
             contenido = {
@@ -538,11 +544,11 @@ private fun FilaArticulo(
             color = if (articulo.comprado) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.weight(1f).padding(vertical = 4.dp)
         )
-        BotonCompactoCompra(Icons.Default.Edit, "Cambiar nombre de ${articulo.nombre}", MaterialTheme.colorScheme.onSurfaceVariant) {
+        BotonCompactoCompra(Icons.Default.Edit, stringResource(R.string.compra_cambiar_nombre_de, articulo.nombre), MaterialTheme.colorScheme.onSurfaceVariant) {
             nombreEditado = articulo.nombre
             editando = true
         }
-        BotonCompactoCompra(Icons.Default.Delete, "Eliminar ${articulo.nombre}", MaterialTheme.colorScheme.onSurface, onEliminar)
+        BotonCompactoCompra(Icons.Default.Delete, stringResource(R.string.compra_eliminar_a, articulo.nombre), MaterialTheme.colorScheme.onSurface, onEliminar)
     }
 }
 
@@ -611,7 +617,7 @@ private fun PanelNuevoArticulo(tiendas: List<String>, onAgregar: (String, String
         CampoPanel(
             valor = nombre,
             onCambio = { nombre = it },
-            marcador = "Artículo",
+            marcador = stringResource(R.string.compra_marcador_articulo),
             icono = Icons.Default.ShoppingCart,
             accion = ImeAction.Next,
             onAccion = {},
@@ -621,7 +627,7 @@ private fun PanelNuevoArticulo(tiendas: List<String>, onAgregar: (String, String
         CampoPanel(
             valor = tienda,
             onCambio = { tienda = it },
-            marcador = "Tienda",
+            marcador = stringResource(R.string.compra_marcador_tienda),
             icono = Icons.Default.Storefront,
             accion = ImeAction.Done,
             onAccion = { agregar() },
@@ -636,7 +642,7 @@ private fun PanelNuevoArticulo(tiendas: List<String>, onAgregar: (String, String
                 .clickable(enabled = puedeAgregar, onClick = { agregar() }),
             contentAlignment = Alignment.Center
         ) {
-            Icon(Icons.Default.Add, contentDescription = "Añadir artículo", tint = extra.onAcento, modifier = Modifier.size(28.dp))
+            Icon(Icons.Default.Add, contentDescription = stringResource(R.string.compra_anadir_articulo), tint = extra.onAcento, modifier = Modifier.size(28.dp))
         }
     }
     }

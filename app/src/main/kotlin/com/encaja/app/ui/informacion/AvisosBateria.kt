@@ -2,6 +2,8 @@ package com.encaja.app.ui.informacion
 
 // NOTA: depende de Android (PowerManager, Settings) y Compose; no compilado en este entorno.
 
+import com.encaja.app.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.material.icons.filled.BatteryAlert
 import com.encaja.app.ui.theme.EstiloAccionAviso
 import com.encaja.app.ui.theme.AccionAvisoHoja
@@ -164,7 +166,7 @@ fun DialogoAvisosBateria(onQuitar: () -> Unit, onAhoraNo: () -> Unit, onMasInfo:
                         }
                         Spacer(Modifier.width(12.dp))
                         Text(
-                            "Avisos de tu familia",
+                            stringResource(R.string.bateria_dlg_titulo),
                             style = MaterialTheme.typography.headlineMedium,
                             fontWeight = FontWeight.ExtraBold,
                             color = MaterialTheme.colorScheme.onBackground,
@@ -174,12 +176,12 @@ fun DialogoAvisosBateria(onQuitar: () -> Unit, onAhoraNo: () -> Unit, onMasInfo:
 
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(
-                            "¿Quieres recibir los avisos de los integrantes de tu familia aunque la app esté cerrada?",
+                            stringResource(R.string.bateria_dlg_pregunta),
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onBackground
                         )
                         Text(
-                            "Quita las restricciones de batería para Encaja.",
+                            stringResource(R.string.bateria_dlg_quita, stringResource(R.string.app_name)),
                             style = MaterialTheme.typography.bodyLarge,
                             color = indigo
                         )
@@ -194,9 +196,7 @@ fun DialogoAvisosBateria(onQuitar: () -> Unit, onAhoraNo: () -> Unit, onMasInfo:
                         ) {
                             IlustracionMovilBateria()
                             Text(
-                                "Se abrirá la ficha de Encaja en los ajustes: entra en «Batería» y elige " +
-                                    "«Sin restricciones» (según el móvil, puede llamarse «No optimizar» o " +
-                                    "«Permitir actividad en segundo plano»).",
+                                stringResource(R.string.bateria_dlg_instrucciones, stringResource(R.string.app_name)),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onBackground,
                                 modifier = Modifier.weight(1f)
@@ -217,7 +217,7 @@ fun DialogoAvisosBateria(onQuitar: () -> Unit, onAhoraNo: () -> Unit, onMasInfo:
                             Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, tint = indigo, modifier = Modifier.size(22.dp))
                             Spacer(Modifier.width(14.dp))
                             Text(
-                                "Más información (Xiaomi, Oppo, Huawei…)",
+                                stringResource(R.string.bateria_mas_info),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onBackground,
                                 modifier = Modifier.weight(1f)
@@ -233,7 +233,7 @@ fun DialogoAvisosBateria(onQuitar: () -> Unit, onAhoraNo: () -> Unit, onMasInfo:
                             border = BorderStroke(1.5.dp, lavanda),
                             modifier = Modifier.weight(1f).height(56.dp)
                         ) {
-                            Text("Ahora no", fontWeight = FontWeight.ExtraBold, color = indigo)
+                            Text(stringResource(R.string.bateria_ahora_no), fontWeight = FontWeight.ExtraBold, color = indigo)
                         }
                         Button(
                             onClick = onQuitar,
@@ -241,7 +241,7 @@ fun DialogoAvisosBateria(onQuitar: () -> Unit, onAhoraNo: () -> Unit, onMasInfo:
                             colors = ButtonDefaults.buttonColors(containerColor = extra.acento, contentColor = extra.onAcento),
                             modifier = Modifier.weight(1.3f).height(56.dp)
                         ) {
-                            Text("Quitar restricciones", fontWeight = FontWeight.ExtraBold, maxLines = 1)
+                            Text(stringResource(R.string.bateria_quitar), fontWeight = FontWeight.ExtraBold, maxLines = 1)
                         }
                     }
                 }
@@ -256,7 +256,7 @@ fun DialogoAvisosBateria(onQuitar: () -> Unit, onAhoraNo: () -> Unit, onMasInfo:
                         .clip(CircleShape)
                         .background(lavanda)
                 ) {
-                    Icon(Icons.Default.Close, contentDescription = "Cerrar", tint = indigo, modifier = Modifier.size(22.dp))
+                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.comun_cerrar), tint = indigo, modifier = Modifier.size(22.dp))
                 }
             }
         }
@@ -306,34 +306,18 @@ private fun IlustracionMovilBateria() {
 
 private data class PasosMarca(val marca: String, val pasos: String)
 
-private val PASOS_POR_MARCA = listOf(
-    PasosMarca(
-        "Xiaomi, Redmi, POCO",
-        "Ajustes → Aplicaciones → Administrar aplicaciones → Encaja: activa «Inicio automático» y, en " +
-            "«Ahorro de batería», elige «Sin restricciones». Además, en la lista de apps recientes, mantén " +
-            "pulsada la tarjeta de Encaja y toca el candado."
-    ),
-    PasosMarca(
-        "Oppo, Realme, OnePlus",
-        "Ajustes → Aplicaciones → Encaja: permite el «Inicio automático» y, en el uso de batería, " +
-            "«Permitir actividad en segundo plano»."
-    ),
-    PasosMarca(
-        "Samsung",
-        "Ajustes → Batería → Límites de uso en segundo plano: quita Encaja de las apps en suspensión " +
-            "y añádela a «Apps que nunca se suspenden»."
-    ),
-    PasosMarca(
-        "Huawei, Honor",
-        "Ajustes → Aplicaciones → Inicio de aplicaciones → Encaja: desactiva la gestión automática y " +
-            "activa «Inicio automático», «Inicio secundario» y «Ejecución en segundo plano»."
-    ),
-    PasosMarca(
-        "Vivo",
-        "Ajustes → Batería → Consumo en segundo plano → Encaja: permite la actividad en segundo plano " +
-            "y el inicio automático."
+/** Los pasos de cada fabricante, en el idioma de la app y con el nombre de la app dentro. */
+@Composable
+private fun pasosPorMarca(): List<PasosMarca> {
+    val app = stringResource(R.string.app_name)
+    return listOf(
+        PasosMarca("Xiaomi, Redmi, POCO", stringResource(R.string.bateria_xiaomi, app)),
+        PasosMarca("Oppo, Realme, OnePlus", stringResource(R.string.bateria_oppo, app)),
+        PasosMarca("Samsung", stringResource(R.string.bateria_samsung, app)),
+        PasosMarca("Huawei, Honor", stringResource(R.string.bateria_huawei, app)),
+        PasosMarca("Vivo", stringResource(R.string.bateria_vivo, app))
     )
-)
+}
 
 /** Ayuda para móviles con ahorro de batería extra del fabricante. */
 @Composable
@@ -341,31 +325,28 @@ fun DialogoMasInformacionBateria(onCerrar: () -> Unit) {
     val contexto = LocalContext.current
     AvisoHoja(
         icono = Icons.Default.BatteryAlert,
-        titulo = "Avisos con la app cerrada",
+        titulo = stringResource(R.string.bateria_titulo),
         texto = null,
         peligro = false,
         conX = true,
         acciones = listOf(
-            AccionAvisoHoja("Cerrar", EstiloAccionAviso.BORDE) { onCerrar() }
+            AccionAvisoHoja(stringResource(R.string.comun_cerrar), EstiloAccionAviso.BORDE) { onCerrar() }
         ),
         onCerrar = onCerrar,
         contenido = {
             Column {
                 Text(
-                    "Además de quitar la restricción de batería de Android, muchos fabricantes añaden su " +
-                        "propio ahorro de energía, que puede cerrar la app y evitar que lleguen los avisos. " +
-                        "Los nombres de los menús cambian según el modelo y la versión.",
+                    stringResource(R.string.bateria_marca_intro),
                     style = MaterialTheme.typography.bodyMedium
                 )
-                PASOS_POR_MARCA.forEach { item ->
+                pasosPorMarca().forEach { item ->
                     Spacer(Modifier.height(12.dp))
                     Text(item.marca, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                     Text(item.pasos, style = MaterialTheme.typography.bodyMedium)
                 }
                 Spacer(Modifier.height(12.dp))
                 Text(
-                    "Si cierras Encaja a la fuerza desde los ajustes del móvil («Forzar detención»), no " +
-                        "llegará ningún aviso hasta que la vuelvas a abrir.",
+                    stringResource(R.string.bateria_marca_forzar, stringResource(R.string.app_name)),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -374,7 +355,7 @@ fun DialogoMasInformacionBateria(onCerrar: () -> Unit) {
                     try {
                         contexto.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://dontkillmyapp.com")))
                     } catch (e: Exception) { /* sin navegador */ }
-                }) { Text("Guía por marca (dontkillmyapp.com)") }
+                }) { Text(stringResource(R.string.bateria_marca_guia)) }
             }
         
         }
