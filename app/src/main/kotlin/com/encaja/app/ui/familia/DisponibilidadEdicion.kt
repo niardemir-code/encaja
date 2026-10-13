@@ -1,5 +1,8 @@
 package com.encaja.app.ui.familia
 
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import com.encaja.app.R
 import com.encaja.app.ui.common.formatearHora
 import com.encaja.app.domain.model.AvailabilityBlock
 import com.encaja.app.domain.model.CategoriaDisponibilidad
@@ -27,38 +30,23 @@ fun turnoConHoras(turnos: List<TurnoTrabajo>, inicio: LocalTime, fin: LocalTime)
 /** Máximo de días que se aceptan en un rango (viaje/vacaciones), para no crear cientos de bloques por error. */
 const val MAX_DIAS_RANGO = 90
 
-fun etiquetaMotivo(motivo: MotivoNoDisponibilidad): String = when (motivo) {
-    MotivoNoDisponibilidad.TRABAJO -> "Trabajo"
-    MotivoNoDisponibilidad.MEDICO -> "Médico"
-    MotivoNoDisponibilidad.VIAJE -> "Viaje"
-    MotivoNoDisponibilidad.VACACIONES -> "Vacaciones"
-    MotivoNoDisponibilidad.OTRO -> "Otro"
-}
-
-/** Versión corta para la casilla del día, que es estrecha. */
-fun etiquetaMotivoCorta(motivo: MotivoNoDisponibilidad): String = when (motivo) {
-    MotivoNoDisponibilidad.TRABAJO -> "Trab."
-    MotivoNoDisponibilidad.MEDICO -> "Médico"
-    MotivoNoDisponibilidad.VIAJE -> "Viaje"
-    MotivoNoDisponibilidad.VACACIONES -> "Vacac."
-    MotivoNoDisponibilidad.OTRO -> "Otro"
-}
-
-/** "06:00 - 14:00", o "Todo el día". */
+/** "06:00 - 14:00", o "Todo el día" en el idioma del móvil. */
+@Composable
 fun textoHorario(bloque: AvailabilityBlock): String =
-    if (bloque.todoElDia) "Todo el día" else "${formatearHora(bloque.horaInicio)} - ${formatearHora(bloque.horaFin)}"
+    if (bloque.todoElDia) stringResource(R.string.comun_todo_el_dia) else "${formatearHora(bloque.horaInicio)} - ${formatearHora(bloque.horaFin)}"
 
 /**
  * Texto de la casilla de un día en la cuadrícula de Familia: las horas en dos
  * líneas ("06:00" / "14:00") o, si es de día completo, el tipo ("Viaje").
  * Si hay más de un bloque ese día se añade "+N" en la segunda línea.
+ * [etiquetaCorta] da el nombre corto de un motivo ya traducido (la lógica no conoce idiomas).
  */
-fun textoCelda(bloques: List<AvailabilityBlock>): String? {
+fun textoCelda(bloques: List<AvailabilityBlock>, etiquetaCorta: (MotivoNoDisponibilidad) -> String): String? {
     if (bloques.isEmpty()) return null
     val primero = bloques.sortedBy { it.horaInicio }.first()
     val extra = if (bloques.size > 1) " +${bloques.size - 1}" else ""
     return if (primero.todoElDia) {
-        etiquetaMotivoCorta(primero.motivo) + extra
+        etiquetaCorta(primero.motivo) + extra
     } else {
         "${formatearHora(primero.horaInicio)}\n${formatearHora(primero.horaFin)}$extra"
     }

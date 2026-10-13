@@ -23,15 +23,15 @@ class DisponibilidadEdicionTest {
     @Test
     fun `la casilla muestra las horas en dos lineas`() {
         val bloque = AvailabilityBlock(victor, lunes, LocalTime.of(6, 0), LocalTime.of(14, 0), MotivoNoDisponibilidad.TRABAJO)
-        assertEquals("06:00\n14:00", textoCelda(listOf(bloque)))
+        assertEquals("06:00\n14:00", textoCelda(listOf(bloque)) { "?" })
     }
 
     @Test
     fun `un bloque de dia completo muestra el tipo, y varios bloques añaden el contador`() {
         val viaje = AvailabilityBlock(victor, lunes, AvailabilityBlock.INICIO_DIA, AvailabilityBlock.FIN_DIA, MotivoNoDisponibilidad.VIAJE)
         val otro = AvailabilityBlock(victor, lunes, LocalTime.of(18, 0), LocalTime.of(19, 0), MotivoNoDisponibilidad.OTRO)
-        assertEquals("Viaje +1", textoCelda(listOf(otro, viaje)))
-        assertNull(textoCelda(emptyList()))
+        assertEquals("Viaje +1", textoCelda(listOf(otro, viaje)) { "Viaje" })
+        assertNull(textoCelda(emptyList()) { "?" })
     }
 
     @Test

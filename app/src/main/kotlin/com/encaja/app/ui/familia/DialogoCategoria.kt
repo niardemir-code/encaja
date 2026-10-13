@@ -8,6 +8,8 @@ package com.encaja.app.ui.familia
 // color e icono (galería de emojis). Las de serie (Trabajo, Médico...) también se
 // pueden borrar; quedan ocultas y se pueden recuperar desde la lista de categorías.
 
+import androidx.compose.ui.res.stringResource
+import com.encaja.app.R
 import androidx.compose.material.icons.filled.EmojiEmotions
 import androidx.compose.material.icons.filled.Category
 import com.encaja.app.ui.theme.EstiloAccionAviso
@@ -71,14 +73,14 @@ fun DialogoCategoria(
 
     AvisoHoja(
         icono = Icons.Default.Category,
-        titulo = if (inicial == null) "Nueva categoría" else "Editar ${inicial.nombre}",
+        titulo = if (inicial == null) stringResource(R.string.categoria_nueva) else stringResource(R.string.categoria_editar, inicial.nombre),
         texto = null,
         peligro = false,
         conX = true,
         accionesEnFila = true,
         acciones = listOf(
-            AccionAvisoHoja("Cancelar", EstiloAccionAviso.BORDE) { onCerrar() },
-            AccionAvisoHoja("Guardar", EstiloAccionAviso.PRIMARIO, habilitada = puedeGuardar) {
+            AccionAvisoHoja(stringResource(R.string.comun_cancelar), EstiloAccionAviso.BORDE) { onCerrar() },
+            AccionAvisoHoja(stringResource(R.string.comun_guardar), EstiloAccionAviso.PRIMARIO, habilitada = puedeGuardar) {
 val guardada = CategoriaDisponibilidad(
                         id = inicial?.id ?: idNueva,
                         nombre = nombre.trim(),
@@ -113,13 +115,13 @@ val guardada = CategoriaDisponibilidad(
                     Spacer(Modifier.width(12.dp))
                     Column {
                         Text(
-                            nombre.trim().ifBlank { "Nombre" },
+                            nombre.trim().ifBlank { stringResource(R.string.categoria_nombre_vista) },
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = TINTA_EDITOR
                         )
                         Text(
-                            if (modo == ModoCategoria.HORAS) "Por horas" else "Por días",
+                            if (modo == ModoCategoria.HORAS) stringResource(R.string.categoria_por_horas) else stringResource(R.string.categoria_por_dias),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -129,8 +131,7 @@ val guardada = CategoriaDisponibilidad(
 
                 if (esBase) {
                     Text(
-                        "Categoría de serie: puedes cambiarlo todo (y borrarla, se puede recuperar). Si le " +
-                            "pones otro icono, las casillas lo mostrarán en lugar de las horas (al tocarlas se ven).",
+                        stringResource(R.string.categoria_aviso_base),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -140,32 +141,32 @@ val guardada = CategoriaDisponibilidad(
                     OutlinedTextField(
                         value = nombre,
                         onValueChange = { nombre = it.take(24) },
-                        label = { Text("Nombre (p.ej. Gimnasio, Clases)") },
+                        label = { Text(stringResource(R.string.categoria_nombre_campo)) },
                         singleLine = true,
                         isError = nombreRepetido,
                         supportingText = if (nombreRepetido) {
-                            { Text("Ya hay una categoría con ese nombre") }
+                            { Text(stringResource(R.string.categoria_nombre_repetido)) }
                         } else null,
                         modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(Modifier.height(8.dp))
 
-                    Text("Cómo se apunta", style = MaterialTheme.typography.labelMedium)
+                    Text(stringResource(R.string.categoria_como_se_apunta), style = MaterialTheme.typography.labelMedium)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         FilterChip(
                             selected = modo == ModoCategoria.HORAS,
                             onClick = { modo = ModoCategoria.HORAS },
-                            label = { Text("Por horas") }
+                            label = { Text(stringResource(R.string.categoria_por_horas)) }
                         )
                         FilterChip(
                             selected = modo == ModoCategoria.DIAS,
                             onClick = { modo = ModoCategoria.DIAS },
-                            label = { Text("Por días") }
+                            label = { Text(stringResource(R.string.categoria_por_dias)) }
                         )
                     }
                     Text(
-                        if (modo == ModoCategoria.HORAS) "Un rato de un día (de tal a tal hora) o el día entero, con horarios guardados para elegir de un toque."
-                        else "Uno o varios días seguidos, eligiendo desde y hasta.",
+                        if (modo == ModoCategoria.HORAS) stringResource(R.string.categoria_desc_horas)
+                        else stringResource(R.string.categoria_desc_dias),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -176,10 +177,10 @@ val guardada = CategoriaDisponibilidad(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("Ocupa a la persona")
+                            Text(stringResource(R.string.categoria_ocupa))
                             Text(
-                                if (bloquea) "No podrá cuidar a las niñas en ese rato."
-                                else "Solo informativa: sigue contando como disponible.",
+                                if (bloquea) stringResource(R.string.categoria_ocupa_si)
+                                else stringResource(R.string.categoria_ocupa_no),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -189,15 +190,15 @@ val guardada = CategoriaDisponibilidad(
                 }
 
                 Spacer(Modifier.height(12.dp))
-                Text("Icono", style = MaterialTheme.typography.labelMedium)
+                Text(stringResource(R.string.actividad_icono), style = MaterialTheme.typography.labelMedium)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(emoji, fontSize = 28.sp)
                     Spacer(Modifier.width(8.dp))
-                    TextButton(onClick = { galeriaAbierta = true }) { Text("Elegir de la galería") }
+                    TextButton(onClick = { galeriaAbierta = true }) { Text(stringResource(R.string.categoria_elegir_galeria)) }
                 }
 
                 Spacer(Modifier.height(8.dp))
-                Text("Color", style = MaterialTheme.typography.labelMedium)
+                Text(stringResource(R.string.categoria_color), style = MaterialTheme.typography.labelMedium)
                 Spacer(Modifier.height(6.dp))
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -219,7 +220,7 @@ val guardada = CategoriaDisponibilidad(
                             contentAlignment = Alignment.Center
                         ) {
                             if (elegido) {
-                                Icon(Icons.Default.Check, contentDescription = "Elegido", tint = TINTA_EDITOR, modifier = Modifier.size(18.dp))
+                                Icon(Icons.Default.Check, contentDescription = stringResource(R.string.categoria_elegido), tint = TINTA_EDITOR, modifier = Modifier.size(18.dp))
                             }
                         }
                     }
@@ -231,7 +232,7 @@ val guardada = CategoriaDisponibilidad(
                     TextButton(onClick = { confirmarBorrado = true }) {
                         Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
                         Spacer(Modifier.width(6.dp))
-                        Text("Borrar categoría", color = MaterialTheme.colorScheme.error)
+                        Text(stringResource(R.string.categoria_borrar), color = MaterialTheme.colorScheme.error)
                     }
                 }
             }
@@ -250,19 +251,19 @@ val guardada = CategoriaDisponibilidad(
     if (confirmarBorrado && onEliminar != null) {
         AvisoHoja(
             icono = Icons.Default.Delete,
-            titulo = "¿Borrar \"${nombre.trim()}\"?",
+            titulo = stringResource(R.string.categoria_borrar_titulo, nombre.trim()),
             texto = null,
             conX = true,
             accionesEnFila = true,
             acciones = listOf(
-                AccionAvisoHoja("Cancelar", EstiloAccionAviso.BORDE) { confirmarBorrado = false },
-                AccionAvisoHoja("Borrar", EstiloAccionAviso.PELIGRO) { confirmarBorrado = false; onEliminar() }
+                AccionAvisoHoja(stringResource(R.string.comun_cancelar), EstiloAccionAviso.BORDE) { confirmarBorrado = false },
+                AccionAvisoHoja(stringResource(R.string.comun_borrar), EstiloAccionAviso.PELIGRO) { confirmarBorrado = false; onEliminar() }
             ),
             onCerrar = { confirmarBorrado = false },
             contenido = {
                 Text(
-                    if (esBase) "Se ocultará de la lista (podrás recuperarla desde \"Categorías\"). Los días ya apuntados con ella no se borran."
-                    else "Los días ya apuntados con esta categoría no se borran: pasarán a verse como \"Otro\"."
+                    if (esBase) stringResource(R.string.categoria_borrar_base)
+                    else stringResource(R.string.categoria_borrar_propia, stringResource(R.string.motivo_otro))
                 )
             
             }
@@ -275,12 +276,12 @@ val guardada = CategoriaDisponibilidad(
 private fun DialogoGaleriaEmojis(seleccionado: String, onElegir: (String) -> Unit, onCerrar: () -> Unit) {
     AvisoHoja(
         icono = Icons.Default.EmojiEmotions,
-        titulo = "Elige un icono",
+        titulo = stringResource(R.string.categoria_elige_icono),
         texto = null,
         peligro = false,
         conX = true,
         acciones = listOf(
-            AccionAvisoHoja("Cerrar", EstiloAccionAviso.BORDE) { onCerrar() }
+            AccionAvisoHoja(stringResource(R.string.comun_cerrar), EstiloAccionAviso.BORDE) { onCerrar() }
         ),
         onCerrar = onCerrar,
         contenido = {
@@ -291,7 +292,7 @@ private fun DialogoGaleriaEmojis(seleccionado: String, onElegir: (String) -> Uni
             ) {
                 SECCIONES_EMOJI.forEach { (titulo, emojis) ->
                     Text(
-                        titulo,
+                        stringResource(titulo),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)

@@ -1,5 +1,6 @@
 package com.encaja.app.ui.familia
 
+import com.encaja.app.R
 import com.encaja.app.domain.model.AvailabilityBlock
 import com.encaja.app.domain.model.CaregiverId
 import com.encaja.app.domain.model.CategoriaDisponibilidad
@@ -20,14 +21,14 @@ val COLORES_CATEGORIA: List<Long> = listOf(
     0xFFDDD3F7, 0xFFEFC6E8, 0xFFD9C8B4, 0xFFE0E0E0
 )
 
-/** Galería de emojis agrupada por temas: (título de la sección, emojis). */
-val SECCIONES_EMOJI: List<Pair<String, List<String>>> = listOf(
-    "Trabajo y estudios" to listOf("💼", "🏢", "💻", "📚", "🎓", "✏️", "🔧", "🚚"),
-    "Salud" to listOf("🩺", "🏥", "💊", "🦷", "👓", "💉", "🧘", "💆"),
-    "Deporte" to listOf("🏃", "⚽", "🏊", "🚴", "🎾", "🏀", "🏋️", "🥾"),
-    "Viajes y ocio" to listOf("✈️", "🚗", "🚆", "🏖️", "⛰️", "🏕️", "🎬", "🎭"),
-    "Casa y familia" to listOf("🏠", "🛒", "🍳", "🧹", "🐶", "👶", "🎂", "🎁"),
-    "Otros" to listOf("📌", "⭐", "❤️", "🎵", "🎸", "🎨", "📅", "⏰", "🙏", "🗣️", "🧾", "🔔")
+/** Galería de emojis agrupada por temas: (recurso con el título de la sección, emojis). */
+val SECCIONES_EMOJI: List<Pair<Int, List<String>>> = listOf(
+    R.string.emoji_trabajo to listOf("💼", "🏢", "💻", "📚", "🎓", "✏️", "🔧", "🚚"),
+    R.string.emoji_salud to listOf("🩺", "🏥", "💊", "🦷", "👓", "💉", "🧘", "💆"),
+    R.string.emoji_deporte to listOf("🏃", "⚽", "🏊", "🚴", "🎾", "🏀", "🏋️", "🥾"),
+    R.string.emoji_viajes to listOf("✈️", "🚗", "🚆", "🏖️", "⛰️", "🏕️", "🎬", "🎭"),
+    R.string.emoji_casa to listOf("🏠", "🛒", "🍳", "🧹", "🐶", "👶", "🎂", "🎁"),
+    R.string.emoji_otros to listOf("📌", "⭐", "❤️", "🎵", "🎸", "🎨", "📅", "⏰", "🙏", "🗣️", "🧾", "🔔")
 )
 
 /**

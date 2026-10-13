@@ -16,3 +16,15 @@ fun etiquetaDeMotivo(motivo: MotivoNoDisponibilidad): String = stringResource(
         MotivoNoDisponibilidad.OTRO -> R.string.motivo_otro
     }
 )
+
+/** Versión corta del nombre del motivo, para la casilla del día de la cuadrícula, que es estrecha. */
+@Composable
+fun etiquetaCortaDeMotivo(motivo: MotivoNoDisponibilidad): String = stringResource(
+    when (motivo) {
+        MotivoNoDisponibilidad.TRABAJO -> R.string.motivo_corto_trabajo
+        MotivoNoDisponibilidad.MEDICO -> R.string.motivo_corto_medico
+        MotivoNoDisponibilidad.VIAJE -> R.string.motivo_corto_viaje
+        MotivoNoDisponibilidad.VACACIONES -> R.string.motivo_corto_vacaciones
+        MotivoNoDisponibilidad.OTRO -> R.string.motivo_corto_otro
+    }
+)

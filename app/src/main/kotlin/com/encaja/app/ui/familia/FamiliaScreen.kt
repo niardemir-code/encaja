@@ -13,6 +13,11 @@ package com.encaja.app.ui.familia
 // Los colores del diseño están aquí como constantes para no tocar el tema
 // del resto de pantallas.
 
+import com.encaja.app.domain.model.MotivoNoDisponibilidad
+import com.encaja.app.ui.common.etiquetaCortaDeMotivo
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import com.encaja.app.R
 import com.encaja.app.ui.common.rangoSemana
 import com.encaja.app.ui.common.letraDia
 import androidx.compose.material.icons.filled.Category
@@ -121,7 +126,7 @@ fun FamiliaScreen(viewModel: FamiliaViewModel = hiltViewModel()) {
             is FamiliaPantallaEstado.SinFamilia -> {
                 Box(modifier = Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
                     Text(
-                        "Vincúlate a una familia desde la pestaña Semana para ver esta pantalla.",
+                        stringResource(R.string.comun_sin_familia_ver),
                         textAlign = TextAlign.Center,
                         color = TINTA
                     )
@@ -206,12 +211,12 @@ private fun ContenidoFamilia(
         }
         AvisoHoja(
             icono = Icons.Default.Delete,
-            titulo = "¿Vaciar ${seleccion.size} ${if (seleccion.size == 1) "casilla" else "casillas"}?",
-            texto = if (bloquesAfectados == 0) "Las casillas marcadas ya están libres."
-            else "Se borrará todo lo apuntado en ellas, sea de la categoría que sea. No se puede deshacer.",
+            titulo = pluralStringResource(R.plurals.familia_vaciar_titulo, seleccion.size, seleccion.size),
+            texto = if (bloquesAfectados == 0) stringResource(R.string.familia_casillas_libres)
+            else stringResource(R.string.familia_vaciar_texto),
             acciones = listOf(
-                AccionAvisoHoja("Cancelar", EstiloAccionAviso.BORDE) { confirmandoBorrado = false },
-                AccionAvisoHoja("Borrar", EstiloAccionAviso.PELIGRO) {
+                AccionAvisoHoja(stringResource(R.string.comun_cancelar), EstiloAccionAviso.BORDE) { confirmandoBorrado = false },
+                AccionAvisoHoja(stringResource(R.string.comun_borrar), EstiloAccionAviso.PELIGRO) {
                     val casillas = seleccion.mapNotNull { (idTexto, fecha) ->
                         val ids = estado.cuidadores.firstOrNull { it.caregiver.id.value == idTexto }?.let { listOf(it.caregiver.id) }
                             ?: estado.unidades.firstOrNull { it.unidad.id.value == idTexto }?.unidad?.miembros
@@ -280,13 +285,13 @@ private fun ContenidoFamilia(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             CabeceraTarjeta(
                                 icono = Icons.AutoMirrored.Filled.Label,
-                                titulo = "Categorías de estado de los cuidadores",
-                                subtitulo = "Qué significa cada color de las casillas.",
+                                titulo = stringResource(R.string.familia_cat_titulo),
+                                subtitulo = stringResource(R.string.familia_cat_sub),
                                 modifier = Modifier.weight(1f)
                             )
                             Spacer(Modifier.width(8.dp))
                             // Lápiz: abre la lista de categorías para editarlas o crear nuevas.
-                            BotonCircular(Icons.Default.Edit, "Editar categorías", { categoriasAbiertas = true })
+                            BotonCircular(Icons.Default.Edit, stringResource(R.string.familia_editar_categorias), { categoriasAbiertas = true })
                         }
                         Spacer(Modifier.height(12.dp))
                         Leyenda(estado.categorias)
@@ -318,8 +323,8 @@ private fun ContenidoFamilia(
                         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             CabeceraTarjeta(
                                 icono = Icons.Default.CalendarMonth,
-                                titulo = "Disponibilidad",
-                                subtitulo = "Toca la casilla de una persona en un día para apuntar algo.",
+                                titulo = stringResource(R.string.familia_disponibilidad),
+                                subtitulo = stringResource(R.string.familia_disponibilidad_sub),
                                 modifier = Modifier.weight(1f)
                             )
                             if (totalFilas > 1) {
@@ -328,7 +333,7 @@ private fun ContenidoFamilia(
                                 // aplica al momento y solo para esta semana).
                                 BotonCircular(
                                     Icons.Default.FilterAlt,
-                                    if (filasVisibles == totalFilas) "Cuidadores" else "Cuidadores ($filasVisibles/$totalFilas)",
+                                    if (filasVisibles == totalFilas) stringResource(R.string.ajustes_cuidadores_titulo) else stringResource(R.string.familia_cuidadores_n, filasVisibles, totalFilas),
                                     { selectorAbierto = true }
                                 )
                             }
@@ -364,13 +369,13 @@ private fun CabeceraFamilia(
 
     Column(modifier = modifier) {
         Text(
-            "Familia",
+            stringResource(R.string.nav_familia),
             fontSize = 26.sp,
             lineHeight = 30.sp,
             fontWeight = FontWeight.ExtraBold,
             color = TINTA
         )
-        Text("Coordinados, todo encaja", style = MaterialTheme.typography.bodyMedium, color = TINTA_SUAVE)
+        Text(stringResource(R.string.familia_subtitulo), style = MaterialTheme.typography.bodyMedium, color = TINTA_SUAVE)
         Spacer(Modifier.height(12.dp))
 
         Tarjeta {
@@ -378,7 +383,7 @@ private fun CabeceraFamilia(
                 modifier = Modifier.fillMaxWidth().padding(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                BotonCircular(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Semana anterior", onSemanaAnterior)
+                BotonCircular(Icons.AutoMirrored.Filled.KeyboardArrowLeft, stringResource(R.string.comun_semana_anterior), onSemanaAnterior)
                 Text(
                     rangoSemana(lunes),
                     modifier = Modifier.weight(1f).padding(horizontal = 6.dp),
@@ -392,13 +397,13 @@ private fun CabeceraFamilia(
                 // mismo icono, el "punto de disparo") que el botón "Ahora" de la Guía. Solo
                 // responde si no se está ya en esta semana.
                 BotonCircular(
-                    Icons.Default.MyLocation, "Ir a la semana actual", onIrASemanaActual,
+                    Icons.Default.MyLocation, stringResource(R.string.comun_ir_semana_actual), onIrASemanaActual,
                     habilitado = !esSemanaActual
                 )
                 Spacer(Modifier.width(6.dp))
-                BotonCircular(Icons.Default.CalendarMonth, "Ir a una semana", { calendarioAbierto = true })
+                BotonCircular(Icons.Default.CalendarMonth, stringResource(R.string.comun_ir_a_semana), { calendarioAbierto = true })
                 Spacer(Modifier.width(6.dp))
-                BotonCircular(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Semana siguiente", onSemanaSiguiente)
+                BotonCircular(Icons.AutoMirrored.Filled.KeyboardArrowRight, stringResource(R.string.comun_semana_siguiente), onSemanaSiguiente)
             }
         }
     }
@@ -406,7 +411,7 @@ private fun CabeceraFamilia(
     if (calendarioAbierto) {
         SelectorFechaHoja(
             fecha = lunes,
-            confirmar = "Ir",
+            confirmar = stringResource(R.string.comun_ir),
             onElegir = onElegirFecha,
             onCerrar = { calendarioAbierto = false }
         )
@@ -513,7 +518,7 @@ private fun LazyListScope.cuadriculaDisponibilidad(
         item(key = "cuadricula-vacia") {
             Box(modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface).padding(horizontal = 18.dp, vertical = 8.dp)) {
                 Text(
-                    "Has ocultado a todo el mundo; usa el botón Cuidadores para volver a verlos.",
+                    stringResource(R.string.familia_ocultado_todos),
                     style = MaterialTheme.typography.bodyMedium,
                     color = TINTA_SUAVE
                 )
@@ -570,7 +575,7 @@ private fun LazyListScope.cuadriculaDisponibilidad(
             ) {
                 Icon(Icons.Default.Add, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
-                Text("Crear un nuevo cuidador", fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.familia_nuevo_cuidador), fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -662,7 +667,7 @@ private fun BloqueFila(
                 modifier = Modifier.weight(1f)
             )
             if (esUnidad) {
-                Text("unidad familiar", style = MaterialTheme.typography.labelSmall, color = TINTA_SUAVE)
+                Text(stringResource(R.string.familia_unidad), style = MaterialTheme.typography.labelSmall, color = TINTA_SUAVE)
             }
         }
         Spacer(Modifier.height(8.dp))
@@ -721,7 +726,9 @@ private fun CeldaDisponibilidad(
                     Text("+${dia.bloqueos.size - 1}", fontSize = 9.sp, fontWeight = FontWeight.Medium, color = TINTA_CELDA)
                 }
             }
-        } else textoCelda(dia.bloqueos)?.let { texto ->
+        } else if (dia.bloqueos.isNotEmpty()) {
+            val etiquetasCortas = MotivoNoDisponibilidad.values().associateWith { etiquetaCortaDeMotivo(it) }
+            val texto = textoCelda(dia.bloqueos) { etiquetasCortas.getValue(it) }.orEmpty()
             Text(
                 texto,
                 fontSize = 11.sp,
@@ -749,20 +756,20 @@ private fun BarraSeleccion(cantidad: Int, onBorrar: () -> Unit, onCancelar: () -
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            if (cantidad == 1) "1 casilla marcada" else "$cantidad casillas marcadas",
+            pluralStringResource(R.plurals.familia_casillas_marcadas, cantidad, cantidad),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Bold,
             color = INDIGO,
             modifier = Modifier.weight(1f)
         )
-        TextButton(onClick = onCancelar) { Text("Cancelar", color = INDIGO) }
+        TextButton(onClick = onCancelar) { Text(stringResource(R.string.comun_cancelar), color = INDIGO) }
         Button(
             onClick = onBorrar,
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
         ) {
             Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(6.dp))
-            Text("Borrar")
+            Text(stringResource(R.string.comun_borrar))
         }
     }
 }
@@ -781,26 +788,26 @@ private fun DialogoMostrar(
 ) {
     AvisoHoja(
         icono = Icons.Default.Visibility,
-        titulo = "Cuidadores a mostrar",
+        titulo = stringResource(R.string.familia_cuidadores_mostrar),
         texto = null,
         peligro = false,
         conX = true,
         acciones = listOf(
-            AccionAvisoHoja("Cerrar", EstiloAccionAviso.BORDE) { onCerrar() }
+            AccionAvisoHoja(stringResource(R.string.comun_cerrar), EstiloAccionAviso.BORDE) { onCerrar() }
         ),
         onCerrar = onCerrar,
         contenido = {
             Column {
                 Text(
-                    if (compartido) "Selección compartida: la ven todos los usuarios en esta semana, y cualquier cambio lo verán también."
-                    else "Solo para ti y para esta semana; se mantiene hasta que la cambies, y cada semana tiene la suya.",
+                    if (compartido) stringResource(R.string.familia_seleccion_compartida)
+                    else stringResource(R.string.familia_seleccion_propia),
                     style = MaterialTheme.typography.bodySmall,
                     color = TINTA_SUAVE
                 )
                 Spacer(Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                     Text(
-                        "Aplicar a todos los usuarios",
+                        stringResource(R.string.familia_aplicar_todos),
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.Bold,
                         color = TINTA,
@@ -810,14 +817,14 @@ private fun DialogoMostrar(
                 }
                 Spacer(Modifier.height(8.dp))
                 if (cuidadores.isNotEmpty()) {
-                    Text("Personas", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = INDIGO)
+                    Text(stringResource(R.string.cuidadores_personas), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = INDIGO)
                     cuidadores.forEach { caregiver ->
                         FilaCasillaMostrar(caregiver.nombreCompleto, caregiver.id.value, ocultos, onAlternar)
                     }
                 }
                 if (unidades.isNotEmpty()) {
                     Spacer(Modifier.height(8.dp))
-                    Text("Unidades familiares", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = INDIGO)
+                    Text(stringResource(R.string.unidades_titulo), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = INDIGO)
                     unidades.forEach { unidad ->
                         FilaCasillaMostrar(unidad.nombre, unidad.id.value, ocultos, onAlternar)
                     }
@@ -835,7 +842,7 @@ private fun Leyenda(categorias: List<CategoriaDisponibilidad>) {
         horizontalArrangement = Arrangement.spacedBy(14.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        ElementoLeyenda(color = VERDE, texto = "Libre")
+        ElementoLeyenda(color = VERDE, texto = stringResource(R.string.familia_libre))
         categorias.forEach { categoria ->
             ElementoLeyenda(color = Color(categoria.color), texto = "${categoria.emoji} ${categoria.nombre}")
         }
@@ -885,18 +892,18 @@ private fun DialogoListaCategorias(
 
     AvisoHoja(
         icono = Icons.Default.Category,
-        titulo = "Categorías",
+        titulo = stringResource(R.string.familia_categorias),
         texto = null,
         peligro = false,
         conX = true,
         acciones = listOf(
-            AccionAvisoHoja("Cerrar", EstiloAccionAviso.BORDE) { onCerrar() }
+            AccionAvisoHoja(stringResource(R.string.comun_cerrar), EstiloAccionAviso.BORDE) { onCerrar() }
         ),
         onCerrar = onCerrar,
         contenido = {
             Column(modifier = Modifier.heightIn(max = 480.dp).verticalScroll(rememberScrollState())) {
                 Text(
-                    "Toca una para cambiar su nombre, icono, color, si va por horas o por días y si ocupa a la persona.",
+                    stringResource(R.string.familia_categorias_ayuda),
                     style = MaterialTheme.typography.bodySmall,
                     color = TINTA_SUAVE
                 )
@@ -921,25 +928,25 @@ private fun DialogoListaCategorias(
                             Text(categoria.nombre, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold, color = TINTA)
                             Text(
                                 listOf(
-                                    if (categoria.modo == ModoCategoria.HORAS) "por horas" else "por días",
-                                    if (categoria.bloquea) "ocupa" else "no ocupa"
+                                    if (categoria.modo == ModoCategoria.HORAS) stringResource(R.string.familia_modo_horas) else stringResource(R.string.familia_modo_dias),
+                                    if (categoria.bloquea) stringResource(R.string.disp_ocupa) else stringResource(R.string.disp_no_ocupa)
                                 ).joinToString(" · "),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = TINTA_SUAVE
                             )
                         }
-                        Icon(Icons.Default.Edit, contentDescription = "Editar", tint = TINTA_SUAVE, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.comun_editar), tint = TINTA_SUAVE, modifier = Modifier.size(18.dp))
                     }
                 }
                 Spacer(Modifier.height(6.dp))
                 TextButton(onClick = { creando = true }) {
                     Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("Nueva categoría")
+                    Text(stringResource(R.string.categoria_nueva))
                 }
                 if (eliminadas.isNotEmpty()) {
                     Spacer(Modifier.height(6.dp))
-                    Text("Borradas (toca para recuperar)", style = MaterialTheme.typography.labelMedium, color = TINTA_SUAVE)
+                    Text(stringResource(R.string.familia_borradas), style = MaterialTheme.typography.labelMedium, color = TINTA_SUAVE)
                     eliminadas.forEach { categoria ->
                         TextButton(onClick = { onRecuperar(categoria) }) {
                             Text("${categoria.emoji} ${categoria.nombre}")
@@ -981,23 +988,23 @@ internal fun DialogoNuevoCuidador(onCrear: (nombre: String, apellido1: String, a
     var apellido2 by remember { mutableStateOf("") }
     AvisoHoja(
         icono = Icons.Default.Group,
-        titulo = "Crear un nuevo cuidador",
+        titulo = stringResource(R.string.familia_nuevo_cuidador),
         texto = null,
         peligro = false,
         conX = true,
         accionesEnFila = true,
         acciones = listOf(
-            AccionAvisoHoja("Cancelar", EstiloAccionAviso.BORDE) { onCerrar() },
-            AccionAvisoHoja("Crear", EstiloAccionAviso.PRIMARIO, habilitada = nombre.isNotBlank()) {
+            AccionAvisoHoja(stringResource(R.string.comun_cancelar), EstiloAccionAviso.BORDE) { onCerrar() },
+            AccionAvisoHoja(stringResource(R.string.comun_crear), EstiloAccionAviso.PRIMARIO, habilitada = nombre.isNotBlank()) {
                 onCrear(nombre, apellido1, apellido2)
             }
         ),
         onCerrar = onCerrar,
         contenido = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                CampoTextoConIconoHoja(nombre, { nombre = it }, "Nombre", Icons.Default.Person)
-                CampoTextoConIconoHoja(apellido1, { apellido1 = it }, "Primer apellido", Icons.Default.Person)
-                CampoTextoConIconoHoja(apellido2, { apellido2 = it }, "Segundo apellido", Icons.Default.Person)
+                CampoTextoConIconoHoja(nombre, { nombre = it }, stringResource(R.string.comun_nombre), Icons.Default.Person)
+                CampoTextoConIconoHoja(apellido1, { apellido1 = it }, stringResource(R.string.familia_primer_apellido), Icons.Default.Person)
+                CampoTextoConIconoHoja(apellido2, { apellido2 = it }, stringResource(R.string.familia_segundo_apellido), Icons.Default.Person)
             }
         }
     )

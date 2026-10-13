@@ -21,6 +21,9 @@ package com.encaja.app.ui.familia
 //    guarda ni se borra hasta pulsar uno de los dos.
 // Las categorías se editan desde la tarjeta "Categorías" de la pantalla.
 
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import com.encaja.app.R
 import com.encaja.app.ui.common.diaConNumero
 import com.encaja.app.ui.theme.AccionAvisoHoja
 import com.encaja.app.ui.theme.AvisoHoja
@@ -99,7 +102,8 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.YearMonth
 
-private fun textoDias(n: Int): String = if (n == 1) "1 día" else "$n días"
+@Composable
+private fun textoDias(n: Int): String = pluralStringResource(R.plurals.actividad_dias_n, n, n)
 
 /**
  * [titulo] es el nombre de la persona o de la unidad familiar. [caregiverIds] son las
@@ -310,7 +314,7 @@ fun DialogoDisponibilidad(
                     color = tintaHoja,
                     modifier = Modifier.weight(1f)
                 )
-                BotonRedondoSuaveHoja(Icons.Default.Close, "Cerrar", onCerrar)
+                BotonRedondoSuaveHoja(Icons.Default.Close, stringResource(R.string.comun_cerrar), onCerrar)
             }
             Spacer(Modifier.height(14.dp))
 
@@ -319,7 +323,7 @@ fun DialogoDisponibilidad(
             if (bloquesDelDia.isNotEmpty() && bloqueEnEdicion == null) {
                 TarjetaSeccionHoja {
                     Text(
-                        if (bloquesDelDia.size == 1) "Actividad de este día" else "Actividades de este día (toca una para editarla)",
+                        if (bloquesDelDia.size == 1) stringResource(R.string.disp_actividad_dia) else stringResource(R.string.disp_actividades_dia),
                         style = MaterialTheme.typography.bodyMedium,
                         color = tintaSuaveHoja
                     )
@@ -339,7 +343,7 @@ fun DialogoDisponibilidad(
                                     textoHorario(bloque),
                                     etiquetaQuienes,
                                     bloque.etiqueta?.takeIf { it.isNotBlank() },
-                                    "no ocupa".takeIf { !categoria.bloquea }
+                                    stringResource(R.string.disp_no_ocupa).takeIf { !categoria.bloquea }
                                 ).joinToString(" · "),
                                 editando = editando,
                                 onEditar = {
@@ -358,8 +362,8 @@ fun DialogoDisponibilidad(
             // ── Categoría ─────────────────────────────────────────────────────────
             if (bloqueEnEdicion == null) {
                 TituloSeccionHoja(
-                    if (caregiverIds.size > 1) "Categoría (para todos)" else "Categoría",
-                    "Selecciona una categoría para esta actividad"
+                    if (caregiverIds.size > 1) stringResource(R.string.disp_categoria_todos) else stringResource(R.string.disp_categoria),
+                    stringResource(R.string.disp_categoria_sub)
                 )
                 Spacer(Modifier.height(10.dp))
                 FlowRow(
@@ -389,7 +393,7 @@ fun DialogoDisponibilidad(
                     }
                     Spacer(Modifier.width(10.dp))
                     Text(
-                        "Editando ${seleccionada.nombre}",
+                        stringResource(R.string.disp_editando, seleccionada.nombre),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.ExtraBold,
                         color = tintaHoja
@@ -402,7 +406,7 @@ fun DialogoDisponibilidad(
             if (seleccionada != null) {
                 key(seleccionada.id) {
                     if (porHoras) {
-                        TituloSeccionHoja("Horarios", "Define el horario de esta actividad")
+                        TituloSeccionHoja(stringResource(R.string.disp_horarios), stringResource(R.string.disp_horarios_sub))
                         Spacer(Modifier.height(10.dp))
                         TarjetaSeccionHoja(padding = 0.dp) {
                             HorariosGuardados(
@@ -415,8 +419,8 @@ fun DialogoDisponibilidad(
                             SeparadorHoja()
                             FilaConInterruptorHoja(
                                 icono = Icons.Default.Schedule,
-                                titulo = "Todo el día",
-                                subtitulo = "Marca si dura todo el día",
+                                titulo = stringResource(R.string.comun_todo_el_dia),
+                                subtitulo = stringResource(R.string.disp_todo_dia_sub),
                                 activo = horasTodoElDia,
                                 onCambiar = { horasTodoElDia = it }
                             )
@@ -426,20 +430,20 @@ fun DialogoDisponibilidad(
                                     modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
                                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                                 ) {
-                                    CajaHoraHoja("Desde", horasInicio, Modifier.weight(1f)) { horasInicio = it }
-                                    CajaHoraHoja("Hasta", horasFin, Modifier.weight(1f)) { horasFin = it }
+                                    CajaHoraHoja(stringResource(R.string.comun_desde), horasInicio, Modifier.weight(1f)) { horasInicio = it }
+                                    CajaHoraHoja(stringResource(R.string.comun_hasta), horasFin, Modifier.weight(1f)) { horasFin = it }
                                 }
                                 if (horasInicio == horasFin) {
-                                    NotaSeccionHoja("La hora de fin debe ser distinta de la de inicio.", error = true)
+                                    NotaSeccionHoja(stringResource(R.string.disp_hora_distinta), error = true)
                                 } else if (!horasFin.isAfter(horasInicio)) {
-                                    NotaSeccionHoja("Turno de noche: termina al día siguiente a las ${formatearHora(horasFin)}.")
+                                    NotaSeccionHoja(stringResource(R.string.disp_turno_noche, formatearHora(horasFin)))
                                 }
                                 if (turnoConHoras(turnosDeLaCategoria, horasInicio, horasFin) == null) {
                                     SeparadorHoja()
                                     FilaConInterruptorHoja(
                                         icono = Icons.Default.BookmarkBorder,
-                                        titulo = "Guardar como horario",
-                                        subtitulo = "Guarda estas horas para usarlas más adelante",
+                                        titulo = stringResource(R.string.disp_guardar_horario),
+                                        subtitulo = stringResource(R.string.disp_guardar_horario_sub),
                                         activo = guardarComoHorario,
                                         onCambiar = { guardarComoHorario = it },
                                         tintaIcono = acentoHoja
@@ -448,7 +452,7 @@ fun DialogoDisponibilidad(
                                         CampoTextoHoja(
                                             valor = nombreHorario,
                                             onCambiar = { nombreHorario = it.take(24) },
-                                            placeholder = "Nombre del horario (p.ej. Mañana)",
+                                            placeholder = stringResource(R.string.disp_nombre_horario),
                                             modifier = Modifier.padding(start = 14.dp, end = 14.dp, bottom = 12.dp)
                                         )
                                     }
@@ -459,7 +463,10 @@ fun DialogoDisponibilidad(
                         }
 
                     } else {
-                        TituloSeccionHoja(if (repetirActivo) "Detalle" else "Fechas", if (repetirActivo) "Opcional" else "Uno o varios días completos")
+                        TituloSeccionHoja(
+                            if (repetirActivo) stringResource(R.string.disp_detalle) else stringResource(R.string.disp_fechas),
+                            if (repetirActivo) stringResource(R.string.disp_opcional) else stringResource(R.string.disp_uno_o_varios)
+                        )
                         Spacer(Modifier.height(10.dp))
                         TarjetaSeccionHoja(padding = 0.dp) {
                             // Con «Repetir o borrar» activo, las fechas se eligen en su calendario.
@@ -468,11 +475,11 @@ fun DialogoDisponibilidad(
                                     modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
                                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                                 ) {
-                                    CajaFechaHoja("Desde", rangoDesde, Modifier.weight(1f)) { rangoDesde = it; if (rangoHasta.isBefore(it)) rangoHasta = it }
-                                    CajaFechaHoja("Hasta", rangoHasta, Modifier.weight(1f)) { rangoHasta = it }
+                                    CajaFechaHoja(stringResource(R.string.comun_desde), rangoDesde, Modifier.weight(1f)) { rangoDesde = it; if (rangoHasta.isBefore(it)) rangoHasta = it }
+                                    CajaFechaHoja(stringResource(R.string.comun_hasta), rangoHasta, Modifier.weight(1f)) { rangoHasta = it }
                                 }
                                 NotaSeccionHoja(
-                                    if (rangoFechas.size == 1) "1 día completo" else "${rangoFechas.size} días completos",
+                                    pluralStringResource(R.plurals.disp_dias_completos, rangoFechas.size, rangoFechas.size),
                                     error = rangoFechas.size > MAX_DIAS_RANGO
                                 )
                                 SeparadorHoja()
@@ -491,9 +498,9 @@ fun DialogoDisponibilidad(
                         IconoEnCirculoHoja(Icons.Default.CalendarMonth, fondo = lavandaHoja, tinta = indigoHoja)
                         Spacer(Modifier.width(12.dp))
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("Repetir en otros días", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = tintaHoja)
+                            Text(stringResource(R.string.actividad_repetir), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = tintaHoja)
                             Text(
-                                if (repetirActivo) "Toca los días del calendario" else "Solo este día",
+                                if (repetirActivo) stringResource(R.string.actividad_repetir_toca) else stringResource(R.string.actividad_repetir_solo),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = tintaSuaveHoja
                             )
@@ -513,7 +520,7 @@ fun DialogoDisponibilidad(
                         Spacer(Modifier.height(12.dp))
                         TarjetaSeccionHoja(padding = 10.dp) {
                             Text(
-                                "Los días marcados se guardan con lo de arriba. El punto indica los que ya tienen ${seleccionada.nombre}; los que no marques no cambian.",
+                                stringResource(R.string.disp_punto_info, seleccionada.nombre),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = tintaSuaveHoja
                             )
@@ -528,7 +535,7 @@ fun DialogoDisponibilidad(
                             SeparadorHoja()
                             Spacer(Modifier.height(10.dp))
                             Text(
-                                "O cada semana en (toca otra vez para quitarlo)",
+                                stringResource(R.string.disp_o_cada_semana),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = tintaSuaveHoja
                             )
@@ -543,7 +550,7 @@ fun DialogoDisponibilidad(
                                 onAlternar = { dia -> alternarDiaSemana(dia) }
                             )
                             Spacer(Modifier.height(10.dp))
-                            CajaFechaHoja("Repetir hasta", hastaRepetir, Modifier.fillMaxWidth()) { cambiarHastaRepetir(it) }
+                            CajaFechaHoja(stringResource(R.string.disp_repetir_hasta), hastaRepetir, Modifier.fillMaxWidth()) { cambiarHastaRepetir(it) }
                         }
                         Spacer(Modifier.height(8.dp))
                         Row(verticalAlignment = Alignment.Top) {
@@ -551,15 +558,15 @@ fun DialogoDisponibilidad(
                             Spacer(Modifier.width(8.dp))
                             Column {
                                 Text(
-                                    if (guardarFechas.isEmpty()) "Ningún día marcado para guardar."
-                                    else "Se guardará en ${textoDias(guardarFechas.size)}" +
-                                        (if (sustituidas > 0) " (${textoDias(sustituidas)} ya tenían ${seleccionada.nombre}: se sustituyen)." else "."),
+                                    if (guardarFechas.isEmpty()) stringResource(R.string.disp_ningun_dia)
+                                    else if (sustituidas > 0) stringResource(R.string.disp_se_guardara_en_sustituye, textoDias(guardarFechas.size), textoDias(sustituidas), seleccionada.nombre)
+                                    else stringResource(R.string.disp_se_guardara_en, textoDias(guardarFechas.size)),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = tintaSuaveHoja
                                 )
                                 if (borrarFechas.isNotEmpty()) {
                                     Text(
-                                        "Se borrará ${seleccionada.nombre} de ${textoDias(borrarFechas.size)}.",
+                                        stringResource(R.string.disp_se_borrara, seleccionada.nombre, textoDias(borrarFechas.size)),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.error
                                     )
@@ -580,12 +587,12 @@ fun DialogoDisponibilidad(
                     border = null,
                     colors = ButtonDefaults.outlinedButtonColors(containerColor = tarjetaHoja, contentColor = tintaHoja)
                 ) {
-                    Text("Cancelar", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.comun_cancelar), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 }
                 bloqueEnEdicion?.let { bloque ->
                     BotonCuadradoHoja(
                         icono = Icons.Default.Delete,
-                        descripcion = "Borrar",
+                        descripcion = stringResource(R.string.comun_borrar),
                         fondo = MaterialTheme.colorScheme.errorContainer,
                         tinta = MaterialTheme.colorScheme.onErrorContainer,
                         onClick = { onEliminar(bloque); onCerrar() }
@@ -594,7 +601,7 @@ fun DialogoDisponibilidad(
                 val fondoGuardar = if (puedeGuardar) acentoHoja else acentoHoja.copy(alpha = 0.35f)
                 BotonCuadradoHoja(
                     icono = Icons.Default.Save,
-                    descripcion = "Guardar",
+                    descripcion = stringResource(R.string.comun_guardar),
                     fondo = fondoGuardar,
                     tinta = onAcentoHoja,
                     habilitado = puedeGuardar,
@@ -609,24 +616,27 @@ fun DialogoDisponibilidad(
         val nombreCat = seleccionada?.nombre.orEmpty()
         val lineas = mutableListOf<String>()
         if (guardarFechas.isNotEmpty()) {
-            lineas += "Se guardará $nombreCat en ${textoDias(guardarFechas.size)}" +
-                if (sustituidas > 0) ". En ${textoDias(sustituidas)} ya lo había y se sustituye." else "."
+            lineas += if (sustituidas > 0) {
+                stringResource(R.string.disp_conf_guardar_sustituye, nombreCat, textoDias(guardarFechas.size), textoDias(sustituidas))
+            } else {
+                stringResource(R.string.disp_conf_guardar, nombreCat, textoDias(guardarFechas.size))
+            }
         }
-        if (borrarFechas.isNotEmpty()) lineas += "Se borrará $nombreCat de ${textoDias(borrarFechas.size)}."
+        if (borrarFechas.isNotEmpty()) lineas += stringResource(R.string.disp_se_borrara, nombreCat, textoDias(borrarFechas.size))
         AvisoHoja(
             icono = if (soloBorrar) Icons.Default.Delete else Icons.Default.Save,
-            titulo = if (soloBorrar) "¿Borrar ${textoDias(borrarFechas.size)}?" else "Aplicar los cambios",
+            titulo = if (soloBorrar) stringResource(R.string.disp_conf_borrar_titulo, textoDias(borrarFechas.size)) else stringResource(R.string.disp_aplicar),
             texto = lineas.joinToString("\n"),
             peligro = soloBorrar,
             acciones = listOf(
                 AccionAvisoHoja(
-                    if (soloBorrar) "Borrar" else "Confirmar",
+                    if (soloBorrar) stringResource(R.string.comun_borrar) else stringResource(R.string.comun_confirmar),
                     if (soloBorrar) EstiloAccionAviso.PELIGRO else EstiloAccionAviso.PRIMARIO
                 ) {
                     confirmandoGuardado = false
                     guardar()
                 },
-                AccionAvisoHoja("Volver", EstiloAccionAviso.BORDE) { confirmandoGuardado = false }
+                AccionAvisoHoja(stringResource(R.string.comun_volver), EstiloAccionAviso.BORDE) { confirmandoGuardado = false }
             ),
             onCerrar = { confirmandoGuardado = false }
         )
@@ -696,7 +706,7 @@ private fun FilaBloqueDelDia(
             Text(categoria.nombre, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = tintaHoja)
             Text(subtitulo, style = MaterialTheme.typography.bodySmall, color = tintaSuaveHoja)
         }
-        Icon(Icons.Default.Edit, contentDescription = "Editar", tint = if (editando) acentoHoja else tintaSuaveHoja, modifier = Modifier.size(20.dp))
+        Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.comun_editar), tint = if (editando) acentoHoja else tintaSuaveHoja, modifier = Modifier.size(20.dp))
     }
 }
 
@@ -765,7 +775,7 @@ private fun CasillaNuevaCategoria(modifier: Modifier = Modifier, onClick: () -> 
     ) {
         Icon(Icons.Default.Add, contentDescription = null, tint = tintaHoja, modifier = Modifier.size(20.dp))
         Spacer(Modifier.width(8.dp))
-        Text("Nueva categoría", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = tintaHoja, maxLines = 2)
+        Text(stringResource(R.string.categoria_nueva), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = tintaHoja, maxLines = 2)
     }
 }
 
@@ -781,10 +791,10 @@ private fun HorariosGuardados(
     var editando by remember { mutableStateOf(false) }
     Column(modifier = Modifier.padding(start = 14.dp, end = 14.dp, top = 10.dp, bottom = 6.dp)) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text("Horarios guardados", style = MaterialTheme.typography.labelLarge, color = tintaSuaveHoja, modifier = Modifier.weight(1f))
+            Text(stringResource(R.string.disp_horarios_guardados), style = MaterialTheme.typography.labelLarge, color = tintaSuaveHoja, modifier = Modifier.weight(1f))
             if (turnos.isNotEmpty()) {
                 TextButton(onClick = { editando = !editando }, contentPadding = PaddingValues(horizontal = 8.dp)) {
-                    Text(if (editando) "Hecho" else "Editar", color = acentoHoja)
+                    Text(if (editando) stringResource(R.string.comun_hecho) else stringResource(R.string.comun_editar), color = acentoHoja)
                 }
             }
         }
@@ -795,7 +805,7 @@ private fun HorariosGuardados(
                     onClick = { if (editando) onEliminar(turno) else onElegir(turno) },
                     label = { Text("${turno.nombre} · ${formatearHora(turno.horaInicio)}-${formatearHora(turno.horaFin)}") },
                     trailingIcon = if (editando) {
-                        { Icon(Icons.Default.Close, contentDescription = "Borrar horario", modifier = Modifier.size(16.dp)) }
+                        { Icon(Icons.Default.Close, contentDescription = stringResource(R.string.disp_borrar_horario), modifier = Modifier.size(16.dp)) }
                     } else null,
                     colors = FilterChipDefaults.filterChipColors(selectedContainerColor = acentoHoja, selectedLabelColor = onAcentoHoja)
                 )
@@ -803,7 +813,7 @@ private fun HorariosGuardados(
             if (!editando) {
                 AssistChip(
                     onClick = onNuevo,
-                    label = { Text("Nuevo horario") },
+                    label = { Text(stringResource(R.string.disp_nuevo_horario)) },
                     leadingIcon = { Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp)) }
                 )
             }
@@ -824,29 +834,29 @@ private fun DialogoNuevoHorario(
     var fin by remember { mutableStateOf(finInicial) }
     AvisoHoja(
         icono = Icons.Default.Schedule,
-        titulo = "Nuevo horario",
-        texto = "Ponle un nombre y las horas; luego lo eliges con un toque.",
+        titulo = stringResource(R.string.disp_nuevo_horario),
+        texto = stringResource(R.string.disp_nuevo_horario_texto),
         peligro = false,
         conX = true,
         accionesEnFila = true,
         acciones = listOf(
-            AccionAvisoHoja("Cancelar", EstiloAccionAviso.BORDE) { onCerrar() },
-            AccionAvisoHoja("Crear", EstiloAccionAviso.PRIMARIO, habilitada = nombre.isNotBlank() && inicio != fin) {
+            AccionAvisoHoja(stringResource(R.string.comun_cancelar), EstiloAccionAviso.BORDE) { onCerrar() },
+            AccionAvisoHoja(stringResource(R.string.comun_crear), EstiloAccionAviso.PRIMARIO, habilitada = nombre.isNotBlank() && inicio != fin) {
                 onCrear(nombre.trim(), inicio, fin)
             }
         ),
         onCerrar = onCerrar,
         contenido = {
-            CampoTextoConIconoHoja(nombre, { nombre = it.take(24) }, "Nombre (p.ej. Tarde)", Icons.Default.Schedule)
+            CampoTextoConIconoHoja(nombre, { nombre = it.take(24) }, stringResource(R.string.disp_nombre_ejemplo), Icons.Default.Schedule)
             Spacer(Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                CajaHoraHoja("Desde", inicio, Modifier.weight(1f)) { inicio = it }
-                CajaHoraHoja("Hasta", fin, Modifier.weight(1f)) { fin = it }
+                CajaHoraHoja(stringResource(R.string.comun_desde), inicio, Modifier.weight(1f)) { inicio = it }
+                CajaHoraHoja(stringResource(R.string.comun_hasta), fin, Modifier.weight(1f)) { fin = it }
             }
             if (inicio == fin) {
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    "La hora de fin debe ser distinta de la de inicio.",
+                    stringResource(R.string.disp_hora_distinta),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error
                 )
@@ -862,9 +872,9 @@ private fun FilaDetalle(valor: String, onCambiar: (String) -> Unit) {
         IconoEnCirculoHoja(Icons.Default.Description, fondo = lavandaHoja, tinta = indigoHoja)
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text("Detalle (opcional)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = tintaHoja)
+            Text(stringResource(R.string.disp_detalle_opcional), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = tintaHoja)
             Spacer(Modifier.height(6.dp))
-            CampoTextoHoja(valor = valor, onCambiar = onCambiar, placeholder = "Añade un detalle…")
+            CampoTextoHoja(valor = valor, onCambiar = onCambiar, placeholder = stringResource(R.string.disp_anade_detalle))
         }
     }
 }
@@ -919,11 +929,12 @@ private fun LineaSemanalRepetir(
         }
         val activos = DayOfWeek.values().filter { (estados[it] ?: EstadoLineaSemanal.SIN_COLOR) != EstadoLineaSemanal.SIN_COLOR }
         if (activos.isNotEmpty()) {
+            val resumenDias = activos.map { dia ->
+                val (con, total) = conteos[dia] ?: (0 to 0)
+                stringResource(R.string.disp_dia_conteo, letraDeDiaHoja(dia), con, total)
+            }.joinToString(", ")
             Text(
-                "Cada semana: " + activos.joinToString(", ") { dia ->
-                    val (con, total) = conteos[dia] ?: (0 to 0)
-                    letraDeDiaHoja(dia) + " ($con de $total)"
-                },
+                stringResource(R.string.disp_cada_semana, resumenDias),
                 style = MaterialTheme.typography.bodySmall,
                 color = tintaSuaveHoja
             )
