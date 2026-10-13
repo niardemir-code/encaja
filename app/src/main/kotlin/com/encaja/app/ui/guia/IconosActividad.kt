@@ -8,6 +8,8 @@ package com.encaja.app.ui.guia
 // quita de este catálogo, las actividades ya guardadas no se rompen: simplemente caen
 // en el icono por defecto (ver [iconoParaActividad]).
 
+import com.encaja.app.R
+import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsBike
 import androidx.compose.material.icons.automirrored.filled.DirectionsRun
@@ -37,33 +39,33 @@ import androidx.compose.material.icons.filled.TheaterComedy
 import androidx.compose.material.icons.filled.Translate
 import androidx.compose.ui.graphics.vector.ImageVector
 
-enum class IconoActividad(val id: String, val etiqueta: String, val icono: ImageVector) {
-    COLEGIO("colegio", "Colegio", Icons.Default.School),
-    DEBERES("deberes", "Deberes", Icons.AutoMirrored.Filled.MenuBook),
-    IDIOMAS("idiomas", "Idiomas", Icons.Default.Translate),
-    INFORMATICA("informatica", "Informática", Icons.Default.Computer),
-    CIENCIAS("ciencias", "Ciencias", Icons.Default.Science),
-    MATEMATICAS("matematicas", "Matemáticas", Icons.Default.Calculate),
-    BIBLIOTECA("biblioteca", "Lectura/biblioteca", Icons.Default.LocalLibrary),
-    FUTBOL("futbol", "Fútbol", Icons.Default.SportsSoccer),
-    BALONCESTO("baloncesto", "Baloncesto", Icons.Default.SportsBasketball),
-    TENIS("tenis", "Tenis/pádel", Icons.Default.SportsTennis),
-    VOLEIBOL("voleibol", "Voleibol", Icons.Default.SportsVolleyball),
-    BALONMANO("balonmano", "Balonmano", Icons.Default.SportsHandball),
-    NATACION("natacion", "Natación/piscina", Icons.Default.Pool),
-    ATLETISMO("atletismo", "Atletismo/correr", Icons.AutoMirrored.Filled.DirectionsRun),
-    CICLISMO("ciclismo", "Ciclismo", Icons.AutoMirrored.Filled.DirectionsBike),
-    GIMNASIO("gimnasio", "Gimnasia/fitness", Icons.Default.FitnessCenter),
-    MUSICA("musica", "Música", Icons.Default.MusicNote),
-    ARTE("arte", "Arte/manualidades", Icons.Default.Brush),
-    TEATRO("teatro", "Teatro", Icons.Default.TheaterComedy),
-    VIDEOJUEGOS("videojuegos", "Videojuegos/ocio", Icons.Default.SportsEsports),
-    NATURALEZA("naturaleza", "Excursión/naturaleza", Icons.Default.Park),
-    FIESTA("fiesta", "Cumpleaños/fiesta", Icons.Default.Celebration),
-    MEDICO("medico", "Médico", Icons.Default.MedicalServices),
-    COMIDA("comida", "Comida", Icons.Default.Restaurant),
-    MASCOTA("mascota", "Mascota", Icons.Default.Pets),
-    OTRO("otro", "Otro", Icons.Default.Star)
+enum class IconoActividad(val id: String, @StringRes val etiqueta: Int, val icono: ImageVector) {
+    COLEGIO("colegio", R.string.icono_colegio, Icons.Default.School),
+    DEBERES("deberes", R.string.icono_deberes, Icons.AutoMirrored.Filled.MenuBook),
+    IDIOMAS("idiomas", R.string.icono_idiomas, Icons.Default.Translate),
+    INFORMATICA("informatica", R.string.icono_informatica, Icons.Default.Computer),
+    CIENCIAS("ciencias", R.string.icono_ciencias, Icons.Default.Science),
+    MATEMATICAS("matematicas", R.string.icono_matematicas, Icons.Default.Calculate),
+    BIBLIOTECA("biblioteca", R.string.icono_biblioteca, Icons.Default.LocalLibrary),
+    FUTBOL("futbol", R.string.icono_futbol, Icons.Default.SportsSoccer),
+    BALONCESTO("baloncesto", R.string.icono_baloncesto, Icons.Default.SportsBasketball),
+    TENIS("tenis", R.string.icono_tenis, Icons.Default.SportsTennis),
+    VOLEIBOL("voleibol", R.string.icono_voleibol, Icons.Default.SportsVolleyball),
+    BALONMANO("balonmano", R.string.icono_balonmano, Icons.Default.SportsHandball),
+    NATACION("natacion", R.string.icono_natacion, Icons.Default.Pool),
+    ATLETISMO("atletismo", R.string.icono_atletismo, Icons.AutoMirrored.Filled.DirectionsRun),
+    CICLISMO("ciclismo", R.string.icono_ciclismo, Icons.AutoMirrored.Filled.DirectionsBike),
+    GIMNASIO("gimnasio", R.string.icono_gimnasio, Icons.Default.FitnessCenter),
+    MUSICA("musica", R.string.icono_musica, Icons.Default.MusicNote),
+    ARTE("arte", R.string.icono_arte, Icons.Default.Brush),
+    TEATRO("teatro", R.string.icono_teatro, Icons.Default.TheaterComedy),
+    VIDEOJUEGOS("videojuegos", R.string.icono_videojuegos, Icons.Default.SportsEsports),
+    NATURALEZA("naturaleza", R.string.icono_naturaleza, Icons.Default.Park),
+    FIESTA("fiesta", R.string.icono_fiesta, Icons.Default.Celebration),
+    MEDICO("medico", R.string.icono_medico, Icons.Default.MedicalServices),
+    COMIDA("comida", R.string.icono_comida, Icons.Default.Restaurant),
+    MASCOTA("mascota", R.string.icono_mascota, Icons.Default.Pets),
+    OTRO("otro", R.string.icono_otro, Icons.Default.Star)
 }
 
 /** El icono elegido para [id], o el genérico de "Colegio" si no se elegido ninguno o

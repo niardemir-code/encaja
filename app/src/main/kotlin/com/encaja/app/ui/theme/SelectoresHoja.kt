@@ -4,6 +4,8 @@ package com.encaja.app.ui.theme
 // Selectores de fecha, hora y días compartidos por los diálogos de disponibilidad (Familia)
 // y de actividades (Guía): antes cada uno tenía su copia idéntica.
 
+import androidx.compose.ui.res.stringResource
+import com.encaja.app.R
 import com.encaja.app.ui.common.diaYMesCorto
 import com.encaja.app.ui.common.mesYAnio
 import com.encaja.app.ui.common.letraDia
@@ -95,7 +97,7 @@ fun CalendarioMultipleHoja(
 
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         IconButton(onClick = { mes = mes.minusMonths(1) }) {
-            Icon(Icons.Default.ChevronLeft, contentDescription = "Mes anterior", tint = indigoHoja)
+            Icon(Icons.Default.ChevronLeft, contentDescription = stringResource(R.string.selector_mes_anterior), tint = indigoHoja)
         }
         Text(
             mesYAnio(mes.atDay(1)),
@@ -106,7 +108,7 @@ fun CalendarioMultipleHoja(
             modifier = Modifier.weight(1f)
         )
         IconButton(onClick = { mes = mes.plusMonths(1) }) {
-            Icon(Icons.Default.ChevronRight, contentDescription = "Mes siguiente", tint = indigoHoja)
+            Icon(Icons.Default.ChevronRight, contentDescription = stringResource(R.string.selector_mes_siguiente), tint = indigoHoja)
         }
     }
     Row(modifier = Modifier.fillMaxWidth()) {

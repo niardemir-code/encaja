@@ -7,6 +7,8 @@ package com.encaja.app.ui.theme
 // grande con icono en círculo, título y botones en píldora. Sustituyen a DatePickerDialog
 // y al AlertDialog con TimePicker de Material por defecto.
 
+import androidx.compose.ui.res.stringResource
+import com.encaja.app.R
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
@@ -40,8 +42,8 @@ fun SelectorFechaHoja(
     fecha: LocalDate,
     onElegir: (LocalDate) -> Unit,
     onCerrar: () -> Unit,
-    titulo: String = "Elige una fecha",
-    confirmar: String = "Aceptar"
+    titulo: String = stringResource(R.string.selector_elige_fecha),
+    confirmar: String = stringResource(R.string.comun_aceptar)
 ) {
     val estado = rememberDatePickerState(initialSelectedDateMillis = fechaAMillisUtcHoja(fecha))
     AvisoHoja(
@@ -53,7 +55,7 @@ fun SelectorFechaHoja(
         accionesEnFila = true,
         ancho = 380.dp,
         acciones = listOf(
-            AccionAvisoHoja("Cancelar", EstiloAccionAviso.BORDE) { onCerrar() },
+            AccionAvisoHoja(stringResource(R.string.comun_cancelar), EstiloAccionAviso.BORDE) { onCerrar() },
             AccionAvisoHoja(confirmar, EstiloAccionAviso.PRIMARIO, habilitada = estado.selectedDateMillis != null) {
                 estado.selectedDateMillis?.let { onElegir(millisUtcAFechaHoja(it)) }
                 onCerrar()
@@ -98,8 +100,8 @@ fun SelectorHoraHoja(
         accionesEnFila = true,
         ancho = 360.dp,
         acciones = listOf(
-            AccionAvisoHoja("Cancelar", EstiloAccionAviso.BORDE) { onCerrar() },
-            AccionAvisoHoja("Aceptar", EstiloAccionAviso.PRIMARIO) {
+            AccionAvisoHoja(stringResource(R.string.comun_cancelar), EstiloAccionAviso.BORDE) { onCerrar() },
+            AccionAvisoHoja(stringResource(R.string.comun_aceptar), EstiloAccionAviso.PRIMARIO) {
                 onElegir(LocalTime.of(estado.hour, estado.minute))
                 onCerrar()
             }

@@ -20,6 +20,9 @@ package com.encaja.app.ui.guia
 // "serie": no hay que elegir si el cambio o el borrado afecta solo a esta
 // ocurrencia o también a las siguientes.
 
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import com.encaja.app.R
 import com.encaja.app.ui.theme.CajaFechaHoja
 import com.encaja.app.ui.theme.CajaHoraHoja
 import com.encaja.app.ui.theme.CalendarioMultipleHoja
@@ -259,23 +262,26 @@ fun DialogoActividad(
         ) {
             // ── Título ────────────────────────────────────────────────────────────
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                val prefijoTitulo = stringResource(if (actividad == null) R.string.actividad_nueva else R.string.actividad_editar)
+                val palabraActividad = stringResource(R.string.actividad_palabra)
                 Text(
                     buildAnnotatedString {
-                        append(if (actividad == null) "Nueva " else "Editar ")
-                        withStyle(SpanStyle(color = acentoHoja)) { append("actividad") }
+                        append(prefijoTitulo)
+                        append(" ")
+                        withStyle(SpanStyle(color = acentoHoja)) { append(palabraActividad) }
                     },
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.ExtraBold,
                     color = tintaHoja,
                     modifier = Modifier.weight(1f)
                 )
-                BotonRedondoSuaveHoja(Icons.Default.Close, "Cerrar", onCerrar)
+                BotonRedondoSuaveHoja(Icons.Default.Close, stringResource(R.string.comun_cerrar), onCerrar)
             }
             Spacer(Modifier.height(14.dp))
 
             if (ninos.isEmpty()) {
                 Text(
-                    "Antes hay que dar de alta a algún niño desde Ajustes.",
+                    stringResource(R.string.actividad_sin_ninos),
                     style = MaterialTheme.typography.bodyMedium,
                     color = tintaSuaveHoja
                 )
@@ -283,7 +289,7 @@ fun DialogoActividad(
             }
 
             // ── Niño/a ────────────────────────────────────────────────────────────
-            Text("Niño/a", style = MaterialTheme.typography.labelLarge, color = tintaSuaveHoja)
+            Text(stringResource(R.string.actividad_nino), style = MaterialTheme.typography.labelLarge, color = tintaSuaveHoja)
             Spacer(Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 ninos.forEach { nino ->
@@ -296,7 +302,7 @@ fun DialogoActividad(
             OutlinedTextField(
                 value = descripcion,
                 onValueChange = { descripcion = it.take(40) },
-                placeholder = { Text("¿Qué es? (p.ej. Fútbol, Recoger del cole)", color = tintaSuaveHoja) },
+                placeholder = { Text(stringResource(R.string.actividad_que_es), color = tintaSuaveHoja) },
                 leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null, tint = tintaSuaveHoja) },
                 singleLine = true,
                 shape = RoundedCornerShape(14.dp),
@@ -311,7 +317,7 @@ fun DialogoActividad(
             Spacer(Modifier.height(14.dp))
 
             // ── Icono ─────────────────────────────────────────────────────────────
-            Text("Icono", style = MaterialTheme.typography.labelLarge, color = tintaSuaveHoja)
+            Text(stringResource(R.string.actividad_icono), style = MaterialTheme.typography.labelLarge, color = tintaSuaveHoja)
             Spacer(Modifier.height(8.dp))
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(IconoActividad.entries.toList()) { opcion ->
@@ -326,13 +332,13 @@ fun DialogoActividad(
 
             // ── Desde / Hasta ─────────────────────────────────────────────────────
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                CajaHoraHoja("Desde", inicio, Modifier.weight(1f)) { inicio = it }
-                CajaHoraHoja("Hasta", fin, Modifier.weight(1f)) { fin = it }
+                CajaHoraHoja(stringResource(R.string.comun_desde), inicio, Modifier.weight(1f)) { inicio = it }
+                CajaHoraHoja(stringResource(R.string.comun_hasta), fin, Modifier.weight(1f)) { fin = it }
             }
             if (!horasValidas) {
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    "La hora de fin debe ser posterior a la de inicio.",
+                    stringResource(R.string.actividad_hora_invalida),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error
                 )
@@ -343,9 +349,9 @@ fun DialogoActividad(
             TarjetaSeccionHoja(padding = 0.dp) {
                 FilaConInterruptorHoja(
                     icono = Icons.AutoMirrored.Filled.DirectionsWalk,
-                    titulo = "Requiere acompañamiento",
-                    subtitulo = if (requiereDesplazamiento) "Alguien tiene que llevarla o recogerla."
-                        else "Solo informativa: no hace falta que nadie la acompañe.",
+                    titulo = stringResource(R.string.actividad_acompanamiento),
+                    subtitulo = if (requiereDesplazamiento) stringResource(R.string.actividad_acomp_si)
+                        else stringResource(R.string.actividad_acomp_no),
                     activo = requiereDesplazamiento,
                     onCambiar = { requiereDesplazamiento = it }
                 )
@@ -354,7 +360,7 @@ fun DialogoActividad(
             if (requiereDesplazamiento && responsables.isNotEmpty()) {
                 Spacer(Modifier.height(10.dp))
                 FilaResponsable(
-                    titulo = "Quién la lleva",
+                    titulo = stringResource(R.string.actividad_quien_lleva),
                     icono = Icons.Default.Person,
                     fondoIcono = MaterialTheme.colorScheme.tertiaryContainer,
                     tintaIcono = MaterialTheme.colorScheme.onTertiaryContainer,
@@ -364,7 +370,7 @@ fun DialogoActividad(
                 )
                 Spacer(Modifier.height(10.dp))
                 FilaResponsable(
-                    titulo = "Quién la recoge",
+                    titulo = stringResource(R.string.actividad_quien_recoge),
                     icono = Icons.Default.Home,
                     fondoIcono = lavandaHoja,
                     tintaIcono = indigoHoja,
@@ -381,20 +387,20 @@ fun DialogoActividad(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconoEnCirculoHoja(Icons.Default.Notifications, fondo = MaterialTheme.colorScheme.tertiaryContainer, tinta = MaterialTheme.colorScheme.onTertiaryContainer, tamano = 34.dp)
                 Spacer(Modifier.width(10.dp))
-                Text("Avisos en el móvil", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = tintaHoja)
+                Text(stringResource(R.string.actividad_avisos_movil), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = tintaHoja)
             }
             Spacer(Modifier.height(10.dp))
             TarjetaSeccionHoja(padding = 0.dp) {
                 SelectorAviso(
-                    titulo = "Antes de empezar",
-                    detalle = "empieza a las ${formatearHora(inicio)}",
+                    titulo = stringResource(R.string.actividad_antes_empezar),
+                    detalle = stringResource(R.string.actividad_empieza_a, formatearHora(inicio)),
                     minutos = avisoLlevarMin,
                     onElegir = { avisoLlevarMin = it }
                 )
                 SeparadorHoja()
                 SelectorAviso(
-                    titulo = "Antes de terminar",
-                    detalle = "termina a las ${formatearHora(fin)}",
+                    titulo = stringResource(R.string.actividad_antes_terminar),
+                    detalle = stringResource(R.string.actividad_termina_a, formatearHora(fin)),
                     minutos = avisoRecogerMin,
                     onElegir = { avisoRecogerMin = it }
                 )
@@ -406,9 +412,9 @@ fun DialogoActividad(
                 IconoEnCirculoHoja(Icons.Default.CalendarMonth, fondo = lavandaHoja, tinta = indigoHoja)
                 Spacer(Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Repetir en otros días", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = tintaHoja)
+                    Text(stringResource(R.string.actividad_repetir), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = tintaHoja)
                     Text(
-                        if (repetirActivo) "Toca los días del calendario" else "Solo este día",
+                        if (repetirActivo) stringResource(R.string.actividad_repetir_toca) else stringResource(R.string.actividad_repetir_solo),
                         style = MaterialTheme.typography.bodySmall,
                         color = tintaSuaveHoja
                     )
@@ -443,7 +449,7 @@ fun DialogoActividad(
                     Spacer(Modifier.height(14.dp))
                     SeparadorHoja()
                     Spacer(Modifier.height(10.dp))
-                    Text("O cada semana en", style = MaterialTheme.typography.bodyMedium, color = tintaSuaveHoja)
+                    Text(stringResource(R.string.actividad_o_cada_semana), style = MaterialTheme.typography.bodyMedium, color = tintaSuaveHoja)
                     Spacer(Modifier.height(8.dp))
                     SelectorDiasSemanaHoja(
                         seleccionados = diasSemanaRepetir,
@@ -451,7 +457,7 @@ fun DialogoActividad(
                     )
                     if (diasSemanaRepetir.isNotEmpty()) {
                         Spacer(Modifier.height(10.dp))
-                        CajaFechaHoja("Hasta", hastaRepetir, Modifier.fillMaxWidth()) { cambiarHastaRepetir(it) }
+                        CajaFechaHoja(stringResource(R.string.comun_hasta), hastaRepetir, Modifier.fillMaxWidth()) { cambiarHastaRepetir(it) }
                     }
                 }
                 Spacer(Modifier.height(8.dp))
@@ -459,8 +465,11 @@ fun DialogoActividad(
                     Icon(Icons.Default.Info, contentDescription = null, tint = tintaSuaveHoja, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        (if (fechasAGuardar.size == 1) "1 día" else "${fechasAGuardar.size} días") +
-                            ". Si alguno ya tenía ${descripcion.trim().ifBlank { "esta actividad" }}, se sustituye.",
+                        stringResource(
+                            R.string.actividad_repetir_resumen,
+                            pluralStringResource(R.plurals.actividad_dias_n, fechasAGuardar.size, fechasAGuardar.size),
+                            descripcion.trim().ifBlank { stringResource(R.string.actividad_esta) }
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                         color = tintaSuaveHoja
                     )
@@ -477,12 +486,12 @@ fun DialogoActividad(
                     border = null,
                     colors = ButtonDefaults.outlinedButtonColors(containerColor = tarjetaHoja, contentColor = tintaHoja)
                 ) {
-                    Text("Cancelar", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.comun_cancelar), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 }
                 if (onEliminar != null) {
                     BotonCuadradoHoja(
                         icono = Icons.Default.Delete,
-                        descripcion = "Borrar",
+                        descripcion = stringResource(R.string.comun_borrar),
                         fondo = MaterialTheme.colorScheme.errorContainer,
                         tinta = MaterialTheme.colorScheme.onErrorContainer,
                         onClick = { confirmarBorrado = true }
@@ -491,7 +500,7 @@ fun DialogoActividad(
                 val fondoGuardar = if (puedeGuardar) acentoHoja else acentoHoja.copy(alpha = 0.35f)
                 BotonCuadradoHoja(
                     icono = Icons.Default.Save,
-                    descripcion = if (tieneSerie) "Guardar solo esta" else "Guardar",
+                    descripcion = if (tieneSerie) stringResource(R.string.guardar_solo_esta) else stringResource(R.string.comun_guardar),
                     fondo = fondoGuardar,
                     tinta = onAcentoHoja,
                     habilitado = puedeGuardar,
@@ -500,7 +509,7 @@ fun DialogoActividad(
                 )
                 if (tieneSerie) {
                     BotonVariosDisquetesHoja(
-                        descripcion = "Guardar toda la serie",
+                        descripcion = stringResource(R.string.guardar_toda_serie),
                         fondo = fondoGuardar,
                         tinta = onAcentoHoja,
                         habilitado = puedeGuardar,
@@ -513,9 +522,9 @@ fun DialogoActividad(
 
     confirmarGuardadoSerie?.let { serieCompleta ->
         ConfirmarGuardadoHoja(
-            titulo = if (serieCompleta) "Guardar la serie completa de la actividad" else "Guardar sólo esta actividad",
-            detalle = if (serieCompleta) "Los cambios se aplicarán a todas las veces que se repite esta actividad."
-            else "Los cambios solo afectarán a esta actividad; el resto de la serie no se toca.",
+            titulo = if (serieCompleta) stringResource(R.string.guardar_serie_titulo) else stringResource(R.string.guardar_solo_esta_titulo),
+            detalle = if (serieCompleta) stringResource(R.string.guardar_serie_detalle)
+            else stringResource(R.string.guardar_solo_esta_detalle),
             onConfirmar = { confirmarGuardadoSerie = null; guardar(serieCompleta); onCerrar() },
             onCancelar = { confirmarGuardadoSerie = null },
             serie = serieCompleta
@@ -526,22 +535,22 @@ fun DialogoActividad(
         val borrar: (Boolean) -> Unit = { serie -> confirmarBorrado = false; onEliminar(serie); onCerrar() }
         AvisoHoja(
             icono = Icons.Default.Delete,
-            titulo = "¿Borrar esta actividad?",
+            titulo = stringResource(R.string.actividad_borrar_titulo),
             texto = if (tieneSerie) {
-                "Se repite ${ocurrenciasSerie.size} veces. Puedes borrar solo esta o toda la serie. No se puede deshacer."
+                stringResource(R.string.actividad_borrar_serie_texto, ocurrenciasSerie.size)
             } else {
-                "No se puede deshacer."
+                stringResource(R.string.comun_no_deshacer)
             },
             acciones = if (tieneSerie) {
                 listOf(
-                    AccionAvisoHoja("Borrar toda la serie (${ocurrenciasSerie.size})", EstiloAccionAviso.PELIGRO, Icons.Default.Delete) { borrar(true) },
-                    AccionAvisoHoja("Borrar solo esta", EstiloAccionAviso.SUAVE, Icons.Default.Delete) { borrar(false) },
-                    AccionAvisoHoja("Cancelar", EstiloAccionAviso.BORDE) { confirmarBorrado = false }
+                    AccionAvisoHoja(stringResource(R.string.actividad_borrar_toda_serie, ocurrenciasSerie.size), EstiloAccionAviso.PELIGRO, Icons.Default.Delete) { borrar(true) },
+                    AccionAvisoHoja(stringResource(R.string.actividad_borrar_solo_esta), EstiloAccionAviso.SUAVE, Icons.Default.Delete) { borrar(false) },
+                    AccionAvisoHoja(stringResource(R.string.comun_cancelar), EstiloAccionAviso.BORDE) { confirmarBorrado = false }
                 )
             } else {
                 listOf(
-                    AccionAvisoHoja("Borrar", EstiloAccionAviso.PELIGRO, Icons.Default.Delete) { borrar(false) },
-                    AccionAvisoHoja("Cancelar", EstiloAccionAviso.BORDE) { confirmarBorrado = false }
+                    AccionAvisoHoja(stringResource(R.string.comun_borrar), EstiloAccionAviso.PELIGRO, Icons.Default.Delete) { borrar(false) },
+                    AccionAvisoHoja(stringResource(R.string.comun_cancelar), EstiloAccionAviso.BORDE) { confirmarBorrado = false }
                 )
             },
             onCerrar = { confirmarBorrado = false }
@@ -608,7 +617,7 @@ private fun CasillaIconoActividad(opcion: IconoActividad, elegido: Boolean, onCl
     ) {
         Icon(
             opcion.icono,
-            contentDescription = opcion.etiqueta,
+            contentDescription = stringResource(opcion.etiqueta),
             tint = if (elegido) onAcentoHoja else tintaSuaveHoja,
             modifier = Modifier.size(24.dp)
         )
@@ -628,7 +637,7 @@ private fun FilaResponsable(
     onElegir: (String?) -> Unit
 ) {
     var abierto by remember { mutableStateOf(false) }
-    val etiquetaElegida = responsables.firstOrNull { it.idTexto == elegidoId }?.etiqueta ?: "Nadie"
+    val etiquetaElegida = responsables.firstOrNull { it.idTexto == elegidoId }?.etiqueta ?: stringResource(R.string.comun_nadie)
 
     Row(
         modifier = Modifier
@@ -657,7 +666,7 @@ private fun FilaResponsable(
             peligro = false,
             conX = true,
             acciones = listOf(
-                AccionAvisoHoja("Cerrar", EstiloAccionAviso.BORDE) { abierto = false }
+                AccionAvisoHoja(stringResource(R.string.comun_cerrar), EstiloAccionAviso.BORDE) { abierto = false }
             ),
             onCerrar = { abierto = false },
             contenido = {
@@ -667,7 +676,7 @@ private fun FilaResponsable(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         RadioButton(selected = elegidoId == null, onClick = { onElegir(null); abierto = false })
-                        Text("Nadie")
+                        Text(stringResource(R.string.comun_nadie))
                     }
                     responsables.forEach { responsable ->
                         Row(
@@ -688,11 +697,12 @@ private fun FilaResponsable(
 /** Opciones de antelación de un aviso, en minutos (null = sin aviso). */
 private val OPCIONES_AVISO: List<Int?> = listOf(null, 5, 10, 15, 30, 45, 60, 90, 120)
 
+@Composable
 private fun textoAviso(minutos: Int?): String = when {
-    minutos == null -> "Sin aviso"
-    minutos < 60 -> "$minutos min antes"
-    minutos % 60 == 0 -> if (minutos == 60) "1 hora antes" else "${minutos / 60} horas antes"
-    else -> "${minutos / 60} h ${minutos % 60} min antes"
+    minutos == null -> stringResource(R.string.aviso_sin_aviso)
+    minutos < 60 -> stringResource(R.string.aviso_min_antes, minutos)
+    minutos % 60 == 0 -> pluralStringResource(R.plurals.aviso_horas_antes, minutos / 60, minutos / 60)
+    else -> stringResource(R.string.aviso_h_min_antes, minutos / 60, minutos % 60)
 }
 
 /**
@@ -726,7 +736,7 @@ private fun SelectorAviso(titulo: String, detalle: String, minutos: Int?, onEleg
             peligro = false,
             conX = true,
             acciones = listOf(
-                AccionAvisoHoja("Cerrar", EstiloAccionAviso.BORDE) { abierto = false }
+                AccionAvisoHoja(stringResource(R.string.comun_cerrar), EstiloAccionAviso.BORDE) { abierto = false }
             ),
             onCerrar = { abierto = false },
             contenido = {

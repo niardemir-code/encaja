@@ -11,6 +11,8 @@ package com.encaja.app.ui.guia
 // se está viendo hoy), y debajo la lista "Actividades del día", una tarjeta por niño.
 // El botón "Ahora" (punto de disparo) vuelve a la hora actual (y al día de hoy).
 
+import androidx.compose.ui.res.stringResource
+import com.encaja.app.R
 import com.encaja.app.ui.common.nombreDia
 import com.encaja.app.ui.common.diaYMes
 import com.encaja.app.ui.theme.SelectorFechaHoja
@@ -218,7 +220,7 @@ fun GuiaScreen(
                     containerColor = extra.acento,
                     contentColor = extra.onAcento
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "Nueva actividad", modifier = Modifier.size(28.dp))
+                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.guia_nueva_actividad), modifier = Modifier.size(28.dp))
                 }
             }
         }
@@ -237,18 +239,18 @@ fun GuiaScreen(
                         verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text("No se pudo cargar la guía", fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center, color = TINTA)
+                        Text(stringResource(R.string.guia_error_titulo), fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center, color = TINTA)
                         Spacer(Modifier.height(8.dp))
-                        Text("Revisa la conexión a internet y vuelve a intentarlo.", textAlign = TextAlign.Center, color = TINTA_SUAVE)
+                        Text(stringResource(R.string.comun_revisa_conexion), textAlign = TextAlign.Center, color = TINTA_SUAVE)
                         Spacer(Modifier.height(16.dp))
-                        androidx.compose.material3.Button(onClick = { viewModel.recargar() }) { Text("Reintentar") }
+                        androidx.compose.material3.Button(onClick = { viewModel.recargar() }) { Text(stringResource(R.string.comun_reintentar)) }
                     }
                 }
 
                 is GuiaPantallaEstado.SinFamilia -> {
                     Box(modifier = Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
                         Text(
-                            "Vincúlate a una familia desde la pestaña Semana para ver esta pantalla.",
+                            stringResource(R.string.comun_sin_familia_ver),
                             textAlign = TextAlign.Center,
                             color = TINTA
                         )
@@ -364,7 +366,7 @@ fun GuiaScreen(
 
                         if (estadoActual.estado.filas.isEmpty()) {
                             Text(
-                                "Todavía no hay niños dados de alta en la familia.",
+                                stringResource(R.string.guia_sin_ninos),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = TINTA_SUAVE,
                                 modifier = Modifier.padding(16.dp)
@@ -469,7 +471,7 @@ private fun TarjetaDia(
     ) {
         Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                BotonRedondo(Icons.Default.ChevronLeft, "Día anterior", onDiaAnterior)
+                BotonRedondo(Icons.Default.ChevronLeft, stringResource(R.string.guia_dia_anterior), onDiaAnterior)
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.weight(1f).padding(horizontal = 4.dp).clickable { calendarioAbierto = true }
@@ -490,11 +492,11 @@ private fun TarjetaDia(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                BotonRedondo(Icons.Default.CalendarMonth, "Ir a una fecha", { calendarioAbierto = true })
+                BotonRedondo(Icons.Default.CalendarMonth, stringResource(R.string.guia_ir_fecha), { calendarioAbierto = true })
                 Spacer(Modifier.width(6.dp))
-                BotonRedondo(Icons.Default.MyLocation, "Ahora", onAhora)
+                BotonRedondo(Icons.Default.MyLocation, stringResource(R.string.guia_ahora), onAhora)
                 Spacer(Modifier.width(6.dp))
-                BotonRedondo(Icons.Default.ChevronRight, "Día siguiente", onDiaSiguiente)
+                BotonRedondo(Icons.Default.ChevronRight, stringResource(R.string.guia_dia_siguiente), onDiaSiguiente)
             }
         }
     }
@@ -502,7 +504,7 @@ private fun TarjetaDia(
     if (calendarioAbierto) {
         SelectorFechaHoja(
             fecha = fecha,
-            confirmar = "Ir",
+            confirmar = stringResource(R.string.comun_ir),
             onElegir = onElegirFecha,
             onCerrar = { calendarioAbierto = false }
         )
@@ -530,10 +532,10 @@ private fun BotonRedondo(icono: ImageVector, descripcion: String, onClick: () ->
 @Composable
 private fun ControlDeEscala(nivel: Int, onMenos: () -> Unit, onMas: () -> Unit, modifier: Modifier = Modifier) {
     Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text("Escala del día", style = MaterialTheme.typography.labelLarge, color = TINTA_SUAVE)
+        Text(stringResource(R.string.guia_escala), style = MaterialTheme.typography.labelLarge, color = TINTA_SUAVE)
         Spacer(Modifier.weight(1f))
         IconButton(onClick = onMenos, enabled = nivel > 0) {
-            Icon(Icons.Default.ZoomOut, contentDescription = "Menos detalle (ver más horas)", tint = if (nivel > 0) INDIGO else TINTA_SUAVE.copy(alpha = 0.4f))
+            Icon(Icons.Default.ZoomOut, contentDescription = stringResource(R.string.guia_menos_detalle), tint = if (nivel > 0) INDIGO else TINTA_SUAVE.copy(alpha = 0.4f))
         }
         Text(
             textoNivelEscala(nivel),
@@ -545,7 +547,7 @@ private fun ControlDeEscala(nivel: Int, onMenos: () -> Unit, onMas: () -> Unit, 
         )
         IconButton(onClick = onMas, enabled = nivel < ESCALAS_DP_POR_MINUTO.lastIndex) {
             Icon(
-                Icons.Default.ZoomIn, contentDescription = "Más detalle (separar las horas)",
+                Icons.Default.ZoomIn, contentDescription = stringResource(R.string.guia_mas_detalle),
                 tint = if (nivel < ESCALAS_DP_POR_MINUTO.lastIndex) INDIGO else TINTA_SUAVE.copy(alpha = 0.4f)
             )
         }
@@ -747,7 +749,7 @@ private fun FilaSinActividades(scrollState: ScrollState, anchoVisiblePx: Int) {
         contentAlignment = Alignment.CenterStart
     ) {
         Text(
-            "Sin actividades",
+            stringResource(R.string.guia_sin_actividades),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.SemiBold,
             color = TINTA_SUAVE,
@@ -909,7 +911,7 @@ private fun CabeceraActividadesDelDia(onAnadir: () -> Unit) {
         )
         Spacer(Modifier.width(10.dp))
         Text(
-            "Actividades del día",
+            stringResource(R.string.guia_actividades_del_dia),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.ExtraBold,
             color = TINTA,
@@ -925,7 +927,7 @@ private fun CabeceraActividadesDelDia(onAnadir: () -> Unit) {
                 .clickable(onClick = onAnadir),
             contentAlignment = Alignment.Center
         ) {
-            Icon(Icons.Default.Add, contentDescription = "Nueva actividad", tint = extra.acento, modifier = Modifier.size(22.dp))
+            Icon(Icons.Default.Add, contentDescription = stringResource(R.string.guia_nueva_actividad), tint = extra.acento, modifier = Modifier.size(22.dp))
         }
     }
 }
@@ -1016,7 +1018,7 @@ private fun FilaActividadEnLista(bloque: BloqueGuia, enCurso: Boolean, yaPaso: B
                         if (enCurso) {
                             Spacer(Modifier.width(8.dp))
                             Text(
-                                "EN CURSO",
+                                stringResource(R.string.guia_en_curso),
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = LocalEncajaExtraColors.current.onAcento,
@@ -1048,8 +1050,8 @@ private fun FilaActividadEnLista(bloque: BloqueGuia, enCurso: Boolean, yaPaso: B
                     )
                     Spacer(Modifier.width(8.dp))
                     Column {
-                        lleva?.let { LineaResponsable("Lleva:", it) }
-                        recoge?.let { LineaResponsable("Recoge:", it) }
+                        lleva?.let { LineaResponsable(stringResource(R.string.guia_lleva), it) }
+                        recoge?.let { LineaResponsable(stringResource(R.string.guia_recoge), it) }
                     }
                 }
             }
@@ -1084,9 +1086,9 @@ private fun SinActividadesEnLista() {
         }
         Spacer(Modifier.width(14.dp))
         Column {
-            Text("Sin actividades", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.ExtraBold, color = TINTA)
+            Text(stringResource(R.string.guia_sin_actividades), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.ExtraBold, color = TINTA)
             Text(
-                "No hay ninguna actividad programada para este día.",
+                stringResource(R.string.guia_sin_actividades_detalle),
                 style = MaterialTheme.typography.bodySmall,
                 color = TINTA_SUAVE
             )
@@ -1105,11 +1107,12 @@ private fun minutosFinDesdeInicioFranja(hora: LocalTime): Int =
     if (hora == LocalTime.MIDNIGHT) MINUTOS_FRANJA else minutosDesdeInicioFranja(hora)
 
 /** "15 min antes de llevar · 1 h antes de recoger", o null si la actividad no tiene avisos. */
+@Composable
 private fun textoAvisos(need: CoverageNeed): String? {
     fun minutos(m: Int) = if (m < 60) "$m min" else if (m % 60 == 0) "${m / 60} h" else "${m / 60} h ${m % 60} min"
     val partes = listOfNotNull(
-        need.avisoLlevarMin?.let { "${minutos(it)} antes de llevar" },
-        need.avisoRecogerMin?.let { "${minutos(it)} antes de recoger" }
+        need.avisoLlevarMin?.let { stringResource(R.string.guia_aviso_llevar, minutos(it)) },
+        need.avisoRecogerMin?.let { stringResource(R.string.guia_aviso_recoger, minutos(it)) }
     )
     return partes.takeIf { it.isNotEmpty() && need.requiereDesplazamiento }?.joinToString(" · ")
 }

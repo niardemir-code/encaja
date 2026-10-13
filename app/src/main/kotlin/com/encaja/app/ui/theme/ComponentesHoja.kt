@@ -7,6 +7,8 @@ package com.encaja.app.ui.theme
 // suaves con borde tenue, iconos en círculo, interruptores de acento...) en claro y en
 // oscuro, ya que los colores salen del tema activo (MaterialTheme / LocalEncajaExtraColors).
 
+import androidx.compose.ui.res.stringResource
+import com.encaja.app.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -201,8 +203,8 @@ fun ConfirmarGuardadoHoja(
         titulo = titulo,
         texto = detalle,
         acciones = listOf(
-            AccionAvisoHoja("Cancelar", EstiloAccionAviso.BORDE) { onCancelar() },
-            AccionAvisoHoja("Guardar", EstiloAccionAviso.PRIMARIO) { onConfirmar() }
+            AccionAvisoHoja(stringResource(R.string.comun_cancelar), EstiloAccionAviso.BORDE) { onCancelar() },
+            AccionAvisoHoja(stringResource(R.string.comun_guardar), EstiloAccionAviso.PRIMARIO) { onConfirmar() }
         ),
         onCerrar = onCancelar,
         conX = true,
@@ -440,7 +442,7 @@ fun AvisoHoja(
                             .clickable(onClick = onCerrar),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.Close, contentDescription = "Cerrar", tint = indigo, modifier = Modifier.size(22.dp))
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.comun_cerrar), tint = indigo, modifier = Modifier.size(22.dp))
                     }
                 }
             }
