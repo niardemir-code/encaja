@@ -205,10 +205,12 @@ fun AjustesScreen(
         var borrando by remember { mutableStateOf(false) }
         var errorBaja by remember { mutableStateOf<TextoUi?>(null) }
         var codigoParaVolver by remember { mutableStateOf<String?>(null) }
+        var datosBorrados by remember { mutableStateOf(false) }
+        var borrarDatosFamilia by remember { mutableStateOf(false) }
         var cuentaBorrada by remember { mutableStateOf(false) }
         Spacer(Modifier.height(12.dp))
         TextButton(
-            onClick = { errorBaja = null; confirmandoBaja = true },
+            onClick = { errorBaja = null; borrarDatosFamilia = false; confirmandoBaja = true },
             enabled = !borrando,
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -223,7 +225,9 @@ fun AjustesScreen(
             AvisoHoja(
                 icono = Icons.Default.CheckCircle,
                 titulo = stringResource(R.string.ajustes_cuenta_borrada_titulo),
-                texto = if (codigoParaVolver != null) {
+                texto = if (datosBorrados) {
+                    stringResource(R.string.ajustes_cuenta_borrada_datos)
+                } else if (codigoParaVolver != null) {
                     stringResource(R.string.ajustes_cuenta_borrada_ultima, codigoParaVolver!!)
                 } else {
                     stringResource(R.string.ajustes_cuenta_borrada_texto)
@@ -243,9 +247,11 @@ fun AjustesScreen(
                         confirmandoBaja = false
                         borrando = true
                         viewModel.borrarMiCuenta(
-                            alTerminar = { codigo ->
+                            borrarDatosFamilia = borrarDatosFamilia,
+                            alTerminar = { resultado ->
                                 borrando = false
-                                codigoParaVolver = codigo
+                                codigoParaVolver = resultado.codigoParaVolver
+                                datosBorrados = resultado.datosBorrados
                                 cuentaBorrada = true
                             },
                             alFallar = { borrando = false; errorBaja = it }
@@ -253,6 +259,21 @@ fun AjustesScreen(
                     },
                     AccionAvisoHoja(stringResource(R.string.comun_cancelar), EstiloAccionAviso.BORDE) { confirmandoBaja = false }
                 ),
+                contenido = {
+                    // Solo tiene efecto si eres la única persona con cuenta; si hay más, la familia se conserva.
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth().clickable { borrarDatosFamilia = !borrarDatosFamilia }
+                    ) {
+                        androidx.compose.material3.Checkbox(checked = borrarDatosFamilia, onCheckedChange = { borrarDatosFamilia = it })
+                        Text(
+                            stringResource(R.string.ajustes_borrar_datos),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = tintaHoja,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                },
                 onCerrar = { confirmandoBaja = false }
             )
         }

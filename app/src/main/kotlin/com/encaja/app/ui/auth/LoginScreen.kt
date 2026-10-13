@@ -216,7 +216,7 @@ fun LoginScreen(
                     Button(
                         onClick = {
                             if (modoRegistro) {
-                                viewModel.registrarse(email, password, onLoginExitoso)
+                                viewModel.registrarse(email, password)
                             } else {
                                 viewModel.iniciarSesion(email, password, onLoginExitoso)
                             }

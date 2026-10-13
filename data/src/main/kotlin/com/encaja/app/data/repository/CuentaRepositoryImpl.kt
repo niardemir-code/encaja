@@ -3,6 +3,7 @@ package com.encaja.app.data.repository
 import com.encaja.app.domain.model.CaregiverId
 import com.encaja.app.domain.model.FamilyId
 import com.encaja.app.domain.repository.CuentaRepository
+import com.encaja.app.domain.repository.ResultadoBajaCuenta
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.functions.FirebaseFunctions
 import kotlinx.coroutines.tasks.await
@@ -15,10 +16,11 @@ class CuentaRepositoryImpl @Inject constructor(
     // Misma región que las Cloud Functions desplegadas (REGION en functions/index.js).
     private val funciones: FirebaseFunctions by lazy { FirebaseFunctions.getInstance("europe-west1") }
 
-    override suspend fun borrarMiCuenta(): Result<String?> = try {
-        val resultado = funciones.getHttpsCallable("borrarMiCuenta").call().await()
+    override suspend fun borrarMiCuenta(borrarDatosFamilia: Boolean): Result<ResultadoBajaCuenta> = try {
+        val resultado = funciones.getHttpsCallable("borrarMiCuenta")
+            .call(mapOf("borrarDatos" to borrarDatosFamilia)).await()
         val datos = resultado.data as? Map<*, *>
-        Result.success(datos?.get("codigo") as? String)
+        Result.success(ResultadoBajaCuenta(datos?.get("codigo") as? String, datos?.get("datosBorrados") == true))
     } catch (e: Exception) {
         Result.failure(e)
     }

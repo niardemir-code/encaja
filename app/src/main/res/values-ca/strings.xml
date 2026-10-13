@@ -90,11 +90,13 @@
     <string name="ajustes_cerrar_sesion">Tanca la sessió</string>
     <string name="ajustes_borrar_cuenta">Esborra el meu compte</string>
     <string name="ajustes_cuenta_borrada_titulo">Compte esborrat</string>
-    <string name="ajustes_cuenta_borrada_ultima">Ets l\'última persona amb compte en aquesta família. La seva informació continua guardada. Apunta aquest codi: qui l\'introdueixi en crear el seu compte es vincularà a la teva persona i continuarà amb tot.\n\n%1$s</string>
+    <string name="ajustes_cuenta_borrada_ultima">Ets l\'última persona amb compte en aquesta família. La seva informació es conservarà 30 dies i després s\'esborrarà sola. Apunta aquest codi: qui l\'introdueixi en crear el seu compte en aquest termini es vincularà a la teva persona i continuarà amb tot.\n\n%1$s</string>
     <string name="ajustes_cuenta_borrada_texto">El teu compte s\'ha eliminat. La informació de la família continua guardada.</string>
     <string name="ajustes_borrar_titulo">Vols esborrar el teu compte?</string>
-    <string name="ajustes_borrar_texto">S\'eliminarà el teu compte de l\'app i deixaràs de tenir accés a aquesta família i de rebre avisos. La teva persona i tot el seu historial es queden a la família, i podran tornar a vincular algú amb ella. No es pot desfer.</string>
+    <string name="ajustes_borrar_texto">S\'eliminarà el teu compte de l\'app i deixaràs de tenir accés a aquesta família i de rebre avisos. Si hi ha més persones amb compte, la teva persona i el seu historial es queden a la família. Si ets l\'única, es conserva 30 dies per si vols tornar, i després s\'esborra sola. No es pot desfer.</string>
     <string name="ajustes_borrar_accion">Esborra</string>
+    <string name="ajustes_cuenta_borrada_datos">El teu compte i totes les dades de la família s\'han esborrat.</string>
+    <string name="ajustes_borrar_datos">Esborra també totes les dades de la família (només si ets l\'única persona amb compte)</string>
     <string name="ajustes_error_borrar_cuenta">No s\'ha pogut esborrar el compte. Comprova la connexió i torna-ho a provar.</string>
     <string name="ajustes_error_desvincular">No s\'ha pogut desvincular el compte. Torna-ho a provar.</string>
     <string name="ajustes_alarma_titulo">Els avisos poden arribar tard</string>

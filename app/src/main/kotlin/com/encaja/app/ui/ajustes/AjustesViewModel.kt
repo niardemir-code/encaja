@@ -18,6 +18,7 @@ import com.encaja.app.domain.repository.CaregiverRepository
 import com.encaja.app.domain.repository.ChildRepository
 import com.encaja.app.domain.repository.FamilyMembershipRepository
 import com.encaja.app.domain.repository.FamilyUnitRepository
+import com.encaja.app.domain.repository.ResultadoBajaCuenta
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -96,10 +97,14 @@ class AjustesViewModel @Inject constructor(
      * Si sale bien se llama a [alTerminar] (con un código de invitación si era la última cuenta
      * de la familia); si no, a [alFallar]. El cuidador y su historial no se tocan.
      */
-    fun borrarMiCuenta(alTerminar: (codigoParaVolver: String?) -> Unit, alFallar: (TextoUi) -> Unit) {
+    fun borrarMiCuenta(
+        borrarDatosFamilia: Boolean,
+        alTerminar: (ResultadoBajaCuenta) -> Unit,
+        alFallar: (TextoUi) -> Unit
+    ) {
         lanzarSeguro {
-            cuentaRepository.borrarMiCuenta().fold(
-                onSuccess = { codigo -> alTerminar(codigo) },
+            cuentaRepository.borrarMiCuenta(borrarDatosFamilia).fold(
+                onSuccess = { resultado -> alTerminar(resultado) },
                 onFailure = { alFallar(textoUi(R.string.ajustes_error_borrar_cuenta)) }
             )
         }

@@ -49,7 +49,7 @@ class LoginViewModel @Inject constructor(
         }
     }
 
-    fun registrarse(email: String, password: String, alConseguirlo: () -> Unit) {
+    fun registrarse(email: String, password: String) {
         _uiState.value = LoginUiState(cargando = true)
         viewModelScope.launch {
             authRepository.registrarse(email, password).fold(

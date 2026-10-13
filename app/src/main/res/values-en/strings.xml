@@ -90,11 +90,13 @@
     <string name="ajustes_cerrar_sesion">Sign out</string>
     <string name="ajustes_borrar_cuenta">Delete my account</string>
     <string name="ajustes_cuenta_borrada_titulo">Account deleted</string>
-    <string name="ajustes_cuenta_borrada_ultima">You were the last person with an account in this family. Its information is still saved. Write down this code: whoever enters it when creating their account will be linked to your person and carry on with everything.\n\n%1$s</string>
+    <string name="ajustes_cuenta_borrada_ultima">You were the last person with an account in this family. Its information will be kept for 30 days and then deleted automatically. Write down this code: whoever enters it when creating their account within that time will be linked to your person and carry on with everything.\n\n%1$s</string>
     <string name="ajustes_cuenta_borrada_texto">Your account has been deleted. The family\'s information is still saved.</string>
     <string name="ajustes_borrar_titulo">Delete your account?</string>
-    <string name="ajustes_borrar_texto">Your account will be removed from the app and you\'ll lose access to this family and stop receiving alerts. Your person and their whole history stay in the family, and someone else can be linked to them again. This can\'t be undone.</string>
+    <string name="ajustes_borrar_texto">Your account will be removed from the app and you\'ll lose access to this family and stop receiving alerts. If other people have accounts, your person and their history stay in the family. If you\'re the only one, it\'s kept for 30 days in case you want to come back, then deleted automatically. This can\'t be undone.</string>
     <string name="ajustes_borrar_accion">Delete</string>
+    <string name="ajustes_cuenta_borrada_datos">Your account and all of the family\'s data have been deleted.</string>
+    <string name="ajustes_borrar_datos">Also delete all of the family\'s data (only if you\'re the only person with an account)</string>
     <string name="ajustes_error_borrar_cuenta">Couldn\'t delete the account. Check your connection and try again.</string>
     <string name="ajustes_error_desvincular">Couldn\'t unlink the account. Please try again.</string>
     <string name="ajustes_alarma_titulo">Alerts may arrive late</string>

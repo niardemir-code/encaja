@@ -14,6 +14,7 @@
 
 const { onDocumentCreated, onDocumentWritten } = require("firebase-functions/v2/firestore");
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { onSchedule } = require("firebase-functions/v2/scheduler");
 const admin = require("firebase-admin");
 
 admin.initializeApp();
@@ -149,6 +150,16 @@ async function desvincular(uid) {
   if (usuario.exists) await usuario.ref.delete();
 }
 
+// Días que se conserva una familia sin ninguna cuenta vinculada antes de borrarla del todo.
+const DIAS_CONSERVAR_HUERFANA = 30;
+
+/** Borra la familia completa (documento y todas sus subcolecciones) y sus invitaciones. */
+async function borrarFamiliaCompleta(familyId) {
+  await db.recursiveDelete(db.collection("families").doc(familyId));
+  const invitaciones = await db.collection("invites").where("familyId", "==", familyId).get();
+  await Promise.all(invitaciones.docs.map((d) => d.ref.delete()));
+}
+
 // Código de invitación de 6 caracteres (sin 0/O ni 1/I), igual que el que genera la app.
 const CARACTERES_CODIGO = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
 async function crearInvitacion(familyId, caregiverId) {
@@ -157,9 +168,10 @@ async function crearInvitacion(familyId, caregiverId) {
     for (let i = 0; i < 6; i++) codigo += CARACTERES_CODIGO[Math.floor(Math.random() * CARACTERES_CODIGO.length)];
     const ref = db.collection("invites").doc(codigo);
     if (!(await ref.get()).exists) {
-      // El código de reenganche tras borrar la última cuenta dura 90 días; el TTL de
-      // Firestore (campo "caducaEn" de "invites") lo borrará después.
-      const caducaEn = admin.firestore.Timestamp.fromMillis(Date.now() + 90 * 86400000);
+      // El código de reenganche tras borrar la última cuenta dura lo mismo que se conservan
+      // los datos de la familia (DIAS_CONSERVAR_HUERFANA); el TTL de Firestore (campo
+      // "caducaEn" de "invites") lo borrará después.
+      const caducaEn = admin.firestore.Timestamp.fromMillis(Date.now() + DIAS_CONSERVAR_HUERFANA * 86400000);
       await ref.set({ familyId, caregiverId, usado: false, caducaEn });
       return codigo;
     }
@@ -177,21 +189,35 @@ exports.borrarMiCuenta = onCall({ region: REGION }, async (request) => {
   const usuario = await db.collection("users").doc(uid).get();
   const familyId = usuario.get("familyId");
   const caregiverId = usuario.get("caregiverId");
+  // Si es la única cuenta de la familia, la persona puede pedir que se borren también todos
+  // los datos de la familia. Si hay más cuentas, la familia se conserva para ellas.
+  const borrarDatos = !!(request.data && request.data.borrarDatos === true);
   await desvincular(uid);
 
   let codigo = null;
-  if (familyId && caregiverId) {
+  let datosBorrados = false;
+  if (familyId) {
     const familia = db.collection("families").doc(familyId);
     const quedan = await familia.collection("caregiverLinks").limit(1).get();
-    const cuidador = await familia.collection("caregivers").doc(caregiverId).get();
-    if (quedan.empty && cuidador.exists) codigo = await crearInvitacion(familyId, caregiverId);
+    if (quedan.empty) {
+      if (borrarDatos) {
+        await borrarFamiliaCompleta(familyId);
+        datosBorrados = true;
+      } else {
+        // Sin cuentas: se conserva DIAS_CONSERVAR_HUERFANA días por si alguien vuelve con el
+        // código, y la limpieza diaria la borra después si nadie la recupera.
+        await familia.set({ huerfanaDesde: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+        const cuidador = caregiverId ? await familia.collection("caregivers").doc(caregiverId).get() : null;
+        if (cuidador && cuidador.exists) codigo = await crearInvitacion(familyId, caregiverId);
+      }
+    }
   }
   try {
     await admin.auth().deleteUser(uid);
   } catch (e) {
     if (e.code !== "auth/user-not-found") throw new HttpsError("internal", "No se pudo borrar la cuenta.");
   }
-  return { ok: true, codigo };
+  return { ok: true, codigo, datosBorrados };
 });
 
 // Un administrador desvincula la cuenta de otro cuidador de su familia: esa persona pierde el
@@ -283,3 +309,32 @@ exports.repararVinculo = onCall({ region: REGION }, async (request) => {
   }
   return { huerfano: true, existe: true };
 });
+
+// Limpieza diaria de familias sin ninguna cuenta vinculada. La primera vez que se ve una así se
+// anota "huerfanaDesde"; si pasados DIAS_CONSERVAR_HUERFANA días sigue sin cuentas, se borra por
+// completo (datos, invitaciones y el propio documento). Si alguien se vincula en el plazo, se
+// quita la marca y no se toca nada. Las familias de demostración ("demo-...") se saltan.
+exports.limpiarFamiliasHuerfanas = onSchedule(
+  { schedule: "every day 04:00", timeZone: "Europe/Madrid", region: REGION },
+  async () => {
+    const limite = Date.now() - DIAS_CONSERVAR_HUERFANA * 86400000;
+    const familias = await db.collection("families").listDocuments();
+    for (const ref of familias) {
+      if (ref.id.startsWith("demo-")) continue;
+      try {
+        const conCuentas = !(await ref.collection("caregiverLinks").limit(1).get()).empty;
+        const doc = await ref.get();
+        const desde = doc.get("huerfanaDesde");
+        if (conCuentas) {
+          if (desde) await ref.update({ huerfanaDesde: admin.firestore.FieldValue.delete() });
+        } else if (!desde) {
+          await ref.set({ huerfanaDesde: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+        } else if (desde.toMillis() < limite) {
+          await borrarFamiliaCompleta(ref.id);
+        }
+      } catch (e) {
+        console.error("limpiarFamiliasHuerfanas: fallo con la familia " + ref.id, e);
+      }
+    }
+  }
+);

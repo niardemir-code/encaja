@@ -91,11 +91,13 @@
     <string name="ajustes_cerrar_sesion">Cerrar sesión</string>
     <string name="ajustes_borrar_cuenta">Borrar mi cuenta</string>
     <string name="ajustes_cuenta_borrada_titulo">Cuenta borrada</string>
-    <string name="ajustes_cuenta_borrada_ultima">Eras la última persona con cuenta en esta familia. Su información sigue guardada. Apunta este código: quien lo introduzca al crear su cuenta se vinculará a tu persona y seguirá con todo.\n\n%1$s</string>
+    <string name="ajustes_cuenta_borrada_ultima">Eras la última persona con cuenta en esta familia. Su información se conservará 30 días y después se borrará sola. Apunta este código: quien lo introduzca al crear su cuenta en ese plazo se vinculará a tu persona y seguirá con todo.\n\n%1$s</string>
     <string name="ajustes_cuenta_borrada_texto">Tu cuenta se ha eliminado. La información de la familia sigue guardada.</string>
     <string name="ajustes_borrar_titulo">¿Borrar tu cuenta?</string>
-    <string name="ajustes_borrar_texto">Se eliminará tu cuenta de la app y dejarás de tener acceso a esta familia y de recibir avisos. Tu persona y todo su historial se quedan en la familia, y podrán volver a vincular a alguien con ella. No se puede deshacer.</string>
+    <string name="ajustes_borrar_texto">Se eliminará tu cuenta de la app y dejarás de tener acceso a esta familia y de recibir avisos. Si hay más personas con cuenta, tu persona y su historial se quedan en la familia. Si eres la única, se conserva 30 días por si quieres volver, y después se borra sola. No se puede deshacer.</string>
     <string name="ajustes_borrar_accion">Borrar</string>
+    <string name="ajustes_cuenta_borrada_datos">Tu cuenta y todos los datos de la familia se han borrado.</string>
+    <string name="ajustes_borrar_datos">Borrar también todos los datos de la familia (solo si eres la única persona con cuenta)</string>
     <string name="ajustes_error_borrar_cuenta">No se pudo borrar la cuenta. Comprueba la conexión e inténtalo de nuevo.</string>
     <string name="ajustes_error_desvincular">No se pudo desvincular la cuenta. Inténtalo de nuevo.</string>
     <string name="ajustes_alarma_titulo">Los avisos pueden llegar tarde</string>
