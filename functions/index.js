@@ -212,6 +212,9 @@ exports.desvincularCuenta = onCall({ region: REGION }, async (request) => {
   const familia = db.collection("families").doc(familyId);
   const miFicha = await familia.collection("caregivers").doc(miCuidador).get();
   if (miFicha.get("rol") !== "ADMIN") throw new HttpsError("permission-denied", "Solo un administrador puede hacerlo.");
+  // Y que mi cuenta sea de verdad la vinculada a esa ficha (no basta con apuntar a ella en users/{uid}).
+  const miEnlace = await familia.collection("caregiverLinks").doc(miCuidador).get();
+  if (miEnlace.get("uid") !== miUid) throw new HttpsError("permission-denied", "Solo un administrador puede hacerlo.");
 
   const enlace = await familia.collection("caregiverLinks").doc(cuidadorObjetivo).get();
   const uidObjetivo = enlace.get("uid");
@@ -244,6 +247,9 @@ exports.repararVinculo = onCall({ region: REGION }, async (request) => {
   const familia = db.collection("families").doc(familyId);
   const miFicha = await familia.collection("caregivers").doc(miCuidador).get();
   if (miFicha.get("rol") !== "ADMIN") throw new HttpsError("permission-denied", "Solo un administrador puede hacerlo.");
+  // Y que mi cuenta sea de verdad la vinculada a esa ficha (no basta con apuntar a ella en users/{uid}).
+  const miEnlace = await familia.collection("caregiverLinks").doc(miCuidador).get();
+  if (miEnlace.get("uid") !== miUid) throw new HttpsError("permission-denied", "Solo un administrador puede hacerlo.");
 
   const enlace = await familia.collection("caregiverLinks").doc(cuidadorObjetivo).get();
   if (!enlace.exists) return { huerfano: false, existe: false };

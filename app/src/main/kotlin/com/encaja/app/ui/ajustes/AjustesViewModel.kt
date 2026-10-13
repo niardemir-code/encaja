@@ -162,6 +162,23 @@ class AjustesViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Cambia el rol de un cuidador entre administrador y cuidador. Solo un administrador puede,
+     * y la familia nunca se queda sin ninguno. Se guarda únicamente esa ficha.
+     */
+    fun cambiarRol(caregiverId: CaregiverId, nuevoRol: CaregiverRole) {
+        val familyId = familyIdActual ?: return
+        val datos = _pantalla.value as? AjustesPantallaEstado.ConDatos ?: return
+        if (!datos.soyAdmin) return
+        val objetivo = datos.cuidadores.firstOrNull { it.id == caregiverId } ?: return
+        if (objetivo.rol == nuevoRol) return
+        if (objetivo.rol == CaregiverRole.ADMIN && datos.cuidadores.count { it.rol == CaregiverRole.ADMIN } <= 1) return
+        lanzarSeguro {
+            caregiverRepository.guardarCuidadores(familyId, listOf(objetivo.copy(rol = nuevoRol)))
+            cargar()
+        }
+    }
+
     fun eliminarCuidador(caregiverId: CaregiverId) {
         val familyId = familyIdActual ?: return
         quitarDeLaPantalla { d ->

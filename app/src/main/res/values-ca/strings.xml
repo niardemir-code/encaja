@@ -113,6 +113,14 @@
     <string name="cuidadores_estado_con_cuenta">Amb compte vinculat</string>
     <string name="cuidadores_desvincular_cuenta_de">Desvincula el compte: %1$s</string>
     <string name="cuidadores_vincularme_a">Vincula\'m a %1$s</string>
+    <string name="cuidadores_rol_admin">Administrador</string>
+    <string name="cuidadores_rol_cambiar_a">Canvia el rol de %1$s</string>
+    <string name="cuidadores_rol_hacer_titulo">Fer administrador %1$s?</string>
+    <string name="cuidadores_rol_hacer_texto">Podrà afegir i eliminar cuidadors, canviar rols, convidar altres administradors i desvincular comptes. Tindrà el mateix control que tu.</string>
+    <string name="cuidadores_rol_hacer_accion">Fer administrador</string>
+    <string name="cuidadores_rol_quitar_titulo">Treure el rol d\'administrador a %1$s?</string>
+    <string name="cuidadores_rol_quitar_texto">Continuarà a la família i podrà fer servir l\'app amb normalitat, però ja no podrà gestionar cuidadors, rols ni comptes.</string>
+    <string name="cuidadores_rol_quitar_accion">Treure administrador</string>
     <string name="cuidadores_eliminar_a">Elimina %1$s</string>
     <string name="cuidadores_nuevo">Nou cuidador</string>
     <string name="unidades_titulo">Unitats familiars</string>

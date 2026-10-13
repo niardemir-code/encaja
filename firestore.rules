@@ -19,8 +19,14 @@ rules_version = '2';
 //
 // LIMITACIÓN CONOCIDA: cada usuario escribe su propio users/{uid}, y desde ahí se
 // determina a qué familia pertenece. Quien conociera el identificador de otra familia
-// podría escribirlo en su documento. Cerrarlo del todo exige que el canje de invitaciones
-// y el vínculo se hagan en una Cloud Function (hoja de ruta, fase E).
+// podría escribirlo en su documento. Para limitar el daño:
+//   - los códigos de invitación solo se pueden leer de uno en uno (nunca listarlos), que es
+//     la única forma de conocer el identificador de una familia ajena;
+//   - los permisos de ADMIN y de escritura solo valen si la cuenta es de verdad la vinculada
+//     a esa ficha (caregiverLinks), así que no basta con copiar el id del administrador;
+//   - un enlace cuidador-cuenta ya ocupado por otra cuenta no se puede pisar.
+// Cerrarlo del todo exige que el canje de invitaciones y el vínculo se hagan en una Cloud
+// Function (hoja de ruta, fase E).
 
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -48,9 +54,17 @@ service cloud.firestore {
       return exists(rutaMiFicha(familyId));
     }
 
+    // Mi cuenta es de verdad la vinculada a la ficha que mi users/{uid} dice que es mía.
+    // Sin esto, bastaría con escribir en users/{uid} el caregiverId de un administrador.
+    function vinculoValido(familyId) {
+      return exists(/databases/$(database)/documents/families/$(familyId)/caregiverLinks/$(miMembresia().caregiverId))
+        && get(/databases/$(database)/documents/families/$(familyId)/caregiverLinks/$(miMembresia().caregiverId)).data.uid == request.auth.uid;
+    }
+
     function soyAdmin(familyId) {
       return esMiembroDeFamilia(familyId)
         && tengoFicha(familyId)
+        && vinculoValido(familyId)
         && get(rutaMiFicha(familyId)).data.rol == 'ADMIN';
     }
 
@@ -59,7 +73,8 @@ service cloud.firestore {
     // poder crearla; el resto de reglas limitan qué puede hacerse en ese momento.
     function puedoEscribir(familyId) {
       return esMiembroDeFamilia(familyId)
-        && (!tengoFicha(familyId) || get(rutaMiFicha(familyId)).data.rol != 'SOLO_LECTURA');
+        && (!tengoFicha(familyId)
+            || (vinculoValido(familyId) && get(rutaMiFicha(familyId)).data.rol != 'SOLO_LECTURA'));
     }
 
     // --- users/{uid}: la membresía de cada usuario ---
@@ -73,15 +88,20 @@ service cloud.firestore {
 
     // --- invites/{codigo}: códigos de invitación de un solo uso ---
     match /invites/{codigo} {
-      // Hace falta poder leer un código para canjearlo, incluso antes de
-      // pertenecer a esa familia.
-      allow read: if autenticado();
+      // Hace falta poder leer un código para canjearlo, incluso antes de pertenecer a esa
+      // familia. Solo "get" (por código exacto): listar la colección daría los identificadores
+      // de todas las familias con una invitación pendiente.
+      allow get: if autenticado();
+      allow list: if false;
 
-      // Solo un miembro con permiso de escritura puede generar invitaciones,
-      // y siempre sin usar todavía.
+      // Solo un miembro con permiso de escritura puede generar invitaciones, siempre sin
+      // usar todavía, y solo un ADMIN puede invitar a la ficha de un ADMIN.
       allow create: if autenticado()
+        && request.resource.data.keys().hasOnly(['familyId', 'caregiverId', 'usado', 'caducaEn'])
         && puedoEscribir(request.resource.data.familyId)
-        && request.resource.data.usado == false;
+        && request.resource.data.usado == false
+        && (soyAdmin(request.resource.data.familyId)
+            || get(/databases/$(database)/documents/families/$(request.resource.data.familyId)/caregivers/$(request.resource.data.caregiverId)).data.rol != 'ADMIN');
 
       // Canjear un código solo puede cambiar "usado" de false a true.
       allow update: if autenticado()
@@ -106,6 +126,7 @@ service cloud.firestore {
       // Editar: un ADMIN, o yo mismo sin tocar mi rol.
       allow update: if soyAdmin(familyId)
         || (puedoEscribir(familyId)
+            && vinculoValido(familyId)
             && caregiverId == miMembresia().caregiverId
             && request.resource.data.rol == resource.data.rol);
 
@@ -115,8 +136,20 @@ service cloud.firestore {
     // --- Enlaces cuidador-cuenta: cada uno crea el suyo; un ADMIN gestiona los demás ---
     match /families/{familyId}/caregiverLinks/{caregiverId} {
       allow read: if esMiembroDeFamilia(familyId);
-      allow write: if soyAdmin(familyId)
-        || (esMiembroDeFamilia(familyId) && caregiverId == miMembresia().caregiverId);
+
+      // Crear el enlace de mi propia ficha, y solo a nombre de mi cuenta.
+      allow create: if esMiembroDeFamilia(familyId)
+        && caregiverId == miMembresia().caregiverId
+        && request.resource.data.uid == request.auth.uid;
+
+      // Un enlace ocupado por otra cuenta no se puede pisar; el mío puedo rehacerlo.
+      allow update: if esMiembroDeFamilia(familyId)
+        && resource.data.uid == request.auth.uid
+        && request.resource.data.uid == request.auth.uid;
+
+      // Borrar: un ADMIN el de cualquiera, y cada uno el suyo (limpieza de enlaces antiguos).
+      allow delete: if soyAdmin(familyId)
+        || (esMiembroDeFamilia(familyId) && resource.data.uid == request.auth.uid);
     }
 
     // --- Resto de datos de la familia (niños, actividades, compra, menús...) ---

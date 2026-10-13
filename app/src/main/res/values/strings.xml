@@ -114,6 +114,14 @@
     <string name="cuidadores_estado_con_cuenta">Con cuenta vinculada</string>
     <string name="cuidadores_desvincular_cuenta_de">Desvincular la cuenta de %1$s</string>
     <string name="cuidadores_vincularme_a">Vincularme a %1$s</string>
+    <string name="cuidadores_rol_admin">Administrador</string>
+    <string name="cuidadores_rol_cambiar_a">Cambiar el rol de %1$s</string>
+    <string name="cuidadores_rol_hacer_titulo">¿Hacer administrador a %1$s?</string>
+    <string name="cuidadores_rol_hacer_texto">Podrá añadir y eliminar cuidadores, cambiar roles, invitar a otros administradores y desvincular cuentas. Tendrá el mismo control que tú.</string>
+    <string name="cuidadores_rol_hacer_accion">Hacer administrador</string>
+    <string name="cuidadores_rol_quitar_titulo">¿Quitar el rol de administrador a %1$s?</string>
+    <string name="cuidadores_rol_quitar_texto">Seguirá en la familia y podrá usar la app con normalidad, pero ya no podrá gestionar cuidadores, roles ni cuentas.</string>
+    <string name="cuidadores_rol_quitar_accion">Quitar administrador</string>
     <string name="cuidadores_eliminar_a">Eliminar a %1$s</string>
     <string name="cuidadores_nuevo">Nuevo cuidador</string>
     <string name="unidades_titulo">Unidades familiares</string>

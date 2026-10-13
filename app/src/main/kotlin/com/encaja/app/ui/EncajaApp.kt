@@ -476,7 +476,13 @@ fun EncajaApp(
         rutaActual = rutaActual,
         ayuda = ayuda,
         etapas = ETAPAS_TOUR,
-        activo = !preguntarBateria && !masInfoBateria && !bajaDetectada
+        activo = !preguntarBateria && !masInfoBateria && !bajaDetectada,
+        alFinalizar = {
+            navController.navigate(Destino.Semana.ruta) {
+                popUpTo(navController.graph.findStartDestination().id)
+                launchSingleTop = true
+            }
+        }
     )
     CapaAyuda(ayuda)
     }

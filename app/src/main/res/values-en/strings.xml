@@ -113,6 +113,14 @@
     <string name="cuidadores_estado_con_cuenta">With a linked account</string>
     <string name="cuidadores_desvincular_cuenta_de">Unlink %1$s\'s account</string>
     <string name="cuidadores_vincularme_a">Link me to %1$s</string>
+    <string name="cuidadores_rol_admin">Administrator</string>
+    <string name="cuidadores_rol_cambiar_a">Change %1$s\'s role</string>
+    <string name="cuidadores_rol_hacer_titulo">Make %1$s an administrator?</string>
+    <string name="cuidadores_rol_hacer_texto">They will be able to add and remove caregivers, change roles, invite other administrators and unlink accounts. They will have the same control as you.</string>
+    <string name="cuidadores_rol_hacer_accion">Make administrator</string>
+    <string name="cuidadores_rol_quitar_titulo">Remove %1$s\'s administrator role?</string>
+    <string name="cuidadores_rol_quitar_texto">They will stay in the family and keep using the app as usual, but will no longer be able to manage caregivers, roles or accounts.</string>
+    <string name="cuidadores_rol_quitar_accion">Remove administrator</string>
     <string name="cuidadores_eliminar_a">Delete %1$s</string>
     <string name="cuidadores_nuevo">New caregiver</string>
     <string name="unidades_titulo">Family units</string>

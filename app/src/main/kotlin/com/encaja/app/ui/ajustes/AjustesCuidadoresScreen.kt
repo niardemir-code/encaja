@@ -2,6 +2,8 @@ package com.encaja.app.ui.ajustes
 
 // NOTA: depende de Jetpack Compose y Hilt, no compilado en este entorno.
 
+import com.encaja.app.domain.model.CaregiverRole
+import androidx.compose.material.icons.filled.AdminPanelSettings
 import com.encaja.app.ui.ayuda.ayudaObjetivo
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -101,7 +103,8 @@ fun AjustesCuidadoresScreen(viewModel: AjustesViewModel = hiltViewModel()) {
                         },
                         onAgregar = { nombre, apellido1, apellido2 -> viewModel.agregarCuidador(nombre, apellido1, apellido2) },
                         onEliminar = { caregiverId -> viewModel.eliminarCuidador(caregiverId) },
-                        onVincularme = { caregiverId -> viewModel.vincularmeAEsteCuidador(caregiverId) }
+                        onVincularme = { caregiverId -> viewModel.vincularmeAEsteCuidador(caregiverId) },
+                        onCambiarRol = { caregiverId, rol -> viewModel.cambiarRol(caregiverId, rol) }
                     )
                     errorBaja?.let { MensajePantalla(it.resolver(), error = true) }
 
@@ -128,9 +131,12 @@ private fun SeccionCuidadores(
     onDesvincular: (CaregiverId) -> Unit,
     onAgregar: (nombre: String, apellido1: String, apellido2: String) -> Unit,
     onEliminar: (CaregiverId) -> Unit,
-    onVincularme: (CaregiverId) -> Unit
+    onVincularme: (CaregiverId) -> Unit,
+    onCambiarRol: (CaregiverId, CaregiverRole) -> Unit
 ) {
     var vinculadoAId by remember { mutableStateOf<CaregiverId?>(null) }
+    var cuidadorARol by remember { mutableStateOf<Caregiver?>(null) }
+    val administradores = cuidadores.count { it.rol == CaregiverRole.ADMIN }
     var cuidadorADesvincular by remember { mutableStateOf<Caregiver?>(null) }
     var cuidadorAEliminar by remember { mutableStateOf<Caregiver?>(null) }
     var nuevoAbierto by remember { mutableStateOf(false) }
@@ -158,6 +164,30 @@ private fun SeccionCuidadores(
                 AccionAvisoHoja(stringResource(R.string.comun_cancelar), EstiloAccionAviso.BORDE) { cuidadorAEliminar = null }
             ),
             onCerrar = { cuidadorAEliminar = null }
+        )
+    }
+
+    cuidadorARol?.let { cuidador ->
+        val haceAdmin = cuidador.rol != CaregiverRole.ADMIN
+        AvisoHoja(
+            icono = Icons.Default.AdminPanelSettings,
+            titulo = stringResource(
+                if (haceAdmin) R.string.cuidadores_rol_hacer_titulo else R.string.cuidadores_rol_quitar_titulo,
+                cuidador.nombreCompleto
+            ),
+            texto = stringResource(if (haceAdmin) R.string.cuidadores_rol_hacer_texto else R.string.cuidadores_rol_quitar_texto),
+            peligro = false,
+            acciones = listOf(
+                AccionAvisoHoja(
+                    stringResource(if (haceAdmin) R.string.cuidadores_rol_hacer_accion else R.string.cuidadores_rol_quitar_accion),
+                    EstiloAccionAviso.PRIMARIO
+                ) {
+                    onCambiarRol(cuidador.id, if (haceAdmin) CaregiverRole.ADMIN else CaregiverRole.CUIDADOR)
+                    cuidadorARol = null
+                },
+                AccionAvisoHoja(stringResource(R.string.comun_cancelar), EstiloAccionAviso.BORDE) { cuidadorARol = null }
+            ),
+            onCerrar = { cuidadorARol = null }
         )
     }
 
@@ -212,11 +242,23 @@ private fun SeccionCuidadores(
                         cuidador.id in vinculados -> stringResource(R.string.cuidadores_estado_con_cuenta)
                         else -> null
                     }
-                    estado?.let {
-                        Text(it, style = MaterialTheme.typography.bodySmall, color = tintaSuaveHoja)
+                    val textoEstado = listOfNotNull(
+                        estado,
+                        if (cuidador.rol == CaregiverRole.ADMIN) stringResource(R.string.cuidadores_rol_admin) else null
+                    ).joinToString(" · ")
+                    if (textoEstado.isNotEmpty()) {
+                        Text(textoEstado, style = MaterialTheme.typography.bodySmall, color = tintaSuaveHoja)
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    // Cambiar el rol: solo un administrador, y nunca quitando al único administrador.
+                    if (soyAdmin && (cuidador.rol != CaregiverRole.ADMIN || administradores > 1)) {
+                        BotonRedondoSuaveHoja(
+                            Icons.Default.AdminPanelSettings,
+                            stringResource(R.string.cuidadores_rol_cambiar_a, cuidador.nombreCompleto),
+                            { cuidadorARol = cuidador }
+                        )
+                    }
                     if (soyAdmin && cuidador.id in vinculados && cuidador.id != miCaregiverId) {
                         BotonRedondoSuaveHoja(
                             Icons.Default.LinkOff,

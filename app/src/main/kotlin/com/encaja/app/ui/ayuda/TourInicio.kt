@@ -44,7 +44,9 @@ fun TourInicioHost(
     rutaActual: String?,
     ayuda: AyudaState,
     etapas: List<EtapaTour>,
-    activo: Boolean
+    activo: Boolean,
+    /** Al acabar o saltar el tour: deja la app en la pantalla principal (Semana). */
+    alFinalizar: () -> Unit = {}
 ) {
     val contexto = LocalContext.current
     var etapa by remember { mutableIntStateOf(PreferenciaTour.etapa(contexto)) }
@@ -93,11 +95,13 @@ fun TourInicioHost(
                         paso = 0
                         etapa += 1
                         PreferenciaTour.guardar(contexto, etapa)
+                        if (etapa >= etapas.size) alFinalizar()
                     }
                 },
                 alSaltar = {
                     etapa = etapas.size
                     PreferenciaTour.guardar(contexto, etapa)
+                    alFinalizar()
                 }
             )
         )
