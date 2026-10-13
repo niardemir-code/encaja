@@ -13,6 +13,7 @@ package com.encaja.app.ui.familia
 // Los colores del diseño están aquí como constantes para no tocar el tema
 // del resto de pantallas.
 
+import com.encaja.app.ui.common.nombreVisible
 import com.encaja.app.domain.model.MotivoNoDisponibilidad
 import com.encaja.app.ui.common.etiquetaCortaDeMotivo
 import androidx.compose.ui.res.pluralStringResource
@@ -844,7 +845,7 @@ private fun Leyenda(categorias: List<CategoriaDisponibilidad>) {
     ) {
         ElementoLeyenda(color = VERDE, texto = stringResource(R.string.familia_libre))
         categorias.forEach { categoria ->
-            ElementoLeyenda(color = Color(categoria.color), texto = "${categoria.emoji} ${categoria.nombre}")
+            ElementoLeyenda(color = Color(categoria.color), texto = "${categoria.emoji} ${categoria.nombreVisible()}")
         }
     }
 }
@@ -925,7 +926,7 @@ private fun DialogoListaCategorias(
                         }
                         Spacer(Modifier.width(10.dp))
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(categoria.nombre, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold, color = TINTA)
+                            Text(categoria.nombreVisible(), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold, color = TINTA)
                             Text(
                                 listOf(
                                     if (categoria.modo == ModoCategoria.HORAS) stringResource(R.string.familia_modo_horas) else stringResource(R.string.familia_modo_dias),
@@ -949,7 +950,7 @@ private fun DialogoListaCategorias(
                     Text(stringResource(R.string.familia_borradas), style = MaterialTheme.typography.labelMedium, color = TINTA_SUAVE)
                     eliminadas.forEach { categoria ->
                         TextButton(onClick = { onRecuperar(categoria) }) {
-                            Text("${categoria.emoji} ${categoria.nombre}")
+                            Text("${categoria.emoji} ${categoria.nombreVisible()}")
                         }
                     }
                 }

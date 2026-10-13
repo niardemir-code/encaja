@@ -21,6 +21,7 @@ package com.encaja.app.ui.familia
 //    guarda ni se borra hasta pulsar uno de los dos.
 // Las categorías se editan desde la tarjeta "Categorías" de la pantalla.
 
+import com.encaja.app.ui.common.nombreVisible
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.encaja.app.R
@@ -393,7 +394,7 @@ fun DialogoDisponibilidad(
                     }
                     Spacer(Modifier.width(10.dp))
                     Text(
-                        stringResource(R.string.disp_editando, seleccionada.nombre),
+                        stringResource(R.string.disp_editando, seleccionada.nombreVisible()),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.ExtraBold,
                         color = tintaHoja
@@ -520,7 +521,7 @@ fun DialogoDisponibilidad(
                         Spacer(Modifier.height(12.dp))
                         TarjetaSeccionHoja(padding = 10.dp) {
                             Text(
-                                stringResource(R.string.disp_punto_info, seleccionada.nombre),
+                                stringResource(R.string.disp_punto_info, seleccionada.nombreVisible()),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = tintaSuaveHoja
                             )
@@ -559,14 +560,14 @@ fun DialogoDisponibilidad(
                             Column {
                                 Text(
                                     if (guardarFechas.isEmpty()) stringResource(R.string.disp_ningun_dia)
-                                    else if (sustituidas > 0) stringResource(R.string.disp_se_guardara_en_sustituye, textoDias(guardarFechas.size), textoDias(sustituidas), seleccionada.nombre)
+                                    else if (sustituidas > 0) stringResource(R.string.disp_se_guardara_en_sustituye, textoDias(guardarFechas.size), textoDias(sustituidas), seleccionada.nombreVisible())
                                     else stringResource(R.string.disp_se_guardara_en, textoDias(guardarFechas.size)),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = tintaSuaveHoja
                                 )
                                 if (borrarFechas.isNotEmpty()) {
                                     Text(
-                                        stringResource(R.string.disp_se_borrara, seleccionada.nombre, textoDias(borrarFechas.size)),
+                                        stringResource(R.string.disp_se_borrara, seleccionada.nombreVisible(), textoDias(borrarFechas.size)),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.error
                                     )
@@ -613,7 +614,7 @@ fun DialogoDisponibilidad(
     }
 
     if (confirmandoGuardado) {
-        val nombreCat = seleccionada?.nombre.orEmpty()
+        val nombreCat = seleccionada?.nombreVisible().orEmpty()
         val lineas = mutableListOf<String>()
         if (guardarFechas.isNotEmpty()) {
             lineas += if (sustituidas > 0) {
@@ -703,7 +704,7 @@ private fun FilaBloqueDelDia(
         }
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(categoria.nombre, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = tintaHoja)
+            Text(categoria.nombreVisible(), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = tintaHoja)
             Text(subtitulo, style = MaterialTheme.typography.bodySmall, color = tintaSuaveHoja)
         }
         Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.comun_editar), tint = if (editando) acentoHoja else tintaSuaveHoja, modifier = Modifier.size(20.dp))
@@ -728,7 +729,7 @@ private fun CasillaCategoria(categoria: CategoriaDisponibilidad, elegida: Boolea
             Text(categoria.emoji, fontSize = 22.sp)
             Spacer(Modifier.width(8.dp))
             Text(
-                categoria.nombre,
+                categoria.nombreVisible(),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.ExtraBold,
                 color = if (elegida) onAcentoHoja else tintaHoja,

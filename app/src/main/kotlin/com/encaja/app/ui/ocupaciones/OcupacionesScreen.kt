@@ -8,6 +8,8 @@ package com.encaja.app.ui.ocupaciones
 // una casilla por ocupación y un botón para borrar de golpe la selección. Mismo estilo
 // que "Todas las actividades".
 
+import androidx.compose.ui.platform.LocalContext
+import com.encaja.app.ui.common.nombreVisible
 import com.encaja.app.R
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
@@ -164,10 +166,11 @@ fun OcupacionesScreen(viewModel: OcupacionesViewModel = hiltViewModel()) {
                         )
                     }
 
+                    val contextoApp = LocalContext.current
                     val visibles = estadoActual.ocupaciones.filter { ocupacion ->
                         (filtroQuien == null || filtroQuien in ocupacion.idsFiltro) &&
                             (filtroTexto.isBlank() ||
-                                ocupacion.categoria.nombre.contains(filtroTexto, ignoreCase = true) ||
+                                ocupacion.categoria.nombreVisible(contextoApp).contains(filtroTexto, ignoreCase = true) ||
                                 ocupacion.representante.etiqueta.orEmpty().contains(filtroTexto, ignoreCase = true) ||
                                 ocupacion.quien.contains(filtroTexto, ignoreCase = true))
                     }
@@ -258,7 +261,7 @@ private fun FilaOcupacion(ocupacion: Ocupacion, marcada: Boolean, onMarcar: (Boo
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                "${categoria.nombre} · ${if (bloque.todoElDia) stringResource(R.string.comun_todo_el_dia) else textoHorario(bloque)}",
+                "${categoria.nombreVisible()} · ${if (bloque.todoElDia) stringResource(R.string.comun_todo_el_dia) else textoHorario(bloque)}",
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 color = tintaHoja

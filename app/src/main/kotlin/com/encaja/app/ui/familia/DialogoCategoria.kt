@@ -8,6 +8,8 @@ package com.encaja.app.ui.familia
 // color e icono (galería de emojis). Las de serie (Trabajo, Médico...) también se
 // pueden borrar; quedan ocultas y se pueden recuperar desde la lista de categorías.
 
+import androidx.compose.ui.platform.LocalContext
+import com.encaja.app.ui.common.nombreVisible
 import androidx.compose.ui.res.stringResource
 import com.encaja.app.R
 import androidx.compose.material.icons.filled.EmojiEmotions
@@ -60,7 +62,8 @@ fun DialogoCategoria(
 ) {
     val esBase = inicial?.esBase == true
     val idNueva = remember { CategoriaId(UUID.randomUUID().toString()) }
-    var nombre by remember { mutableStateOf(inicial?.nombre ?: "") }
+    val contexto = LocalContext.current
+    var nombre by remember { mutableStateOf(inicial?.nombreVisible(contexto) ?: "") }
     var emoji by remember { mutableStateOf(inicial?.emoji ?: "📌") }
     var color by remember { mutableStateOf(inicial?.color ?: COLORES_CATEGORIA[4]) }
     var modo by remember { mutableStateOf(inicial?.modo ?: ModoCategoria.HORAS) }
@@ -68,12 +71,14 @@ fun DialogoCategoria(
     var galeriaAbierta by remember { mutableStateOf(false) }
     var confirmarBorrado by remember { mutableStateOf(false) }
 
-    val nombreRepetido = nombre.isNotBlank() && !nombreCategoriaValido(nombre, categorias, inicial?.id)
-    val puedeGuardar = nombreCategoriaValido(nombre, categorias, inicial?.id)
+    // Los nombres se comparan como los ve la familia (las de serie, en su idioma).
+    val categoriasVisibles = remember(categorias, contexto) { categorias.map { it.copy(nombre = it.nombreVisible(contexto)) } }
+    val nombreRepetido = nombre.isNotBlank() && !nombreCategoriaValido(nombre, categoriasVisibles, inicial?.id)
+    val puedeGuardar = nombreCategoriaValido(nombre, categoriasVisibles, inicial?.id)
 
     AvisoHoja(
         icono = Icons.Default.Category,
-        titulo = if (inicial == null) stringResource(R.string.categoria_nueva) else stringResource(R.string.categoria_editar, inicial.nombre),
+        titulo = if (inicial == null) stringResource(R.string.categoria_nueva) else stringResource(R.string.categoria_editar, inicial.nombreVisible(contexto)),
         texto = null,
         peligro = false,
         conX = true,
@@ -83,7 +88,8 @@ fun DialogoCategoria(
             AccionAvisoHoja(stringResource(R.string.comun_guardar), EstiloAccionAviso.PRIMARIO, habilitada = puedeGuardar) {
 val guardada = CategoriaDisponibilidad(
                         id = inicial?.id ?: idNueva,
-                        nombre = nombre.trim(),
+                        // Si no se ha tocado el nombre, se conserva el guardado (el de serie sigue adaptándose al idioma).
+                        nombre = nombre.trim().let { limpio -> if (inicial != null && limpio == inicial.nombreVisible(contexto)) inicial.nombre else limpio },
                         emoji = emoji,
                         color = color,
                         modo = modo,
