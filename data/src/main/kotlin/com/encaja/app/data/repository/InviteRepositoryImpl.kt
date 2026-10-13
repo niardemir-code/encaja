@@ -1,5 +1,6 @@
 package com.encaja.app.data.repository
 
+import com.encaja.app.domain.model.ErrorDeInvitacion
 import com.encaja.app.domain.model.CaregiverId
 import com.encaja.app.domain.model.FamilyId
 import com.encaja.app.domain.model.FamilyMembership
@@ -49,10 +50,9 @@ class InviteRepositoryImpl @Inject constructor(
             // campos (de ahí el PERMISSION_DENIED). Un get() a un documento concreto sí es compatible.
             val yaVinculado = firestore.collection("families").document(familyId.value)
                 .collection("caregiverLinks").document(caregiverId.value)
-                .get()
-                .await()
+                .get().await()
             if (yaVinculado.exists() && !enlaceHuerfano(caregiverId)) {
-                return Result.failure(IllegalStateException("Ese cuidador ya tiene una cuenta vinculada"))
+                return Result.failure(ErrorDeInvitacion.CuidadorYaVinculado)
             }
 
             // Hasta 5 intentos por si el código generado ya existiera (muy improbable con 6 caracteres).
@@ -74,7 +74,7 @@ class InviteRepositoryImpl @Inject constructor(
                     return Result.success(codigo)
                 }
             }
-            Result.failure(IllegalStateException("No se pudo generar un código único, inténtalo de nuevo"))
+            Result.failure(ErrorDeInvitacion.NoSeGeneroCodigo)
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -87,19 +87,19 @@ class InviteRepositoryImpl @Inject constructor(
             val membership = firestore.runTransaction { transaccion ->
                 val snapshot = transaccion.get(doc)
                 if (!snapshot.exists()) {
-                    throw IllegalArgumentException("Ese código no existe")
+                    throw ErrorDeInvitacion.CodigoNoExiste
                 }
                 val usado = snapshot.getBoolean("usado") ?: false
                 if (usado) {
-                    throw IllegalStateException("Ese código ya se ha usado")
+                    throw ErrorDeInvitacion.CodigoYaUsado
                 }
                 // Los códigos antiguos no tienen fecha de caducidad: siguen valiendo.
                 val caducaEn = snapshot.getTimestamp("caducaEn")
                 if (caducaEn != null && caducaEn.toDate().time < System.currentTimeMillis()) {
-                    throw IllegalStateException("Ese código ha caducado, pide uno nuevo")
+                    throw ErrorDeInvitacion.CodigoCaducado
                 }
-                val familyId = snapshot.getString("familyId") ?: throw IllegalStateException("Código incompleto")
-                val caregiverId = snapshot.getString("caregiverId") ?: throw IllegalStateException("Código incompleto")
+                val familyId = snapshot.getString("familyId") ?: throw ErrorDeInvitacion.CodigoIncompleto
+                val caregiverId = snapshot.getString("caregiverId") ?: throw ErrorDeInvitacion.CodigoIncompleto
 
                 transaccion.update(doc, "usado", true)
                 FamilyMembership(FamilyId(familyId), CaregiverId(caregiverId))

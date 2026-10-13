@@ -9,6 +9,11 @@ package com.encaja.app.ui.semana
 // sin familia, con datos. El botón de invitar vive en la barra superior
 // (EncajaApp.kt), no aquí.
 
+import com.encaja.app.ui.common.etiquetaDeMotivo
+import com.encaja.app.ui.common.resolver
+import com.encaja.app.ui.common.TextoUi
+import com.encaja.app.R
+import androidx.compose.ui.res.stringResource
 import com.encaja.app.ui.common.rangoSemana
 import com.encaja.app.ui.common.letraDia
 import com.encaja.app.ui.common.diaConNumero
@@ -76,7 +81,6 @@ import com.encaja.app.domain.model.Hueco
 import com.encaja.app.domain.model.MotivoHueco
 import com.encaja.app.domain.usecase.AvisoConflicto
 import com.encaja.app.domain.usecase.RolResponsable
-import com.encaja.app.ui.familia.etiquetaMotivo
 import com.encaja.app.ui.familia.fechaAMillisUtc
 import com.encaja.app.ui.familia.millisUtcAFecha
 import com.encaja.app.ui.ayuda.AyudaPantalla
@@ -92,22 +96,10 @@ import java.time.LocalTime
 
 /** Visita guiada de la primera vez en Semana. */
 private val PASOS_AYUDA_SEMANA = listOf(
-    PasoAyuda(
-        "semana_tarjeta", "El semáforo de la semana",
-        "Cada círculo es un día. Verde: todo cubierto. Ámbar: hay avisos. Rojo: falta alguien. Toca un día para ver el detalle."
-    ),
-    PasoAyuda(
-        "semana_tablon", "Tablón de la familia",
-        "Escribe aquí notas para todos: las verán al abrir la app."
-    ),
-    PasoAyuda(
-        "barra_invitar", "Invita a tu familia",
-        "Genera un código para que otra persona se una a tu familia y vea lo mismo que tú."
-    ),
-    PasoAyuda(
-        "barra_inferior", "Tus pestañas",
-        "Guía: el día hora a hora. Familia: la disponibilidad de cada uno. Menú: las comidas de la semana. Compra: la lista familiar."
-    )
+    PasoAyuda("semana_tarjeta", R.string.ayuda_semana_semaforo_t, R.string.ayuda_semana_semaforo_d),
+    PasoAyuda("semana_tablon", R.string.ayuda_semana_tablon_t, R.string.ayuda_semana_tablon_d),
+    PasoAyuda("barra_invitar", R.string.ayuda_semana_invitar_t, R.string.ayuda_semana_invitar_d),
+    PasoAyuda("barra_inferior", R.string.ayuda_semana_pestanas_t, R.string.ayuda_semana_pestanas_d)
 )
 
 // Atajos a los colores del tema activo (Cálido/Nocturno) con los nombres del diseño.
@@ -159,30 +151,30 @@ fun SemanaScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    "No se pudo cargar tu familia",
+                    stringResource(R.string.semana_error_titulo),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.ExtraBold,
                     color = TINTA
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "Revisa la conexión a internet y vuelve a intentarlo.",
+                    stringResource(R.string.comun_revisa_conexion),
                     style = MaterialTheme.typography.bodyMedium,
                     color = TINTA_SUAVE,
                     textAlign = TextAlign.Center
                 )
                 Spacer(Modifier.height(16.dp))
-                Button(onClick = { viewModel.recargar() }) { Text("Reintentar") }
+                Button(onClick = { viewModel.recargar() }) { Text(stringResource(R.string.comun_reintentar)) }
             }
         }
 
         is SemaforoPantallaEstado.SinFamilia -> {
             var codigo by remember { mutableStateOf("") }
-            var error by remember { mutableStateOf<String?>(null) }
+            var error by remember { mutableStateOf<TextoUi?>(null) }
             var nombre by remember { mutableStateOf("") }
             var apellido1 by remember { mutableStateOf("") }
             var apellido2 by remember { mutableStateOf("") }
-            var errorCrear by remember { mutableStateOf<String?>(null) }
+            var errorCrear by remember { mutableStateOf<TextoUi?>(null) }
 
             // Si se escribió un código en la intro, se canjea solo al entrar con la cuenta.
             val contexto = LocalContext.current
@@ -204,58 +196,58 @@ fun SemanaScreen(
                     .padding(24.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Text("Empieza con tu familia", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
+                Text(stringResource(R.string.semana_empieza), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
 
                 Surface(shape = RoundedCornerShape(24.dp), color = BLANCO, shadowElevation = 2.dp, modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Crear una familia nueva", fontWeight = FontWeight.ExtraBold, color = INDIGO, style = MaterialTheme.typography.titleMedium)
-                        Text("Para empezar de cero. Tú serás la primera persona; luego añadirás a los niños y a quien quieras invitar.", color = TINTA_SUAVE, fontSize = 13.sp)
+                        Text(stringResource(R.string.intro_crear_familia), fontWeight = FontWeight.ExtraBold, color = INDIGO, style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.semana_crear_texto), color = TINTA_SUAVE, fontSize = 13.sp)
                         OutlinedTextField(
                             value = nombre, onValueChange = { nombre = it; errorCrear = null },
-                            label = { Text("Tu nombre") }, singleLine = true,
+                            label = { Text(stringResource(R.string.semana_tu_nombre)) }, singleLine = true,
                             shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth()
                         )
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedTextField(
                                 value = apellido1, onValueChange = { apellido1 = it },
-                                label = { Text("1er apellido") }, singleLine = true,
+                                label = { Text(stringResource(R.string.semana_apellido1)) }, singleLine = true,
                                 shape = RoundedCornerShape(14.dp), modifier = Modifier.weight(1f)
                             )
                             OutlinedTextField(
                                 value = apellido2, onValueChange = { apellido2 = it },
-                                label = { Text("2º apellido") }, singleLine = true,
+                                label = { Text(stringResource(R.string.semana_apellido2)) }, singleLine = true,
                                 shape = RoundedCornerShape(14.dp), modifier = Modifier.weight(1f)
                             )
                         }
-                        if (errorCrear != null) Text(errorCrear!!, color = MaterialTheme.colorScheme.error, fontSize = 13.sp)
+                        if (errorCrear != null) Text(errorCrear!!.resolver(), color = MaterialTheme.colorScheme.error, fontSize = 13.sp)
                         Button(
                             onClick = { viewModel.crearFamilia(nombre, apellido1, apellido2) { errorCrear = it } },
                             enabled = nombre.isNotBlank(),
                             shape = RoundedCornerShape(16.dp),
                             modifier = Modifier.fillMaxWidth().height(50.dp)
-                        ) { Text("Crear mi familia", fontWeight = FontWeight.Bold) }
+                        ) { Text(stringResource(R.string.semana_crear_mi_familia), fontWeight = FontWeight.Bold) }
                     }
                 }
 
                 Surface(shape = RoundedCornerShape(24.dp), color = BLANCO, shadowElevation = 2.dp, modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Unirme a una familia", fontWeight = FontWeight.ExtraBold, color = INDIGO, style = MaterialTheme.typography.titleMedium)
-                        Text("Si ya te han invitado, escribe el código que te han dado.", color = TINTA_SUAVE, fontSize = 13.sp)
+                        Text(stringResource(R.string.semana_unirme_titulo), fontWeight = FontWeight.ExtraBold, color = INDIGO, style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.semana_unirme_texto), color = TINTA_SUAVE, fontSize = 13.sp)
                         OutlinedTextField(
                             value = codigo,
                             onValueChange = { codigo = it.uppercase(); error = null },
-                            label = { Text("Código de invitación") },
+                            label = { Text(stringResource(R.string.intro_codigo_label)) },
                             singleLine = true,
                             shape = RoundedCornerShape(14.dp),
                             modifier = Modifier.fillMaxWidth()
                         )
-                        if (error != null) Text(error!!, color = MaterialTheme.colorScheme.error, fontSize = 13.sp)
+                        if (error != null) Text(error!!.resolver(), color = MaterialTheme.colorScheme.error, fontSize = 13.sp)
                         OutlinedButton(
                             onClick = { viewModel.canjearCodigo(codigo) { mensaje -> error = mensaje } },
                             enabled = codigo.isNotBlank(),
                             shape = RoundedCornerShape(16.dp),
                             modifier = Modifier.fillMaxWidth().height(50.dp)
-                        ) { Text("Unirme con este código", fontWeight = FontWeight.Bold) }
+                        ) { Text(stringResource(R.string.semana_unirme_boton), fontWeight = FontWeight.Bold) }
                     }
                 }
             }
@@ -450,13 +442,13 @@ private fun TarjetaSemana(
     ) {
         Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 14.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                BotonRedondo(Icons.Default.ChevronLeft, "Semana anterior", onSemanaAnterior)
+                BotonRedondo(Icons.Default.ChevronLeft, stringResource(R.string.comun_semana_anterior), onSemanaAnterior)
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.weight(1f).padding(horizontal = 4.dp).clickable { calendarioAbierto = true }
                 ) {
                     Text(
-                        if (esSemanaActual) "Esta semana" else "Semana",
+                        stringResource(if (esSemanaActual) R.string.semana_esta_semana else R.string.semana_semana),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.ExtraBold,
                         color = TINTA,
@@ -473,11 +465,11 @@ private fun TarjetaSemana(
                         )
                     }
                 }
-                BotonRedondo(Icons.Default.CalendarMonth, "Ir a una semana", { calendarioAbierto = true })
+                BotonRedondo(Icons.Default.CalendarMonth, stringResource(R.string.comun_ir_a_semana), { calendarioAbierto = true })
                 Spacer(Modifier.width(6.dp))
-                BotonRedondo(Icons.Default.MyLocation, "Ir a la semana actual", onIrASemanaActual, habilitado = !esSemanaActual)
+                BotonRedondo(Icons.Default.MyLocation, stringResource(R.string.comun_ir_semana_actual), onIrASemanaActual, habilitado = !esSemanaActual)
                 Spacer(Modifier.width(6.dp))
-                BotonRedondo(Icons.Default.ChevronRight, "Semana siguiente", onSemanaSiguiente)
+                BotonRedondo(Icons.Default.ChevronRight, stringResource(R.string.comun_semana_siguiente), onSemanaSiguiente)
             }
 
             Spacer(Modifier.height(16.dp))
@@ -488,7 +480,7 @@ private fun TarjetaSemana(
     if (calendarioAbierto) {
         SelectorFechaHoja(
             fecha = lunes ?: LocalDate.now(),
-            confirmar = "Ir",
+            confirmar = stringResource(R.string.comun_ir),
             onElegir = onElegirFecha,
             onCerrar = { calendarioAbierto = false }
         )
@@ -527,12 +519,12 @@ private fun BotonRedondo(icono: ImageVector, descripcion: String, onClick: () ->
 fun BotonInvitar(viewModel: SemaforoViewModel) {
     var mostrarSelector by remember { mutableStateOf(false) }
     var codigoGenerado by remember { mutableStateOf<String?>(null) }
-    var errorInvitacion by remember { mutableStateOf<String?>(null) }
+    var errorInvitacion by remember { mutableStateOf<TextoUi?>(null) }
     var copiado by remember { mutableStateOf(false) }
     val cuidadores by viewModel.cuidadores.collectAsState()
     val clipboard = LocalClipboardManager.current
 
-    BotonBarraSuperior(Icons.Default.PersonAdd, "Invitar a alguien") {
+    BotonBarraSuperior(Icons.Default.PersonAdd, stringResource(R.string.semana_invitar)) {
         // Lista al día: puede haberse creado un cuidador desde Ajustes desde la última carga.
         viewModel.recargarCuidadores()
         mostrarSelector = true
@@ -541,13 +533,13 @@ fun BotonInvitar(viewModel: SemaforoViewModel) {
     if (mostrarSelector) {
         AvisoHoja(
             icono = Icons.Default.PersonAdd,
-            titulo = if (codigoGenerado != null) "Código generado" else "Invitación para cuidadores",
+            titulo = stringResource(if (codigoGenerado != null) R.string.semana_codigo_generado else R.string.semana_invitacion_titulo),
             texto = null,
             peligro = false,
             conX = true,
             acciones = listOf(
-                AccionAvisoHoja("Cerrar", EstiloAccionAviso.BORDE) {
-mostrarSelector = false
+                AccionAvisoHoja(stringResource(R.string.comun_cerrar), EstiloAccionAviso.BORDE) {
+                    mostrarSelector = false
                     codigoGenerado = null
                     errorInvitacion = null
                     copiado = false
@@ -573,22 +565,22 @@ mostrarSelector = false
                                     clipboard.setText(AnnotatedString(codigoGenerado!!))
                                     copiado = true
                                 }) {
-                                    Icon(Icons.Default.ContentCopy, contentDescription = "Copiar código")
+                                    Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.semana_copiar_codigo))
                                 }
                             }
                             if (copiado) {
                                 Spacer(Modifier.height(4.dp))
                                 Text(
-                                    "Copiado al portapapeles",
+                                    stringResource(R.string.semana_copiado),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.primary
                                 )
                             }
                             Spacer(Modifier.height(8.dp))
-                            Text("Compártelo con esa persona. Deja de funcionar en cuanto se use una vez.")
+                            Text(stringResource(R.string.semana_codigo_texto))
                         }
                         errorInvitacion != null -> {
-                            Text(errorInvitacion!!, color = MaterialTheme.colorScheme.error)
+                            Text(errorInvitacion!!.resolver(), color = MaterialTheme.colorScheme.error)
                         }
                         else -> {
                             cuidadores.forEach { caregiver ->
@@ -714,7 +706,7 @@ private fun TablonDeAnuncios(
                 IconoDeTarjeta(Icons.Default.Campaign, fondo = LAVANDA, tinta = INDIGO)
                 Spacer(Modifier.width(12.dp))
                 Text(
-                    "Tablón de anuncios",
+                    stringResource(R.string.semana_tablon_titulo),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.ExtraBold,
                     color = TINTA
@@ -724,7 +716,7 @@ private fun TablonDeAnuncios(
 
             if (anuncios.isEmpty()) {
                 Text(
-                    "Todavía no hay ningún anuncio.",
+                    stringResource(R.string.semana_tablon_vacio),
                     style = MaterialTheme.typography.bodyLarge,
                     color = TINTA_SUAVE
                 )
@@ -743,7 +735,7 @@ private fun TablonDeAnuncios(
             OutlinedTextField(
                 value = textoNuevo,
                 onValueChange = { textoNuevo = it },
-                placeholder = { Text("Nuevo anuncio", color = TINTA_SUAVE) },
+                placeholder = { Text(stringResource(R.string.semana_nuevo_anuncio), color = TINTA_SUAVE) },
                 leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null, tint = INDIGO) },
                 shape = RoundedCornerShape(16.dp),
                 colors = OutlinedTextFieldDefaults.colors(
@@ -778,7 +770,7 @@ private fun TablonDeAnuncios(
             ) {
                 Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("Publicar", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
+                Text(stringResource(R.string.semana_publicar), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
             }
         }
     }
@@ -804,7 +796,7 @@ private fun FilaAnuncio(anuncio: Anuncio, onEliminar: () -> Unit) {
             Text(anuncio.texto, style = MaterialTheme.typography.bodyLarge, color = TINTA)
         }
         IconButton(onClick = onEliminar) {
-            Icon(Icons.Default.Delete, contentDescription = "Eliminar anuncio", tint = TINTA_SUAVE)
+            Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.semana_eliminar_anuncio), tint = TINTA_SUAVE)
         }
     }
 }
@@ -896,12 +888,6 @@ private fun TarjetaAviso(
 
 @Composable
 private fun TarjetaHueco(hueco: Hueco, nombreNino: String?, onClick: () -> Unit) {
-    val quien = nombreNino?.let { " a $it" } ?: ""
-    val queFalta = when (hueco.motivo) {
-        MotivoHueco.FALTA_QUIEN_LLEVA -> "llevar"
-        MotivoHueco.FALTA_QUIEN_RECOGE -> "recoger"
-        MotivoHueco.SIN_ASIGNACION -> "llevar ni recoger"
-    }
     // Llevar se hace a la hora de entrada, pero recoger se hace a la hora de
     // salida — si no, el aviso de recogida muestra la hora equivocada.
     val horaReferencia = if (hueco.motivo == MotivoHueco.FALTA_QUIEN_RECOGE) {
@@ -909,11 +895,18 @@ private fun TarjetaHueco(hueco: Hueco, nombreNino: String?, onClick: () -> Unit)
     } else {
         hueco.need.horaInicio
     }
+    val conNino = !nombreNino.isNullOrBlank()
+    val textoId = when (hueco.motivo) {
+        MotivoHueco.FALTA_QUIEN_LLEVA -> if (conNino) R.string.semana_hueco_lleva_nino else R.string.semana_hueco_lleva
+        MotivoHueco.FALTA_QUIEN_RECOGE -> if (conNino) R.string.semana_hueco_recoge_nino else R.string.semana_hueco_recoge
+        MotivoHueco.SIN_ASIGNACION -> if (conNino) R.string.semana_hueco_ninguno_nino else R.string.semana_hueco_ninguno
+    }
+    val dia = formatearFechaHueco(hueco.need.fecha)
+    val hora = formatearHora(horaReferencia)
     TarjetaAviso(
         titulo = tituloConNino(hueco.need.descripcion, nombreNino),
-        chip = "Sin cubrir",
-        texto = "${formatearFechaHueco(hueco.need.fecha)} a las ${formatearHora(horaReferencia)}: " +
-            "todavía no hay nadie asignado para $queFalta$quien.",
+        chip = stringResource(R.string.semana_chip_sin_cubrir),
+        texto = if (conNino) stringResource(textoId, dia, hora, nombreNino!!) else stringResource(textoId, dia, hora),
         fondo = LocalEncajaExtraColors.current.rosaHueco,
         franja = MaterialTheme.colorScheme.error,
         tinta = MaterialTheme.colorScheme.onErrorContainer,
@@ -922,26 +915,29 @@ private fun TarjetaHueco(hueco: Hueco, nombreNino: String?, onClick: () -> Unit)
     )
 }
 
-/** "Ojo, Sílvia tiene asignado llevar y recoger a Etna el sábado en "Fútbol de
- * Etna", pero tiene asignada "Trabajo" a esa hora." Un único aviso aunque la
- * misma persona esté asignada a llevar y a recoger (no cambia el semáforo). */
+/** "Ojo, Sílvia tiene asignado llevar y recoger a Etna el sábado en «Fútbol de Etna», pero
+ * tiene asignada «Trabajo» a esa hora." Un único aviso aunque la misma persona esté asignada
+ * a llevar y a recoger (no cambia el semáforo). Cada idioma coloca las palabras a su manera. */
+@Composable
 private fun textoAviso(aviso: AvisoConflicto): String {
-    val accion = when {
-        RolResponsable.LLEVA in aviso.roles && RolResponsable.RECOGE in aviso.roles -> "llevar y recoger"
-        RolResponsable.LLEVA in aviso.roles -> "llevar"
-        else -> "recoger"
+    val textoId = when {
+        RolResponsable.LLEVA in aviso.roles && RolResponsable.RECOGE in aviso.roles -> R.string.semana_conflicto_ambos
+        RolResponsable.LLEVA in aviso.roles -> R.string.semana_conflicto_lleva
+        else -> R.string.semana_conflicto_recoge
     }
-    val dia = nombreDia(aviso.need.fecha.dayOfWeek).lowercase(localeApp())
-    val tarea = aviso.bloque.etiqueta ?: etiquetaMotivo(aviso.bloque.motivo)
-    return "Ojo, ${aviso.caregiver.nombreCompleto} tiene asignado $accion a ${aviso.child.nombre} " +
-        "el $dia en \"${aviso.need.descripcion}\", pero tiene asignada \"$tarea\" a esa hora."
+    val locale = localeApp()
+    val nombre = nombreDia(aviso.need.fecha.dayOfWeek)
+    // En inglés los días llevan mayúscula siempre («on Saturday»); en castellano y catalán, no.
+    val dia = stringResource(R.string.semana_el_dia, if (locale.language == "en") nombre else nombre.lowercase(locale))
+    val tarea = aviso.bloque.etiqueta ?: etiquetaDeMotivo(aviso.bloque.motivo)
+    return stringResource(textoId, aviso.caregiver.nombreCompleto, aviso.child.nombre, dia, aviso.need.descripcion, tarea)
 }
 
 @Composable
 private fun TarjetaAvisoConflicto(aviso: AvisoConflicto, onClick: () -> Unit) {
     TarjetaAviso(
         titulo = tituloConNino(aviso.need.descripcion, aviso.child.nombre),
-        chip = "Importante",
+        chip = stringResource(R.string.semana_chip_importante),
         texto = textoAviso(aviso),
         fondo = LocalEncajaExtraColors.current.cremaAviso,
         franja = LocalEncajaExtraColors.current.ambar,
@@ -967,12 +963,12 @@ private fun DialogoInfoDia(
         peligro = false,
         conX = true,
         acciones = listOf(
-            AccionAvisoHoja("Cerrar", EstiloAccionAviso.BORDE) { onCerrar() }
+            AccionAvisoHoja(stringResource(R.string.comun_cerrar), EstiloAccionAviso.BORDE) { onCerrar() }
         ),
         onCerrar = onCerrar,
         contenido = {
             if (dia.needs.isEmpty()) {
-                Text("Ese día no hay ninguna actividad registrada.")
+                Text(stringResource(R.string.semana_dia_vacio))
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     dia.needs.sortedBy { it.horaInicio }.forEach { need ->
@@ -994,7 +990,11 @@ private fun DialogoInfoDia(
                                 val recoge = cuidadores.firstOrNull { it.id.value == need.quienRecogeId }?.nombreCompleto
                                 Spacer(Modifier.height(2.dp))
                                 Text(
-                                    "Lleva: ${lleva ?: "Sin asignar"} · Recoge: ${recoge ?: "Sin asignar"}",
+                                    stringResource(
+                                        R.string.semana_lleva_recoge,
+                                        lleva ?: stringResource(R.string.comun_sin_asignar),
+                                        recoge ?: stringResource(R.string.comun_sin_asignar)
+                                    ),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )

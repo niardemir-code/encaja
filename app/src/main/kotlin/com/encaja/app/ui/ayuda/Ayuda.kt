@@ -11,6 +11,9 @@ package com.encaja.app.ui.ayuda
 //  - AyudaPantalla(...): declara los pasos de una pantalla y los lanza la primera vez.
 //  - CapaAyuda(...): dibuja el fondo oscuro, el foco y el globo; va una sola vez, en la raíz.
 
+import com.encaja.app.R
+import androidx.compose.ui.res.stringResource
+import androidx.annotation.StringRes
 import android.content.Context
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
@@ -82,7 +85,7 @@ object PreferenciaAyuda {
 }
 
 /** Un paso de la visita: [clave] del elemento a iluminar (null = globo centrado, sin foco). */
-data class PasoAyuda(val clave: String?, val titulo: String, val texto: String)
+data class PasoAyuda(val clave: String?, @StringRes val titulo: Int, @StringRes val texto: Int)
 
 class AyudaState {
     /** Posición en pantalla (coordenadas de la ventana) de cada elemento marcado. */
@@ -194,28 +197,28 @@ fun CapaAyuda(ayuda: AyudaState) {
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
                 Text(
-                    paso.titulo,
+                    stringResource(paso.titulo),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.ExtraBold,
                     color = MaterialTheme.colorScheme.primary
                 )
                 Spacer(Modifier.height(6.dp))
-                Text(paso.texto, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                Text(stringResource(paso.texto), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
                 Spacer(Modifier.height(16.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        "${ayuda.indice + 1} de ${ayuda.pasos.size}",
+                        stringResource(R.string.ayuda_paso_de, ayuda.indice + 1, ayuda.pasos.size),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.weight(1f)
                     )
                     if (!ultimo) {
-                        TextButton(onClick = { ayuda.cerrar() }) { Text("Saltar") }
+                        TextButton(onClick = { ayuda.cerrar() }) { Text(stringResource(R.string.intro_saltar)) }
                         Spacer(Modifier.width(4.dp))
                     }
                     Button(onClick = { ayuda.siguiente() }, shape = RoundedCornerShape(14.dp)) {
-                        Text(if (ultimo) "Entendido" else "Siguiente", fontWeight = FontWeight.Bold)
+                        Text(stringResource(if (ultimo) R.string.comun_entendido else R.string.intro_siguiente), fontWeight = FontWeight.Bold)
                     }
                 }
             }

@@ -1,5 +1,8 @@
 package com.encaja.app.ui.semana
 
+import com.encaja.app.ui.common.textoUi
+import com.encaja.app.ui.common.TextoUi
+import com.encaja.app.R
 import androidx.lifecycle.ViewModel
 import com.encaja.app.ui.common.lanzarSeguro
 import com.encaja.app.domain.model.AnuncioId
@@ -110,7 +113,7 @@ class SemaforoViewModel @Inject constructor(
     }
 
     /** Introduce un código de invitación y, si es válido, vincula al usuario a esa familia. */
-    fun canjearCodigo(codigo: String, alFallar: (String) -> Unit) {
+    fun canjearCodigo(codigo: String, alFallar: (TextoUi) -> Unit) {
         lanzarSeguro {
             val uid = authRepository.sesionActual()?.uid ?: return@lanzarSeguro
             inviteRepository.canjearInvitacion(codigo).fold(
@@ -119,7 +122,7 @@ class SemaforoViewModel @Inject constructor(
                     cambiosDeMembresia.avisar()
                     cargar()
                 },
-                onFailure = { error -> alFallar(error.message ?: "Código no válido") }
+                onFailure = { error -> alFallar(error.textoDeErrorDeInvitacion(textoUi(R.string.invitacion_err_canjear))) }
             )
         }
     }
@@ -128,7 +131,7 @@ class SemaforoViewModel @Inject constructor(
      * Crea una familia nueva desde cero para quien empieza sin invitación: la persona queda
      * como primer cuidador (administrador) y su cuenta se vincula a él.
      */
-    fun crearFamilia(nombre: String, apellido1: String, apellido2: String, alFallar: (String) -> Unit) {
+    fun crearFamilia(nombre: String, apellido1: String, apellido2: String, alFallar: (TextoUi) -> Unit) {
         val nombreLimpio = nombre.trim()
         if (nombreLimpio.isBlank()) return
         lanzarSeguro {
@@ -138,7 +141,7 @@ class SemaforoViewModel @Inject constructor(
             when (familyMembershipRepository.consultarMembresia(uid)) {
                 is ResultadoMembresia.Tiene -> { cargar(); return@lanzarSeguro }
                 ResultadoMembresia.Error -> {
-                    alFallar("No se pudo comprobar tu cuenta. Revisa la conexión e inténtalo de nuevo")
+                    alFallar(textoUi(R.string.semana_err_comprobar_cuenta))
                     return@lanzarSeguro
                 }
                 ResultadoMembresia.NoTiene -> Unit
@@ -159,18 +162,18 @@ class SemaforoViewModel @Inject constructor(
                 cambiosDeMembresia.avisar()
                 cargar()
             } catch (e: Exception) {
-                alFallar("No se pudo crear la familia, inténtalo de nuevo")
+                alFallar(textoUi(R.string.semana_err_crear_familia))
             }
         }
     }
 
     /** Genera un código de invitación para un cuidador concreto de la familia actual. */
-    fun generarInvitacion(caregiverId: CaregiverId, alConseguirlo: (String) -> Unit, alFallar: (String) -> Unit) {
+    fun generarInvitacion(caregiverId: CaregiverId, alConseguirlo: (String) -> Unit, alFallar: (TextoUi) -> Unit) {
         val familyId = familyIdActual ?: return
         lanzarSeguro {
             inviteRepository.generarInvitacion(familyId, caregiverId).fold(
                 onSuccess = { codigo -> alConseguirlo(codigo) },
-                onFailure = { error -> alFallar(error.message ?: "No se pudo generar el código") }
+                onFailure = { error -> alFallar(error.textoDeErrorDeInvitacion(textoUi(R.string.invitacion_err_generar))) }
             )
         }
     }

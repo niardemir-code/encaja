@@ -197,7 +197,7 @@ private fun CabeceraMenu(
     if (calendarioAbierto) {
         SelectorFechaHoja(
             fecha = primerDia ?: LocalDate.now(),
-            confirmar = "Ir",
+            confirmar = stringResource(R.string.comun_ir),
             onElegir = onIrASemanaDe,
             onCerrar = { calendarioAbierto = false }
         )
