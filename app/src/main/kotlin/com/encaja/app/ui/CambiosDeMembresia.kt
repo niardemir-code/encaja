@@ -26,7 +26,16 @@ class CambiosDeMembresia @Inject constructor() {
     /** La cuenta ya no pertenece a su familia (otro administrador la desvinculó o la eliminó). */
     val perdidas: SharedFlow<Unit> = _perdidas.asSharedFlow()
 
+    /**
+     * true mientras la persona borra su propia cuenta desde Ajustes: perder la familia es
+     * entonces cosa suya, y no debe salir además el aviso de "un administrador te ha dado de
+     * baja". Lo reinicia EncajaAppViewModel al arrancar (tras volver a entrar con otra cuenta).
+     */
+    @Volatile
+    var bajaVoluntaria: Boolean = false
+
     fun avisarPerdida() {
+        if (bajaVoluntaria) return
         _perdidas.tryEmit(Unit)
     }
 }

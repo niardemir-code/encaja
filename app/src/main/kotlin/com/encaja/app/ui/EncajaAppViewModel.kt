@@ -58,6 +58,7 @@ class EncajaAppViewModel @Inject constructor(
     private var ultimaFamilia: FamilyId? = null
 
     init {
+        cambiosDeMembresia.bajaVoluntaria = false
         lanzarSeguro(avisar = false) { iniciar() }
         // Al vincularse la cuenta a una familia (código de invitación, crear familia o
         // "Vincularme"), se repite todo esto sin esperar a reiniciar la app.

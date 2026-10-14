@@ -103,9 +103,15 @@ class AjustesViewModel @Inject constructor(
         alFallar: (TextoUi) -> Unit
     ) {
         lanzarSeguro {
+            // Se avisa antes de llamar: el servidor desvincula la cuenta y la escucha en directo
+            // lo vería como una baja hecha por un administrador.
+            cambiosDeMembresia.bajaVoluntaria = true
             cuentaRepository.borrarMiCuenta(borrarDatosFamilia).fold(
                 onSuccess = { resultado -> alTerminar(resultado) },
-                onFailure = { alFallar(textoUi(R.string.ajustes_error_borrar_cuenta)) }
+                onFailure = {
+                    cambiosDeMembresia.bajaVoluntaria = false
+                    alFallar(textoUi(R.string.ajustes_error_borrar_cuenta))
+                }
             )
         }
     }
