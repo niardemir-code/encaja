@@ -73,6 +73,10 @@ class SemaforoViewModel @Inject constructor(
      * sesión ni familia, porque no cambian mientras se navega. */
     private var familyIdActual: FamilyId? = null
 
+    /** Ficha del propio usuario: no aparece al invitar (nadie se invita a sí mismo). */
+    var miCaregiverId: CaregiverId? = null
+        private set
+
     /** Nombre del cuidador actual, para firmar los anuncios que publique. */
     // Vacío si aún no se conoce: la pantalla y la notificación muestran entonces "Alguien de la familia" en el idioma del móvil.
     private var nombreCuidadorActual: String = ""
@@ -211,6 +215,7 @@ class SemaforoViewModel @Inject constructor(
                 }
             }
             familyIdActual = membresia.familyId
+            miCaregiverId = membresia.caregiverId
 
             cargarSemana(mostrarCargando = false, caregiverIdPropio = membresia.caregiverId)
         }

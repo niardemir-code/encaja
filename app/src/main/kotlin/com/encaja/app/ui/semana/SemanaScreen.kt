@@ -572,7 +572,11 @@ fun BotonInvitar(viewModel: SemaforoViewModel) {
                             Text(errorInvitacion!!.resolver(), color = MaterialTheme.colorScheme.error)
                         }
                         else -> {
-                            cuidadores.forEach { caregiver ->
+                            val invitables = cuidadores.filter { it.id != viewModel.miCaregiverId }
+                            if (invitables.isEmpty()) {
+                                Text(stringResource(R.string.semana_invitar_nadie))
+                            }
+                            invitables.forEach { caregiver ->
                                 TextButton(onClick = {
                                     viewModel.generarInvitacion(
                                         caregiver.id,

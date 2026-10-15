@@ -116,7 +116,7 @@
     <string name="cuidadores_eliminar_titulo">Vols eliminar %1$s?</string>
     <string name="cuidadores_eliminar_texto">S\'eliminarà de la llista, el seu compte perdrà l\'accés, s\'esborraran les unitats familiars en què estigui i les seves activitats assignades quedaran sense responsable. No es pot desfer.</string>
     <string name="cuidadores_desvincular_titulo">Vols desvincular %1$s?</string>
-    <string name="cuidadores_desvincular_texto">El seu compte deixarà de tenir accés a les dades de la família i deixarà de rebre avisos. %1$s continuarà a la llista i podràs tornar-lo a convidar.</string>
+    <string name="cuidadores_desvincular_texto">El seu compte s\'eliminarà i deixarà de tenir accés a les dades de la família i de rebre avisos. %1$s continuarà a la llista i podràs tornar-lo a convidar: haurà de crear el seu compte de nou.</string>
     <string name="cuidadores_desvincular_accion">Desvincula</string>
     <string name="cuidadores_personas">Persones</string>
     <string name="cuidadores_vacio">Encara no has afegit cap cuidador.</string>
@@ -358,6 +358,7 @@
     <string name="semana_invitar">Convida algú</string>
     <string name="semana_codigo_generado">Codi generat</string>
     <string name="semana_invitacion_titulo">Invitació per a cuidadors</string>
+    <string name="semana_invitar_nadie">No hi ha més persones a qui convidar. Afegeix un cuidador a Ajustos > Cuidadors.</string>
     <string name="semana_copiar_codigo">Copia el codi</string>
     <string name="semana_copiado">Copiat al porta-retalls</string>
     <string name="semana_codigo_texto">Comparteix-lo amb aquesta persona. Deixa de funcionar tan bon punt s\'hagi fet servir una vegada.</string>

@@ -117,7 +117,7 @@
     <string name="cuidadores_eliminar_titulo">¿Eliminar a %1$s?</string>
     <string name="cuidadores_eliminar_texto">Se eliminará de la lista, su cuenta perderá el acceso, se borrarán las unidades familiares en las que esté y sus actividades asignadas quedarán sin responsable. No se puede deshacer.</string>
     <string name="cuidadores_desvincular_titulo">¿Desvincular a %1$s?</string>
-    <string name="cuidadores_desvincular_texto">Su cuenta dejará de tener acceso a los datos de la familia y dejará de recibir avisos. %1$s seguirá en la lista y podrás volver a invitarle.</string>
+    <string name="cuidadores_desvincular_texto">Su cuenta se eliminará y dejará de tener acceso a los datos de la familia y de recibir avisos. %1$s seguirá en la lista y podrás volver a invitarle: tendrá que crear su cuenta de nuevo.</string>
     <string name="cuidadores_desvincular_accion">Desvincular</string>
     <string name="cuidadores_personas">Personas</string>
     <string name="cuidadores_vacio">Todavía no has añadido ningún cuidador.</string>
@@ -359,6 +359,7 @@
     <string name="semana_invitar">Invitar a alguien</string>
     <string name="semana_codigo_generado">Código generado</string>
     <string name="semana_invitacion_titulo">Invitación para cuidadores</string>
+    <string name="semana_invitar_nadie">No hay más personas a las que invitar. Añade un cuidador en Ajustes > Cuidadores.</string>
     <string name="semana_copiar_codigo">Copiar código</string>
     <string name="semana_copiado">Copiado al portapapeles</string>
     <string name="semana_codigo_texto">Compártelo con esa persona. Deja de funcionar en cuanto se use una vez.</string>

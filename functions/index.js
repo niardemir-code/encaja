@@ -12,7 +12,7 @@
 //   families/{familyId}/caregiverLinks/{cuidadorId} { uid }
 //   users/{uid}/tokens/{token}                   (los registra la app)
 
-const { onDocumentCreated, onDocumentWritten } = require("firebase-functions/v2/firestore");
+const { onDocumentCreated, onDocumentWritten, onDocumentUpdated, onDocumentDeleted } = require("firebase-functions/v2/firestore");
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const admin = require("firebase-admin");
@@ -147,7 +147,9 @@ async function desvincular(uid) {
     if (actual.exists && actual.get("uid") === uid) await enlace.delete();
   }
   await borrarTokens(uid);
-  if (usuario.exists) await usuario.ref.delete();
+  // recursiveDelete: quita también lo que cuelgue de users/{uid} (tokens) para que no quede
+  // un documento "fantasma" en cursiva en la consola.
+  await db.recursiveDelete(db.collection("users").doc(uid));
 }
 
 // Días que se conserva una familia sin ninguna cuenta vinculada antes de borrarla del todo.
@@ -217,6 +219,8 @@ exports.borrarMiCuenta = onCall({ region: REGION }, async (request) => {
   } catch (e) {
     if (e.code !== "auth/user-not-found") throw new HttpsError("internal", "No se pudo borrar la cuenta.");
   }
+  // Por si el móvil volvió a registrarse (token de notificaciones) mientras se borraba.
+  await db.recursiveDelete(db.collection("users").doc(uid));
   return { ok: true, codigo, datosBorrados };
 });
 
@@ -250,7 +254,17 @@ exports.desvincularCuenta = onCall({ region: REGION }, async (request) => {
   await enlace.ref.delete();
   await borrarTokens(uidObjetivo);
   const usuarioObjetivo = await db.collection("users").doc(uidObjetivo).get();
-  if (usuarioObjetivo.exists && usuarioObjetivo.get("familyId") === familyId) await usuarioObjetivo.ref.delete();
+  if (usuarioObjetivo.exists && usuarioObjetivo.get("familyId") === familyId) {
+    await db.recursiveDelete(usuarioObjetivo.ref);
+  }
+  // La cuenta de esa persona se elimina también de Authentication (no solo se desvincula):
+  // si quiere volver, crea su cuenta de nuevo y canjea otra invitación.
+  try {
+    await admin.auth().deleteUser(uidObjetivo);
+  } catch (e) {
+    if (e.code !== "auth/user-not-found") throw new HttpsError("internal", "No se pudo eliminar la cuenta.");
+  }
+  await db.recursiveDelete(db.collection("users").doc(uidObjetivo));
   return { ok: true };
 });
 
@@ -310,31 +324,126 @@ exports.repararVinculo = onCall({ region: REGION }, async (request) => {
   return { huerfano: true, existe: true };
 });
 
-// Limpieza diaria de familias sin ninguna cuenta vinculada. La primera vez que se ve una así se
-// anota "huerfanaDesde"; si pasados DIAS_CONSERVAR_HUERFANA días sigue sin cuentas, se borra por
-// completo (datos, invitaciones y el propio documento). Si alguien se vincula en el plazo, se
-// quita la marca y no se toca nada. Las familias de demostración ("demo-...") se saltan.
+// Cuando se crea una invitación, se borran las demás aún sin usar del mismo cuidador: cada vez
+// que se pulsa "Invitar" se genera un código nuevo, y los anteriores solo estorbarían (la app no
+// puede listar "invites", así que no puede limpiarlos ella).
+exports.limpiarInvitacionesAnteriores = onDocumentCreated(
+  { document: "invites/{codigo}", region: REGION },
+  async (event) => {
+    const nueva = event.data && event.data.data();
+    if (!nueva || !nueva.familyId || !nueva.caregiverId) return;
+    const anteriores = await db.collection("invites")
+      .where("familyId", "==", nueva.familyId)
+      .where("caregiverId", "==", nueva.caregiverId)
+      .get();
+    await Promise.all(anteriores.docs.filter((d) => d.id !== event.params.codigo).map((d) => d.ref.delete()));
+  }
+);
+
+/** Borra todos los documentos de una consulta, en lotes. */
+async function borrarConsulta(consulta) {
+  const snap = await consulta.get();
+  for (let i = 0; i < snap.docs.length; i += 400) {
+    const lote = db.batch();
+    snap.docs.slice(i, i + 400).forEach((d) => lote.delete(d.ref));
+    await lote.commit();
+  }
+  return snap.size;
+}
+
+// Limpieza diaria (4:00, hora de Madrid):
+//  1) Familias sin ninguna cuenta vinculada: la primera vez que se ve una así se anota
+//     "huerfanaDesde"; si pasados DIAS_CONSERVAR_HUERFANA días sigue sin cuentas, se borra por
+//     completo (datos, invitaciones y el propio documento). Si alguien se vincula en el plazo,
+//     se quita la marca y no se toca nada. Las familias de demostración ("demo-...") se saltan.
+//  2) Invitaciones caducadas o ya usadas.
+//  3) Documentos de users/{uid} cuya cuenta ya no existe en Authentication.
 exports.limpiarFamiliasHuerfanas = onSchedule(
-  { schedule: "every day 04:00", timeZone: "Europe/Madrid", region: REGION },
+  { schedule: "every day 04:00", timeZone: "Europe/Madrid", region: REGION, timeoutSeconds: 540 },
   async () => {
-    const limite = Date.now() - DIAS_CONSERVAR_HUERFANA * 86400000;
-    const familias = await db.collection("families").listDocuments();
-    for (const ref of familias) {
-      if (ref.id.startsWith("demo-")) continue;
-      try {
-        const conCuentas = !(await ref.collection("caregiverLinks").limit(1).get()).empty;
-        const doc = await ref.get();
-        const desde = doc.get("huerfanaDesde");
-        if (conCuentas) {
-          if (desde) await ref.update({ huerfanaDesde: admin.firestore.FieldValue.delete() });
-        } else if (!desde) {
-          await ref.set({ huerfanaDesde: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
-        } else if (desde.toMillis() < limite) {
-          await borrarFamiliaCompleta(ref.id);
+    // 1) Familias sin cuentas
+    try {
+      const limite = Date.now() - DIAS_CONSERVAR_HUERFANA * 86400000;
+      const familias = await db.collection("families").listDocuments();
+      for (const ref of familias) {
+        if (ref.id.startsWith("demo-")) continue;
+        try {
+          const conCuentas = !(await ref.collection("caregiverLinks").limit(1).get()).empty;
+          const doc = await ref.get();
+          const desde = doc.get("huerfanaDesde");
+          if (conCuentas) {
+            if (desde) await ref.update({ huerfanaDesde: admin.firestore.FieldValue.delete() });
+          } else if (!desde) {
+            await ref.set({ huerfanaDesde: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+          } else if (desde.toMillis() < limite) {
+            await borrarFamiliaCompleta(ref.id);
+          }
+        } catch (e) {
+          console.error("limpieza: fallo con la familia " + ref.id, e);
         }
-      } catch (e) {
-        console.error("limpiarFamiliasHuerfanas: fallo con la familia " + ref.id, e);
       }
+    } catch (e) {
+      console.error("limpieza: familias", e);
     }
+
+    // 2) Invitaciones caducadas o usadas
+    try {
+      const ahora = admin.firestore.Timestamp.now();
+      const caducadas = await borrarConsulta(db.collection("invites").where("caducaEn", "<", ahora));
+      const usadas = await borrarConsulta(db.collection("invites").where("usado", "==", true));
+      console.log("limpieza: invitaciones borradas (caducadas, usadas) =", caducadas, usadas);
+    } catch (e) {
+      console.error("limpieza: invitaciones", e);
+    }
+
+    // 3) users/{uid} de cuentas que ya no existen (incluye los documentos "fantasma")
+    try {
+      const usuarios = await db.collection("users").listDocuments();
+      for (let i = 0; i < usuarios.length; i += 100) {
+        const lote = usuarios.slice(i, i + 100);
+        const r = await admin.auth().getUsers(lote.map((u) => ({ uid: u.id })));
+        const inexistentes = new Set(r.notFound.map((n) => n.uid));
+        for (const u of lote) {
+          if (inexistentes.has(u.id)) await db.recursiveDelete(u);
+        }
+      }
+    } catch (e) {
+      console.error("limpieza: usuarios", e);
+    }
+  }
+);
+
+// Una invitación usada ya no sirve para nada: se borra en cuanto alguien la canjea.
+exports.borrarInvitacionUsada = onDocumentUpdated(
+  { document: "invites/{codigo}", region: REGION },
+  async (event) => {
+    const despues = event.data && event.data.after && event.data.after.data();
+    if (despues && despues.usado === true) await event.data.after.ref.delete();
+  }
+);
+
+// Cuando desaparece el vínculo de un cuidador con su cuenta (desvincularlo, eliminar al cuidador,
+// borrar la cuenta, o a mano en la consola), la cuenta de esa persona se elimina también de
+// Authentication y se limpia su users/{uid}. Así no quedan cuentas sueltas que ya no dan acceso a
+// nada, sea cual sea el camino por el que se haya borrado el vínculo.
+exports.limpiarCuentaSinVinculo = onDocumentDeleted(
+  { document: "families/{familyId}/caregiverLinks/{caregiverId}", region: REGION },
+  async (event) => {
+    const uid = event.data && event.data.get("uid");
+    if (!uid) return;
+    const { familyId, caregiverId } = event.params;
+    // Si esa cuenta ya apunta a otra familia o ficha (se vinculó a otra), no se toca.
+    const usuario = await db.collection("users").doc(uid).get();
+    if (usuario.exists) {
+      const otraFamilia = usuario.get("familyId") && usuario.get("familyId") !== familyId;
+      const otraFicha = usuario.get("caregiverId") && usuario.get("caregiverId") !== caregiverId;
+      if (otraFamilia || otraFicha) return;
+    }
+    try {
+      await admin.auth().deleteUser(uid);
+    } catch (e) {
+      if (e.code !== "auth/user-not-found") console.error("limpiarCuentaSinVinculo: no se pudo borrar " + uid, e);
+    }
+    await db.recursiveDelete(db.collection("users").doc(uid));
   }
 );

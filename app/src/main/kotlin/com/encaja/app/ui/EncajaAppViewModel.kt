@@ -94,7 +94,11 @@ class EncajaAppViewModel @Inject constructor(
                 BajaDeDispositivo.recordarMembresia(contexto, uid)
             }
             // También si la baja ocurrió con la app cerrada: se recordó en un uso anterior.
-            ResultadoMembresia.NoTiene -> if (teniaMembresia || BajaDeDispositivo.tuvoMembresia(contexto, uid)) {
+            // Si la persona está borrando su propia cuenta no hay nada que avisar ni recargar
+            // (recargar volvía a registrar el móvil en el servidor justo antes de borrarla).
+            ResultadoMembresia.NoTiene -> if (cambiosDeMembresia.bajaVoluntaria) {
+                teniaMembresia = false
+            } else if (teniaMembresia || BajaDeDispositivo.tuvoMembresia(contexto, uid)) {
                 teniaMembresia = false
                 android.util.Log.d("Encaja", "Baja: cuenta dada de baja, se avisa al usuario")
                 cambiosDeMembresia.avisarPerdida()

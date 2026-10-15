@@ -116,7 +116,7 @@
     <string name="cuidadores_eliminar_titulo">Delete %1$s?</string>
     <string name="cuidadores_eliminar_texto">They\'ll be removed from the list, their account will lose access, the family units they belong to will be deleted and their assigned activities will have no one in charge. This can\'t be undone.</string>
     <string name="cuidadores_desvincular_titulo">Unlink %1$s?</string>
-    <string name="cuidadores_desvincular_texto">Their account will lose access to the family\'s data and stop receiving alerts. %1$s will stay on the list and you can invite them again.</string>
+    <string name="cuidadores_desvincular_texto">Their account will be deleted and they\'ll lose access to the family\'s data and stop receiving alerts. %1$s will stay on the list and you can invite them again: they\'ll have to create their account anew.</string>
     <string name="cuidadores_desvincular_accion">Unlink</string>
     <string name="cuidadores_personas">People</string>
     <string name="cuidadores_vacio">You haven\'t added any caregivers yet.</string>
@@ -358,6 +358,7 @@
     <string name="semana_invitar">Invite someone</string>
     <string name="semana_codigo_generado">Code generated</string>
     <string name="semana_invitacion_titulo">Invitation for caregivers</string>
+    <string name="semana_invitar_nadie">There\'s no one else to invite. Add a caregiver in Settings > Caregivers.</string>
     <string name="semana_copiar_codigo">Copy code</string>
     <string name="semana_copiado">Copied to clipboard</string>
     <string name="semana_codigo_texto">Share it with that person. It stops working as soon as it\'s used once.</string>
