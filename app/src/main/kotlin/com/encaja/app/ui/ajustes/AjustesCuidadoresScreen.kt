@@ -224,62 +224,74 @@ private fun SeccionCuidadores(
 
         cuidadores.forEachIndexed { indice, cuidador ->
             TarjetaFilaHoja {
-                AvatarInicialesHoja(
-                    iniciales = inicialesDe(cuidador.nombreCompleto),
-                    colores = PaletaAvatarPersonas[indice % PaletaAvatarPersonas.size]
-                )
-                Spacer(Modifier.width(12.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        cuidador.nombreCompleto,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = tintaHoja
-                    )
-                    val estado = when {
-                        vinculadoAId == cuidador.id -> stringResource(R.string.cuidadores_estado_vinculado)
-                        cuidador.id == miCaregiverId -> stringResource(R.string.cuidadores_estado_tu)
-                        cuidador.id in vinculados -> stringResource(R.string.cuidadores_estado_con_cuenta)
-                        else -> null
-                    }
-                    val textoEstado = listOfNotNull(
-                        estado,
-                        if (cuidador.rol == CaregiverRole.ADMIN) stringResource(R.string.cuidadores_rol_admin) else null
-                    ).joinToString(" · ")
-                    if (textoEstado.isNotEmpty()) {
-                        Text(textoEstado, style = MaterialTheme.typography.bodySmall, color = tintaSuaveHoja)
-                    }
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    // Cambiar el rol: solo un administrador, y nunca quitando al único administrador.
-                    if (soyAdmin && (cuidador.rol != CaregiverRole.ADMIN || administradores > 1)) {
-                        BotonRedondoSuaveHoja(
-                            Icons.Default.AdminPanelSettings,
-                            stringResource(R.string.cuidadores_rol_cambiar_a, cuidador.nombreCompleto),
-                            { cuidadorARol = cuidador }
+                // Nombre arriba y los botones en su propia línea: con cuatro iconos al lado, el
+                // nombre se partía letra a letra.
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        AvatarInicialesHoja(
+                            iniciales = inicialesDe(cuidador.nombreCompleto),
+                            colores = PaletaAvatarPersonas[indice % PaletaAvatarPersonas.size]
                         )
-                    }
-                    if (soyAdmin && cuidador.id in vinculados && cuidador.id != miCaregiverId) {
-                        BotonRedondoSuaveHoja(
-                            Icons.Default.LinkOff,
-                            stringResource(R.string.cuidadores_desvincular_cuenta_de, cuidador.nombreCompleto),
-                            { cuidadorADesvincular = cuidador }
-                        )
-                    }
-                    BotonRedondoSuaveHoja(
-                        Icons.Default.Person,
-                        stringResource(R.string.cuidadores_vincularme_a, cuidador.nombreCompleto),
-                        {
-                            onVincularme(cuidador.id)
-                            vinculadoAId = cuidador.id
+                        Spacer(Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                cuidador.nombreCompleto,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = tintaHoja
+                            )
+                            val estado = when {
+                                vinculadoAId == cuidador.id -> stringResource(R.string.cuidadores_estado_vinculado)
+                                cuidador.id == miCaregiverId -> stringResource(R.string.cuidadores_estado_tu)
+                                cuidador.id in vinculados -> stringResource(R.string.cuidadores_estado_con_cuenta)
+                                else -> null
+                            }
+                            val textoEstado = listOfNotNull(
+                                estado,
+                                if (cuidador.rol == CaregiverRole.ADMIN) stringResource(R.string.cuidadores_rol_admin) else null
+                            ).joinToString(" · ")
+                            if (textoEstado.isNotEmpty()) {
+                                Text(textoEstado, style = MaterialTheme.typography.bodySmall, color = tintaSuaveHoja)
+                            }
                         }
-                    )
-                    BotonRedondoSuaveHoja(
-                        Icons.Default.Delete,
-                        stringResource(R.string.cuidadores_eliminar_a, cuidador.nombreCompleto),
-                        { cuidadorAEliminar = cuidador },
-                        tinta = MaterialTheme.colorScheme.error
-                    )
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Cambiar el rol: solo un administrador, y nunca quitando al único administrador.
+                        if (soyAdmin && (cuidador.rol != CaregiverRole.ADMIN || administradores > 1)) {
+                            BotonRedondoSuaveHoja(
+                                Icons.Default.AdminPanelSettings,
+                                stringResource(R.string.cuidadores_rol_cambiar_a, cuidador.nombreCompleto),
+                                { cuidadorARol = cuidador }
+                            )
+                        }
+                        if (soyAdmin && cuidador.id in vinculados && cuidador.id != miCaregiverId) {
+                            BotonRedondoSuaveHoja(
+                                Icons.Default.LinkOff,
+                                stringResource(R.string.cuidadores_desvincular_cuenta_de, cuidador.nombreCompleto),
+                                { cuidadorADesvincular = cuidador }
+                            )
+                        }
+                        BotonRedondoSuaveHoja(
+                            Icons.Default.Person,
+                            stringResource(R.string.cuidadores_vincularme_a, cuidador.nombreCompleto),
+                            {
+                                onVincularme(cuidador.id)
+                                vinculadoAId = cuidador.id
+                            }
+                        )
+                        BotonRedondoSuaveHoja(
+                            Icons.Default.Delete,
+                            stringResource(R.string.cuidadores_eliminar_a, cuidador.nombreCompleto),
+                            { cuidadorAEliminar = cuidador },
+                            tinta = MaterialTheme.colorScheme.error
+                        )
+                    }
+            
                 }
             }
             Spacer(Modifier.height(10.dp))

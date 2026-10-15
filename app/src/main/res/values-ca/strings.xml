@@ -54,6 +54,10 @@
     <string name="login_verifica_reenviar">Reenviar el correu</string>
     <string name="login_verifica_reenviado">Correu reenviat.</string>
     <string name="login_verifica_aun_no">Encara no consta com a verificat. Obre l\'enllaç del correu i torna-ho a provar.</string>
+    <string name="login_verifica_paso1">1. Obre el correu que t\'hem enviat</string>
+    <string name="login_verifica_paso2">2. Prem l\'enllaç de verificació</string>
+    <string name="login_verifica_paso3">3. Torna aquí i prem «Ja l\'he verificat»</string>
+    <string name="login_verifica_reenviar_en">Reenviar el correu (%1$d s)</string>
     <string name="login_verifica_otra">Fer servir un altre compte</string>
     <string name="login_olvide">Has oblidat la contrasenya?</string>
     <string name="login_recuperar_enviado">Si existeix un compte amb aquest correu, t\'hem enviat un enllaç per triar una contrasenya nova.</string>

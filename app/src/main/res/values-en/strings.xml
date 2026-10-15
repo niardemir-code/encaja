@@ -54,6 +54,10 @@
     <string name="login_verifica_reenviar">Resend email</string>
     <string name="login_verifica_reenviado">Email resent.</string>
     <string name="login_verifica_aun_no">Not verified yet. Open the link in the email and try again.</string>
+    <string name="login_verifica_paso1">1. Open the email we sent you</string>
+    <string name="login_verifica_paso2">2. Tap the verification link</string>
+    <string name="login_verifica_paso3">3. Come back here and tap “I\'ve verified it”</string>
+    <string name="login_verifica_reenviar_en">Resend email (%1$d s)</string>
     <string name="login_verifica_otra">Use another account</string>
     <string name="login_olvide">Forgot your password?</string>
     <string name="login_recuperar_enviado">If an account exists with that email, we\'ve sent you a link to choose a new password.</string>

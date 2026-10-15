@@ -680,8 +680,8 @@ private fun TablonDeAnuncios(
 ) {
     var textoNuevo by remember { mutableStateOf("") }
     val extra = LocalEncajaExtraColors.current
-    // Cada vez que el texto crece (o al enfocar el campo), se pide que el campo quede a
-    // la vista: si no, a medida que se escribe se va quedando escondido tras el teclado.
+    // Cada vez que el texto crece (o al enfocar el campo), se pide que el botón de publicar (justo
+    // debajo del campo) quede a la vista: si no, se va quedando escondido tras el teclado.
     val traerALaVista = remember { BringIntoViewRequester() }
     var conFoco by remember { mutableStateOf(false) }
     val focusManagerTablon = LocalFocusManager.current
@@ -740,7 +740,6 @@ private fun TablonDeAnuncios(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 56.dp)
-                    .bringIntoViewRequester(traerALaVista)
                     .onFocusChanged { conFoco = it.isFocused }
             )
             Spacer(Modifier.height(10.dp))
@@ -759,7 +758,10 @@ private fun TablonDeAnuncios(
                     disabledContentColor = extra.onAcento
                 ),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp),
-                modifier = Modifier.fillMaxWidth()
+                // Es el botón (no el campo) lo que se trae a la vista al escribir: el campo
+                // queda justo encima, así que se ven los dos y "Publicar" no se esconde
+                // tras el teclado.
+                modifier = Modifier.fillMaxWidth().bringIntoViewRequester(traerALaVista)
             ) {
                 Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))

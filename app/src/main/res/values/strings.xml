@@ -55,6 +55,10 @@
     <string name="login_verifica_reenviar">Reenviar correo</string>
     <string name="login_verifica_reenviado">Correo reenviado.</string>
     <string name="login_verifica_aun_no">Todavía no consta como verificado. Abre el enlace del correo e inténtalo de nuevo.</string>
+    <string name="login_verifica_paso1">1. Abre el correo que te hemos enviado</string>
+    <string name="login_verifica_paso2">2. Pulsa el enlace de verificación</string>
+    <string name="login_verifica_paso3">3. Vuelve aquí y pulsa «Ya lo he verificado»</string>
+    <string name="login_verifica_reenviar_en">Reenviar correo (%1$d s)</string>
     <string name="login_verifica_otra">Usar otra cuenta</string>
     <string name="login_olvide">¿Has olvidado la contraseña?</string>
     <string name="login_recuperar_enviado">Si existe una cuenta con ese correo, te hemos enviado un enlace para elegir una contraseña nueva.</string>

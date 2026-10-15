@@ -4,6 +4,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -116,6 +117,19 @@ fun LoginScreen(
                             color = colores.onSurface.copy(alpha = 0.75f),
                             fontSize = 14.sp
                         )
+                        Spacer(Modifier.height(12.dp))
+                        listOf(R.string.login_verifica_paso1, R.string.login_verifica_paso2, R.string.login_verifica_paso3)
+                            .forEachIndexed { i, paso ->
+                                Row(Modifier.padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Surface(shape = CircleShape, color = colores.primary, modifier = Modifier.size(22.dp)) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Text("${i + 1}", color = colores.onPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                        }
+                                    }
+                                    Spacer(Modifier.width(10.dp))
+                                    Text(stringResource(paso), color = colores.onSurface, fontSize = 14.sp)
+                                }
+                            }
                         uiState.error?.let {
                             Spacer(Modifier.height(10.dp))
                             Text(it.resolver(), color = colores.error, fontSize = 13.sp)
@@ -123,6 +137,10 @@ fun LoginScreen(
                         uiState.info?.let {
                             Spacer(Modifier.height(10.dp))
                             Text(it.resolver(), color = colores.primary, fontSize = 13.sp)
+                        }
+                        var espera by remember { mutableStateOf(30) }
+                        LaunchedEffect(espera) {
+                            if (espera > 0) { kotlinx.coroutines.delay(1000); espera -= 1 }
                         }
                         Spacer(Modifier.height(14.dp))
                         Button(
@@ -139,11 +157,17 @@ fun LoginScreen(
                         }
                         Spacer(Modifier.height(8.dp))
                         OutlinedButton(
-                            onClick = { viewModel.reenviarVerificacion() },
-                            enabled = !uiState.cargando,
+                            onClick = { viewModel.reenviarVerificacion(); espera = 30 },
+                            enabled = !uiState.cargando && espera == 0,
                             shape = RoundedCornerShape(16.dp),
                             modifier = Modifier.fillMaxWidth().height(48.dp)
-                        ) { Text(stringResource(R.string.login_verifica_reenviar), fontWeight = FontWeight.Bold) }
+                        ) {
+                            Text(
+                                if (espera > 0) stringResource(R.string.login_verifica_reenviar_en, espera)
+                                else stringResource(R.string.login_verifica_reenviar),
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                         TextButton(
                             onClick = { viewModel.cancelarVerificacion() },
                             modifier = Modifier.align(Alignment.CenterHorizontally)
