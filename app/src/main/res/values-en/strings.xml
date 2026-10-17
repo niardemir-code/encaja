@@ -453,6 +453,7 @@
     <string name="actividad_o_cada_semana">Or every week on</string>
     <string name="actividad_esta">this activity</string>
     <string name="actividad_repetir_resumen">%1$s. If any already had %2$s, it is replaced.</string>
+    <string name="actividad_repetir_ya_existen">Days in a softer colour already have this activity.</string>
     <string name="actividad_borrar_titulo">Delete this activity?</string>
     <string name="actividad_borrar_serie_texto">It repeats %1$d times. You can delete just this one or the whole series. This can\'t be undone.</string>
     <string name="actividad_borrar_toda_serie">Delete the whole series (%1$d)</string>

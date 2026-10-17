@@ -90,7 +90,9 @@ fun CalendarioMultipleHoja(
     seleccionadas: Set<LocalDate>,
     onAlternar: (LocalDate) -> Unit,
     /** Días que llevan un puntito (p.ej. los que ya tienen algo apuntado), estén o no marcados. */
-    conPunto: Set<LocalDate> = emptySet()
+    conPunto: Set<LocalDate> = emptySet(),
+    /** Días que ya existen (se ven marcados, más suaves) y no se pueden tocar. */
+    bloqueadas: Set<LocalDate> = emptySet()
 ) {
     var mes by remember { mutableStateOf(mesInicial) }
     val hoy = LocalDate.now()
@@ -133,18 +135,25 @@ fun CalendarioMultipleHoja(
             semana.forEach { dia ->
                 Box(modifier = Modifier.weight(1f).padding(2.dp), contentAlignment = Alignment.Center) {
                     if (dia != null) {
-                        val marcado = dia in seleccionadas
+                        val bloqueado = dia in bloqueadas
+                        val marcado = dia in seleccionadas || bloqueado
                         Box(
                             modifier = Modifier
                                 .size(38.dp)
                                 .clip(CircleShape)
-                                .background(if (marcado) acentoHoja else Color.Transparent)
+                                .background(
+                                    when {
+                                        bloqueado -> acentoHoja.copy(alpha = 0.45f)
+                                        marcado -> acentoHoja
+                                        else -> Color.Transparent
+                                    }
+                                )
                                 .border(
                                     width = if (dia == hoy) 2.dp else 0.dp,
                                     color = if (dia == hoy) acentoHoja else Color.Transparent,
                                     shape = CircleShape
                                 )
-                                .clickable { onAlternar(dia) },
+                                .clickable(enabled = !bloqueado) { onAlternar(dia) },
                             contentAlignment = Alignment.Center
                         ) {
                             Text(

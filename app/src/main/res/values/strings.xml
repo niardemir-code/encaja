@@ -454,6 +454,7 @@
     <string name="actividad_o_cada_semana">O cada semana en</string>
     <string name="actividad_esta">esta actividad</string>
     <string name="actividad_repetir_resumen">%1$s. Si alguno ya tenía %2$s, se sustituye.</string>
+    <string name="actividad_repetir_ya_existen">Los días con el color más suave ya tienen esta actividad.</string>
     <string name="actividad_borrar_titulo">¿Borrar esta actividad?</string>
     <string name="actividad_borrar_serie_texto">Se repite %1$d veces. Puedes borrar solo esta o toda la serie. No se puede deshacer.</string>
     <string name="actividad_borrar_toda_serie">Borrar toda la serie (%1$d)</string>

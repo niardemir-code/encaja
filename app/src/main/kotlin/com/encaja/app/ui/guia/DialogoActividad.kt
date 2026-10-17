@@ -142,6 +142,9 @@ fun DialogoActividad(
         }
     }
     val tieneSerie = ocurrenciasSerie.size > 1
+    // Días de la serie que ya existen: se enseñan marcados en «Repetir» y no se vuelven a
+    // crear al guardar (salvo la propia actividad que se edita).
+    val fechasExistentes = if (tieneSerie) ocurrenciasSerie.map { it.fecha }.toSet() else emptySet()
 
     val fechaBase = actividad?.fecha ?: fecha
 
@@ -178,7 +181,9 @@ fun DialogoActividad(
     }
 
     val horasValidas = fin.isAfter(inicio)
-    val fechasAGuardar = fechasRepetir.sorted()
+    val fechasAGuardar = fechasRepetir
+        .filter { it == actividad?.fecha || it !in fechasExistentes }
+        .sorted()
     val puedeGuardar = childId != null && descripcion.isNotBlank() && horasValidas && fechasAGuardar.isNotEmpty()
 
     fun guardar(aplicarATodaLaSerie: Boolean = false) {
@@ -435,6 +440,7 @@ fun DialogoActividad(
                     CalendarioMultipleHoja(
                         mesInicial = YearMonth.from(fechaBase),
                         seleccionadas = fechasRepetir,
+                        bloqueadas = fechasExistentes - fechaBase,
                         onAlternar = { dia ->
                             fechasRepetir = if (dia in fechasRepetir) {
                                 if (fechasRepetir.size > 1) fechasRepetir - dia else fechasRepetir
@@ -456,6 +462,14 @@ fun DialogoActividad(
                         Spacer(Modifier.height(10.dp))
                         CajaFechaHoja(stringResource(R.string.comun_hasta), hastaRepetir, Modifier.fillMaxWidth()) { cambiarHastaRepetir(it) }
                     }
+                }
+                if (fechasExistentes.size > 1) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        stringResource(R.string.actividad_repetir_ya_existen),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = tintaSuaveHoja
+                    )
                 }
                 Spacer(Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {

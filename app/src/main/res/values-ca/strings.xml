@@ -453,6 +453,7 @@
     <string name="actividad_o_cada_semana">O cada setmana en</string>
     <string name="actividad_esta">aquesta activitat</string>
     <string name="actividad_repetir_resumen">%1$s. Si algun ja tenia %2$s, se substitueix.</string>
+    <string name="actividad_repetir_ya_existen">Els dies amb el color més suau ja tenen aquesta activitat.</string>
     <string name="actividad_borrar_titulo">Vols esborrar aquesta activitat?</string>
     <string name="actividad_borrar_serie_texto">Es repeteix %1$d vegades. Pots esborrar només aquesta o tota la sèrie. No es pot desfer.</string>
     <string name="actividad_borrar_toda_serie">Esborra tota la sèrie (%1$d)</string>
