@@ -147,7 +147,7 @@ fun LoginScreen(
                             onClick = { viewModel.comprobarVerificado(onLoginExitoso) },
                             enabled = !uiState.cargando,
                             shape = RoundedCornerShape(16.dp),
-                            modifier = Modifier.fillMaxWidth().height(48.dp)
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
                         ) {
                             if (uiState.cargando) {
                                 CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
@@ -160,7 +160,7 @@ fun LoginScreen(
                             onClick = { viewModel.reenviarVerificacion(); espera = 30 },
                             enabled = !uiState.cargando && espera == 0,
                             shape = RoundedCornerShape(16.dp),
-                            modifier = Modifier.fillMaxWidth().height(48.dp)
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
                         ) {
                             Text(
                                 if (espera > 0) stringResource(R.string.login_verifica_reenviar_en, espera)
@@ -247,7 +247,7 @@ fun LoginScreen(
                         },
                         enabled = !uiState.cargando && email.isNotBlank() && password.isNotBlank(),
                         shape = RoundedCornerShape(16.dp),
-                        modifier = Modifier.fillMaxWidth().height(48.dp)
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
                     ) {
                         if (uiState.cargando) {
                             CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
@@ -281,7 +281,7 @@ fun LoginScreen(
                         },
                         enabled = !uiState.cargando,
                         shape = RoundedCornerShape(16.dp),
-                        modifier = Modifier.fillMaxWidth().height(48.dp)
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
                     ) {
                         Text(stringResource(R.string.login_google), fontWeight = FontWeight.Bold)
                     }

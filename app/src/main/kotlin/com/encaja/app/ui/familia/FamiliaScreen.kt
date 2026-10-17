@@ -572,7 +572,7 @@ private fun LazyListScope.cuadriculaDisponibilidad(
         ) {
             OutlinedButton(
                 onClick = onCrearCuidador,
-                modifier = Modifier.fillMaxWidth().height(48.dp),
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Icon(Icons.Default.Add, contentDescription = null)

@@ -191,10 +191,15 @@ fun DialogoActividad(
         // que aún no tuvieran grupo (de antes de existir las series) pasan a compartir uno.
         if (aplicarATodaLaSerie && actividad != null && ocurrenciasSerie.size > 1) {
             val grupo = actividad.grupoRepeticionId ?: UUID.randomUUID().toString()
-            val ids = ocurrenciasSerie.map { it.id }.iterator()
+            // Las fechas que se hayan marcado en «Repetir» y todavía no estén en la serie
+            // (p. ej. un día que se borró y se quiere recuperar) se añaden a la serie con
+            // la misma actividad; antes se ignoraban al guardar la serie completa.
+            val fechasSerie = ocurrenciasSerie.map { it.fecha }
+            val fechasNuevas = if (repetirActivo) fechasAGuardar.filter { it !in fechasSerie } else emptyList()
+            val ids = (ocurrenciasSerie.map { it.id } + fechasNuevas.map { CoverageNeedId(UUID.randomUUID().toString()) }).iterator()
             onGuardar(
                 crearActividades(
-                    fechas = ocurrenciasSerie.map { it.fecha },
+                    fechas = fechasSerie + fechasNuevas,
                     childId = id, inicio = inicio, fin = fin, descripcion = descripcion,
                     requiereDesplazamiento = requiereDesplazamiento,
                     generarId = { ids.next() },
@@ -473,7 +478,7 @@ fun DialogoActividad(
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedButton(
                     onClick = onCerrar,
-                    modifier = Modifier.weight(1f).height(56.dp),
+                    modifier = Modifier.weight(1f).heightIn(min = 56.dp),
                     shape = RoundedCornerShape(18.dp),
                     border = null,
                     colors = ButtonDefaults.outlinedButtonColors(containerColor = tarjetaHoja, contentColor = tintaHoja)

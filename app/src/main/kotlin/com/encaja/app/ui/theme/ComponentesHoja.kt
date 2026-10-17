@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -458,13 +459,20 @@ fun AvisoHoja(
 @Composable
 private fun BotonAvisoHoja(accion: AccionAvisoHoja, modifierBase: Modifier) {
     val forma = RoundedCornerShape(28.dp)
-    val modificador = modifierBase.height(56.dp)
+    val modificador = modifierBase.heightIn(min = 56.dp)
     val contenido: @Composable androidx.compose.foundation.layout.RowScope.(Color) -> Unit = { tinta ->
         if (accion.icono != null) {
             Icon(accion.icono, contentDescription = null, tint = tinta, modifier = Modifier.size(22.dp))
             Spacer(Modifier.width(12.dp))
         }
-        Text(accion.texto, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = tinta)
+        Text(
+            accion.texto,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = tinta,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            modifier = Modifier.weight(1f, fill = false)
+        )
     }
     when (accion.estilo) {
         EstiloAccionAviso.PELIGRO -> {

@@ -16,6 +16,7 @@ import android.provider.Settings
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -231,7 +232,7 @@ fun DialogoAvisosBateria(onQuitar: () -> Unit, onAhoraNo: () -> Unit, onMasInfo:
                             onClick = onAhoraNo,
                             shape = RoundedCornerShape(28.dp),
                             border = BorderStroke(1.5.dp, lavanda),
-                            modifier = Modifier.weight(1f).height(56.dp)
+                            modifier = Modifier.weight(1f).heightIn(min = 56.dp)
                         ) {
                             Text(stringResource(R.string.bateria_ahora_no), fontWeight = FontWeight.ExtraBold, color = indigo)
                         }
@@ -239,9 +240,9 @@ fun DialogoAvisosBateria(onQuitar: () -> Unit, onAhoraNo: () -> Unit, onMasInfo:
                             onClick = onQuitar,
                             shape = RoundedCornerShape(28.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = extra.acento, contentColor = extra.onAcento),
-                            modifier = Modifier.weight(1.3f).height(56.dp)
+                            modifier = Modifier.weight(1.3f).heightIn(min = 56.dp)
                         ) {
-                            Text(stringResource(R.string.bateria_quitar), fontWeight = FontWeight.ExtraBold, maxLines = 1)
+                            Text(stringResource(R.string.bateria_quitar), fontWeight = FontWeight.ExtraBold, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                         }
                     }
                 }

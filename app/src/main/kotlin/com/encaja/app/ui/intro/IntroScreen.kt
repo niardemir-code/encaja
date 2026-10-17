@@ -177,7 +177,7 @@ fun IntroScreen(
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         OutlinedButton(
                             onClick = { scope.launch { pager.animateScrollToPage(pager.currentPage - 1) } },
-                            modifier = Modifier.weight(1f).height(52.dp),
+                            modifier = Modifier.weight(1f).heightIn(min = 52.dp),
                             shape = RoundedCornerShape(16.dp),
                             border = BorderStroke(1.dp, Lavanda)
                         ) { Text(stringResource(R.string.intro_anterior), color = Violeta, fontWeight = FontWeight.Bold) }
@@ -195,7 +195,7 @@ fun IntroScreen(
 private fun BotonPrincipal(texto: String, onClick: () -> Unit) {
     Button(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth().height(52.dp),
+        modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
         shape = RoundedCornerShape(16.dp),
         colors = ButtonDefaults.buttonColors(containerColor = Violeta, contentColor = Color.White)
     ) {
@@ -329,7 +329,7 @@ private fun ColumnScope.PaginaUnirse(alUnirse: (String) -> Unit, alCrearFamilia:
         Button(
             onClick = { alUnirse(codigo) },
             enabled = codigo.isNotBlank(),
-            modifier = Modifier.fillMaxWidth().height(52.dp),
+            modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
             shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Violeta, contentColor = Color.White)
         ) { Text(stringResource(R.string.intro_unirme), fontWeight = FontWeight.Bold, fontSize = 16.sp) }
@@ -352,7 +352,7 @@ private fun ColumnScope.PaginaUnirse(alUnirse: (String) -> Unit, alCrearFamilia:
     Spacer(Modifier.height(8.dp))
     Button(
         onClick = alCrearFamilia,
-        modifier = Modifier.fillMaxWidth().height(48.dp),
+        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
         shape = RoundedCornerShape(16.dp),
         colors = ButtonDefaults.buttonColors(containerColor = Acento, contentColor = Color.White)
     ) {
@@ -363,7 +363,7 @@ private fun ColumnScope.PaginaUnirse(alUnirse: (String) -> Unit, alCrearFamilia:
     Spacer(Modifier.height(6.dp))
     OutlinedButton(
         onClick = alTenerCuenta,
-        modifier = Modifier.fillMaxWidth().height(48.dp),
+        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
         shape = RoundedCornerShape(16.dp),
         border = BorderStroke(1.dp, Acento)
     ) {

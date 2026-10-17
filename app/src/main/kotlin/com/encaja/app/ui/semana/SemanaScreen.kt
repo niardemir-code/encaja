@@ -214,7 +214,7 @@ fun SemanaScreen(
                             onClick = { viewModel.crearFamilia(nombre, apellido1, apellido2) { errorCrear = it } },
                             enabled = nombre.isNotBlank(),
                             shape = RoundedCornerShape(16.dp),
-                            modifier = Modifier.fillMaxWidth().height(50.dp)
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp)
                         ) { Text(stringResource(R.string.semana_crear_mi_familia), fontWeight = FontWeight.Bold) }
                     }
                 }
@@ -236,7 +236,7 @@ fun SemanaScreen(
                             onClick = { viewModel.canjearCodigo(codigo) { mensaje -> error = mensaje } },
                             enabled = codigo.isNotBlank(),
                             shape = RoundedCornerShape(16.dp),
-                            modifier = Modifier.fillMaxWidth().height(50.dp)
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp)
                         ) { Text(stringResource(R.string.semana_unirme_boton), fontWeight = FontWeight.Bold) }
                     }
                 }
