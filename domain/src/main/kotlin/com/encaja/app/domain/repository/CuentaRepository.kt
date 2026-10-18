@@ -25,4 +25,11 @@ interface CuentaRepository {
 
     /** Cuidadores de la familia que ya tienen una cuenta vinculada. */
     suspend fun cuidadoresVinculados(familyId: FamilyId): Set<CaregiverId>
+
+    /**
+     * Igual que [cuidadoresVinculados], pero en directo: [alCambiar] se llama cada vez que alguien
+     * se vincula o se desvincula (por ejemplo, al canjear una invitación en otro móvil). Devuelve
+     * la función para dejar de escuchar.
+     */
+    fun escucharCuidadoresVinculados(familyId: FamilyId, alCambiar: (Set<CaregiverId>) -> Unit): () -> Unit
 }

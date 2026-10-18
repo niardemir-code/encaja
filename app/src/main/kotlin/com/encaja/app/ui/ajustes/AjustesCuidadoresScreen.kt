@@ -24,7 +24,6 @@ import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.LinkOff
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -103,7 +102,6 @@ fun AjustesCuidadoresScreen(viewModel: AjustesViewModel = hiltViewModel()) {
                         },
                         onAgregar = { nombre, apellido1, apellido2 -> viewModel.agregarCuidador(nombre, apellido1, apellido2) },
                         onEliminar = { caregiverId -> viewModel.eliminarCuidador(caregiverId) },
-                        onVincularme = { caregiverId -> viewModel.vincularmeAEsteCuidador(caregiverId) },
                         onCambiarRol = { caregiverId, rol -> viewModel.cambiarRol(caregiverId, rol) }
                     )
                     errorBaja?.let { MensajePantalla(it.resolver(), error = true) }
@@ -131,10 +129,8 @@ private fun SeccionCuidadores(
     onDesvincular: (CaregiverId) -> Unit,
     onAgregar: (nombre: String, apellido1: String, apellido2: String) -> Unit,
     onEliminar: (CaregiverId) -> Unit,
-    onVincularme: (CaregiverId) -> Unit,
     onCambiarRol: (CaregiverId, CaregiverRole) -> Unit
 ) {
-    var vinculadoAId by remember { mutableStateOf<CaregiverId?>(null) }
     var cuidadorARol by remember { mutableStateOf<Caregiver?>(null) }
     val administradores = cuidadores.count { it.rol == CaregiverRole.ADMIN }
     var cuidadorADesvincular by remember { mutableStateOf<Caregiver?>(null) }
@@ -213,13 +209,6 @@ private fun SeccionCuidadores(
 
         if (cuidadores.isEmpty()) {
             MensajePantalla(stringResource(R.string.cuidadores_vacio))
-        } else {
-            Text(
-                stringResource(R.string.cuidadores_ayuda_vincular),
-                style = MaterialTheme.typography.bodySmall,
-                color = tintaSuaveHoja,
-                modifier = Modifier.padding(bottom = 10.dp)
-            )
         }
 
         cuidadores.forEachIndexed { indice, cuidador ->
@@ -241,7 +230,6 @@ private fun SeccionCuidadores(
                                 color = tintaHoja
                             )
                             val estado = when {
-                                vinculadoAId == cuidador.id -> stringResource(R.string.cuidadores_estado_vinculado)
                                 cuidador.id == miCaregiverId -> stringResource(R.string.cuidadores_estado_tu)
                                 cuidador.id in vinculados -> stringResource(R.string.cuidadores_estado_con_cuenta)
                                 else -> null
@@ -276,14 +264,6 @@ private fun SeccionCuidadores(
                                 { cuidadorADesvincular = cuidador }
                             )
                         }
-                        BotonRedondoSuaveHoja(
-                            Icons.Default.Person,
-                            stringResource(R.string.cuidadores_vincularme_a, cuidador.nombreCompleto),
-                            {
-                                onVincularme(cuidador.id)
-                                vinculadoAId = cuidador.id
-                            }
-                        )
                         BotonRedondoSuaveHoja(
                             Icons.Default.Delete,
                             stringResource(R.string.cuidadores_eliminar_a, cuidador.nombreCompleto),

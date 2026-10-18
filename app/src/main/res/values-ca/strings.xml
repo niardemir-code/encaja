@@ -32,6 +32,12 @@
     <string name="login_titulo_entrar">Et donem la benvinguda</string>
     <string name="login_sub_registro">Només necessites un correu i una contrasenya.</string>
     <string name="login_sub_entrar">Inicia la sessió per veure la teva setmana.</string>
+    <string name="login_codigo_guardado">Tens un codi d\'invitació desat (%1$s). Crea el teu compte o inicia la sessió i t\'uniràs a la família automàticament.</string>
+    <string name="login_pw_req_longitud">Mínim 8 caràcters</string>
+    <string name="login_pw_req_letra">Almenys una lletra</string>
+    <string name="login_pw_req_numero">Almenys un número</string>
+    <string name="login_pw_habitual">És una contrasenya massa habitual. Tria\'n una altra.</string>
+    <string name="login_error_password_debil">Tria una contrasenya més segura: mínim 8 caràcters, amb lletres i números.</string>
     <string name="login_correo">Correu electrònic</string>
     <string name="login_password">Contrasenya</string>
     <string name="login_ocultar_password">Amaga la contrasenya</string>
@@ -124,12 +130,9 @@
     <string name="cuidadores_desvincular_accion">Desvincula</string>
     <string name="cuidadores_personas">Persones</string>
     <string name="cuidadores_vacio">Encara no has afegit cap cuidador.</string>
-    <string name="cuidadores_ayuda_vincular">Si ets tu qui té la sessió oberta, fes servir la icona de persona per vincular-te al teu propi cuidador.</string>
-    <string name="cuidadores_estado_vinculado">Vinculat</string>
     <string name="cuidadores_estado_tu">Tu</string>
     <string name="cuidadores_estado_con_cuenta">Amb compte vinculat</string>
     <string name="cuidadores_desvincular_cuenta_de">Desvincula el compte: %1$s</string>
-    <string name="cuidadores_vincularme_a">Vincula\'m a %1$s</string>
     <string name="cuidadores_rol_admin">Administrador</string>
     <string name="cuidadores_rol_cambiar_a">Canvia el rol de %1$s</string>
     <string name="cuidadores_rol_hacer_titulo">Fer administrador %1$s?</string>
@@ -327,8 +330,6 @@
     <string name="tour_ninos_d">Comença afegint cada nen amb aquest botó. Tota la resta —activitats, recollides, avisos— s\'organitza al voltant d\'ells.</string>
     <string name="tour_cuid_t">Afegeix els cuidadors</string>
     <string name="tour_cuid_d">Afegeix totes les persones que s\'encarreguen dels nens: tu, la teva parella, els avis, el cangur… També pots crear unitats familiars, com «els avis».</string>
-    <string name="tour_vinc_t">Vincula\'t al teu cuidador</string>
-    <string name="tour_vinc_d">Si ets un d\'ells, fes servir la icona de persona al costat del teu nom per vincular el teu propi compte amb el teu cuidador. Així l\'app sabrà quins són els teus horaris i els teus avisos.</string>
     <string name="tour_inv_t">Convida els cuidadors</string>
     <string name="tour_inv_d">Amb aquest botó es genera un codi d\'un sol ús. Tria el cuidador que has afegit abans i envia-li el codi que genera l\'app (per missatge, per exemple). Quan l\'introdueixi al seu mòbil amb el seu propi compte, s\'unirà a la família i veurà el mateix que tu.</string>
     <string name="tour_guia_nueva_t">Crea les activitats dels nens</string>

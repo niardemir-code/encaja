@@ -323,6 +323,21 @@ private fun ColumnScope.PaginaUnirse(alUnirse: (String) -> Unit, alCrearFamilia:
             singleLine = true,
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
             shape = RoundedCornerShape(14.dp),
+            // La intro usa siempre su paleta clara, así que el campo también: con el tema
+            // oscuro del móvil, los colores por defecto dejaban el texto casi blanco sobre blanco.
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = Texto,
+                unfocusedTextColor = Texto,
+                focusedContainerColor = Color.White,
+                unfocusedContainerColor = Color.White,
+                focusedBorderColor = Acento,
+                unfocusedBorderColor = Lavanda,
+                focusedLabelColor = Acento,
+                unfocusedLabelColor = TextoSuave,
+                focusedPlaceholderColor = TextoSuave.copy(alpha = 0.6f),
+                unfocusedPlaceholderColor = TextoSuave.copy(alpha = 0.6f),
+                cursorColor = Acento
+            ),
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(Modifier.height(8.dp))

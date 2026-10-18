@@ -32,6 +32,12 @@
     <string name="login_titulo_entrar">Welcome</string>
     <string name="login_sub_registro">All you need is an email and a password.</string>
     <string name="login_sub_entrar">Sign in to see your week.</string>
+    <string name="login_codigo_guardado">You have an invitation code saved (%1$s). Create your account or sign in and you will join the family automatically.</string>
+    <string name="login_pw_req_longitud">At least 8 characters</string>
+    <string name="login_pw_req_letra">At least one letter</string>
+    <string name="login_pw_req_numero">At least one number</string>
+    <string name="login_pw_habitual">That password is too common. Choose another one.</string>
+    <string name="login_error_password_debil">Choose a stronger password: at least 8 characters, with letters and numbers.</string>
     <string name="login_correo">Email</string>
     <string name="login_password">Password</string>
     <string name="login_ocultar_password">Hide password</string>
@@ -124,12 +130,9 @@
     <string name="cuidadores_desvincular_accion">Unlink</string>
     <string name="cuidadores_personas">People</string>
     <string name="cuidadores_vacio">You haven\'t added any caregivers yet.</string>
-    <string name="cuidadores_ayuda_vincular">If you\'re the one signed in, use the person icon to link yourself to your own caregiver.</string>
-    <string name="cuidadores_estado_vinculado">Linked</string>
     <string name="cuidadores_estado_tu">You</string>
     <string name="cuidadores_estado_con_cuenta">With a linked account</string>
     <string name="cuidadores_desvincular_cuenta_de">Unlink %1$s\'s account</string>
-    <string name="cuidadores_vincularme_a">Link me to %1$s</string>
     <string name="cuidadores_rol_admin">Administrator</string>
     <string name="cuidadores_rol_cambiar_a">Change %1$s\'s role</string>
     <string name="cuidadores_rol_hacer_titulo">Make %1$s an administrator?</string>
@@ -327,8 +330,6 @@
     <string name="tour_ninos_d">Start by adding each child with this button. Everything else — activities, pick-ups, alerts — is organized around them.</string>
     <string name="tour_cuid_t">Add the caregivers</string>
     <string name="tour_cuid_d">Add everyone who looks after the children: you, your partner, the grandparents, the babysitter… You can also create family units, like \'the grandparents\'.</string>
-    <string name="tour_vinc_t">Link yourself to your caregiver</string>
-    <string name="tour_vinc_d">If you are one of them, use the person icon next to your name to link your own account to your caregiver. That way the app knows your schedule and your alerts.</string>
     <string name="tour_inv_t">Invite the caregivers</string>
     <string name="tour_inv_d">This button generates a one-time code. Pick the caregiver you added earlier and send them the code the app generates (by message, for example). When they enter it on their phone with their own account, they join the family and see what you see.</string>
     <string name="tour_guia_nueva_t">Create the children\'s activities</string>

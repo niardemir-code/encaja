@@ -41,4 +41,17 @@ class CuentaRepositoryImpl @Inject constructor(
     } catch (e: Exception) {
         emptySet()
     }
+
+    override fun escucharCuidadoresVinculados(familyId: FamilyId, alCambiar: (Set<CaregiverId>) -> Unit): () -> Unit {
+        val registro = firestore.collection("families").document(familyId.value)
+            .collection("caregiverLinks")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null || snapshot == null) return@addSnapshotListener
+                // La primera entrega puede salir de la caché local, incompleta: solo cuenta lo
+                // que confirma el servidor (la pantalla ya tiene los datos de su carga inicial).
+                if (snapshot.metadata.isFromCache) return@addSnapshotListener
+                alCambiar(snapshot.documents.map { CaregiverId(it.id) }.toSet())
+            }
+        return { registro.remove() }
+    }
 }

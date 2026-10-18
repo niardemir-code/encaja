@@ -138,12 +138,11 @@ private val ETAPAS_TOUR = listOf(
         PasoTour(setOf(RUTA_AJUSTES), "ajustes_ninos", R.string.tour_ir_ninos_t, R.string.tour_ir_ninos_d, tocar = true),
         PasoTour(setOf(RUTA_AJUSTES_NINOS), "ninos_nuevo", R.string.tour_ninos_t, R.string.tour_ninos_d)
     )),
-    // 2) Añadir los cuidadores: engranaje -> Cuidadores -> botón de nuevo cuidador -> vincularse.
+    // 2) Añadir los cuidadores: engranaje -> Cuidadores -> botón de nuevo cuidador.
     EtapaTour(listOf(
         PasoTour(null, "barra_ajustes", R.string.tour_ajustes_t, R.string.tour_ajustes_d, tocar = true),
         PasoTour(setOf(RUTA_AJUSTES), "ajustes_cuidadores", R.string.tour_ir_cuid_t, R.string.tour_ir_cuid_d, tocar = true),
-        PasoTour(setOf(RUTA_AJUSTES_CUIDADORES), "cuidadores_nuevo", R.string.tour_cuid_t, R.string.tour_cuid_d),
-        PasoTour(setOf(RUTA_AJUSTES_CUIDADORES), null, R.string.tour_vinc_t, R.string.tour_vinc_d)
+        PasoTour(setOf(RUTA_AJUSTES_CUIDADORES), "cuidadores_nuevo", R.string.tour_cuid_t, R.string.tour_cuid_d)
     )),
     // 3) Invitar a los cuidadores: el botón de la barra superior, visible en cualquier pantalla.
     EtapaTour(listOf(

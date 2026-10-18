@@ -50,6 +50,11 @@ class LoginViewModel @Inject constructor(
     }
 
     fun registrarse(email: String, password: String) {
+        // Red de seguridad: la pantalla ya no deja pulsar el botón sin cumplir los requisitos.
+        if (!evaluarPassword(password).cumple) {
+            _uiState.value = LoginUiState(error = textoUi(R.string.login_error_password_debil))
+            return
+        }
         _uiState.value = LoginUiState(cargando = true)
         viewModelScope.launch {
             authRepository.registrarse(email, password).fold(

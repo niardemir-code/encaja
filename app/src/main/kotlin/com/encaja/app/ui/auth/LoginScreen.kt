@@ -9,8 +9,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Mail
+import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
@@ -186,6 +188,24 @@ fun LoginScreen(
                         color = colores.onSurface.copy(alpha = 0.65f),
                         fontSize = 13.sp
                     )
+                    // Si en la intro se escribió un código de invitación, se explica que ya está
+                    // guardado y que se canjea solo al entrar o crear la cuenta.
+                    val codigoGuardado = remember { com.encaja.app.ui.intro.PreferenciaIntro.codigoPendiente(context) }
+                    if (codigoGuardado != null) {
+                        Spacer(Modifier.height(10.dp))
+                        Surface(
+                            shape = RoundedCornerShape(14.dp),
+                            color = colores.primaryContainer.copy(alpha = 0.6f),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                stringResource(R.string.login_codigo_guardado, codigoGuardado),
+                                color = colores.onSurface,
+                                fontSize = 13.sp,
+                                modifier = Modifier.padding(12.dp)
+                            )
+                        }
+                    }
                     Spacer(Modifier.height(12.dp))
 
                     OutlinedTextField(
@@ -220,6 +240,19 @@ fun LoginScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
 
+                    // Al crear la cuenta, los requisitos de la contraseña se van marcando mientras se escribe.
+                    val requisitos = evaluarPassword(password)
+                    if (modoRegistro) {
+                        Spacer(Modifier.height(8.dp))
+                        RequisitoPassword(stringResource(R.string.login_pw_req_longitud), requisitos.longitud)
+                        RequisitoPassword(stringResource(R.string.login_pw_req_letra), requisitos.letra)
+                        RequisitoPassword(stringResource(R.string.login_pw_req_numero), requisitos.numero)
+                        if (requisitos.basicosCumplidos && !requisitos.noHabitual) {
+                            Spacer(Modifier.height(4.dp))
+                            Text(stringResource(R.string.login_pw_habitual), color = colores.error, fontSize = 13.sp)
+                        }
+                    }
+
                     if (!modoRegistro) {
                         TextButton(
                             onClick = { viewModel.recuperarPassword(email) },
@@ -245,7 +278,8 @@ fun LoginScreen(
                                 viewModel.iniciarSesion(email, password, onLoginExitoso)
                             }
                         },
-                        enabled = !uiState.cargando && email.isNotBlank() && password.isNotBlank(),
+                        enabled = !uiState.cargando && email.isNotBlank() && password.isNotBlank() &&
+                            (!modoRegistro || requisitos.cumple),
                         shape = RoundedCornerShape(16.dp),
                         modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
                     ) {
@@ -298,5 +332,25 @@ fun LoginScreen(
             }
             Spacer(Modifier.height(8.dp))
         }
+    }
+}
+
+/** Una línea de la lista de requisitos de la contraseña: marcada en verde cuando se cumple. */
+@Composable
+private fun RequisitoPassword(texto: String, cumplido: Boolean) {
+    val colores = MaterialTheme.colorScheme
+    Row(Modifier.padding(vertical = 1.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            if (cumplido) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
+            contentDescription = null,
+            tint = if (cumplido) androidx.compose.ui.graphics.Color(0xFF2E9E5B) else colores.onSurface.copy(alpha = 0.45f),
+            modifier = Modifier.size(16.dp)
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            texto,
+            color = if (cumplido) colores.onSurface else colores.onSurface.copy(alpha = 0.65f),
+            fontSize = 13.sp
+        )
     }
 }

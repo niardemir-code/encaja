@@ -17,3 +17,7 @@ local.properties
 # Firebase
 app/google-services.json
 *.hprof
+app/release/
+*.jks
+*.keystore
+keystore.properties

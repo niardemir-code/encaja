@@ -10,7 +10,6 @@ import com.encaja.app.domain.model.CaregiverRole
 import com.encaja.app.domain.model.Child
 import com.encaja.app.domain.model.ChildId
 import com.encaja.app.domain.model.FamilyId
-import com.encaja.app.domain.model.FamilyMembership
 import com.encaja.app.domain.model.FamilyUnit
 import com.encaja.app.domain.model.FamilyUnitId
 import com.encaja.app.domain.repository.AuthRepository
@@ -89,7 +88,28 @@ class AjustesViewModel @Inject constructor(
                 soyAdmin = yo?.rol == CaregiverRole.ADMIN,
                 vinculados = vinculados
             )
+            vigilarVinculos(membresia.familyId)
         }
+    }
+
+    private var cancelarEscuchaVinculos: (() -> Unit)? = null
+
+    /**
+     * Mantiene al día quién tiene cuenta vinculada: cuando un familiar canjea su invitación (o un
+     * administrador desvincula a alguien) se actualiza la lista sin cerrar y volver a abrir la
+     * pantalla de Cuidadores.
+     */
+    private fun vigilarVinculos(familyId: FamilyId) {
+        cancelarEscuchaVinculos?.invoke()
+        cancelarEscuchaVinculos = cuentaRepository.escucharCuidadoresVinculados(familyId) { nuevos ->
+            val actual = _pantalla.value as? AjustesPantallaEstado.ConDatos ?: return@escucharCuidadoresVinculados
+            if (actual.vinculados != nuevos) _pantalla.value = actual.copy(vinculados = nuevos)
+        }
+    }
+
+    override fun onCleared() {
+        cancelarEscuchaVinculos?.invoke()
+        super.onCleared()
     }
 
     /**
@@ -218,23 +238,6 @@ class AjustesViewModel @Inject constructor(
 
             caregiverRepository.eliminarCuidador(familyId, caregiverId)
             cargar()
-        }
-    }
-
-    /**
-     * Vincula la cuenta con la sesión abierta a un cuidador ya existente de la lista,
-     * sin pasar por un código de invitación. Sirve para el caso de quien está montando
-     * la familia (o para recuperar el enlace si se borró y volvió a crear su propio
-     * cuidador): normalmente esa vinculación se hace canjeando un código, pero ese
-     * flujo solo aparece cuando la cuenta NO tiene ya una familia asignada — y quien
-     * ya tiene una (aunque apunte a un cuidador borrado) nunca llega a verlo.
-     */
-    fun vincularmeAEsteCuidador(caregiverId: CaregiverId) {
-        val familyId = familyIdActual ?: return
-        lanzarSeguro {
-            val uid = authRepository.sesionActual()?.uid ?: return@lanzarSeguro
-            familyMembershipRepository.vincularAFamilia(uid, FamilyMembership(familyId, caregiverId))
-            cambiosDeMembresia.avisar()
         }
     }
 

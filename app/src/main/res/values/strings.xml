@@ -33,6 +33,12 @@
     <string name="login_titulo_entrar">Te damos la bienvenida</string>
     <string name="login_sub_registro">Solo necesitas un correo y una contraseña.</string>
     <string name="login_sub_entrar">Inicia sesión para ver tu semana.</string>
+    <string name="login_codigo_guardado">Tienes un código de invitación guardado (%1$s). Crea tu cuenta o inicia sesión y te unirás a la familia automáticamente.</string>
+    <string name="login_pw_req_longitud">Mínimo 8 caracteres</string>
+    <string name="login_pw_req_letra">Al menos una letra</string>
+    <string name="login_pw_req_numero">Al menos un número</string>
+    <string name="login_pw_habitual">Es una contraseña demasiado habitual. Elige otra.</string>
+    <string name="login_error_password_debil">Elige una contraseña más segura: mínimo 8 caracteres, con letras y números.</string>
     <string name="login_correo">Correo electrónico</string>
     <string name="login_password">Contraseña</string>
     <string name="login_ocultar_password">Ocultar contraseña</string>
@@ -125,12 +131,9 @@
     <string name="cuidadores_desvincular_accion">Desvincular</string>
     <string name="cuidadores_personas">Personas</string>
     <string name="cuidadores_vacio">Todavía no has añadido ningún cuidador.</string>
-    <string name="cuidadores_ayuda_vincular">Si eres tú quien tiene la sesión abierta, usa el icono de persona para vincularte a tu propio cuidador.</string>
-    <string name="cuidadores_estado_vinculado">Vinculado</string>
     <string name="cuidadores_estado_tu">Tú</string>
     <string name="cuidadores_estado_con_cuenta">Con cuenta vinculada</string>
     <string name="cuidadores_desvincular_cuenta_de">Desvincular la cuenta de %1$s</string>
-    <string name="cuidadores_vincularme_a">Vincularme a %1$s</string>
     <string name="cuidadores_rol_admin">Administrador</string>
     <string name="cuidadores_rol_cambiar_a">Cambiar el rol de %1$s</string>
     <string name="cuidadores_rol_hacer_titulo">¿Hacer administrador a %1$s?</string>
@@ -328,8 +331,6 @@
     <string name="tour_ninos_d">Empieza añadiendo a cada niño con este botón. Todo lo demás —actividades, recogidas, avisos— se organiza alrededor de ellos.</string>
     <string name="tour_cuid_t">Añade a los cuidadores</string>
     <string name="tour_cuid_d">Añade a todas las personas que se encargan de los niños: tú, tu pareja, los abuelos, el canguro… También puedes crear unidades familiares, como «los abuelos».</string>
-    <string name="tour_vinc_t">Vincúlate a tu cuidador</string>
-    <string name="tour_vinc_d">Si eres uno de ellos, usa el icono de persona junto a tu nombre para vincular tu propia cuenta con tu cuidador. Así la app sabrá cuáles son tus horarios y tus avisos.</string>
     <string name="tour_inv_t">Invita a los cuidadores</string>
     <string name="tour_inv_d">Con este botón se genera un código de un solo uso. Elige al cuidador que añadiste antes y envíale el código que genera la app (por mensaje, por ejemplo). Cuando lo introduzca en su móvil con su propia cuenta, se unirá a la familia y verá lo mismo que tú.</string>
     <string name="tour_guia_nueva_t">Crea las actividades de los niños</string>
