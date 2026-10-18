@@ -86,6 +86,7 @@ import com.encaja.app.ui.theme.ConfirmarGuardadoHoja
 import com.encaja.app.ui.theme.EstiloAccionAviso
 import com.encaja.app.ui.theme.FilaConInterruptorHoja
 import com.encaja.app.ui.theme.IconoEnCirculoHoja
+import com.encaja.app.ui.theme.IconoVariosDisquetes
 import com.encaja.app.ui.theme.TarjetaSeccionHoja
 import com.encaja.app.ui.theme.SeparadorHoja
 import com.encaja.app.ui.theme.acentoHoja
@@ -101,7 +102,9 @@ import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.YearMonth
+import java.time.format.TextStyle
 import java.time.temporal.TemporalAdjusters
+import java.util.Locale
 import java.util.UUID
 
 /**
@@ -135,6 +138,8 @@ fun DialogoActividad(
     // Qué se está pidiendo confirmar al guardar una actividad que pertenece a una serie:
     // false = solo esta actividad, true = la serie completa, null = nada pendiente.
     var confirmarGuardadoSerie by remember { mutableStateOf<Boolean?>(null) }
+    // Guardar la serie pero solo en los días de la semana marcados en «Repetir» (p. ej. solo los lunes).
+    var confirmarSoloDias by remember { mutableStateOf(false) }
     var ocurrenciasSerie by remember { mutableStateOf<List<CoverageNeed>>(emptyList()) }
     LaunchedEffect(actividad?.id) {
         if (actividad != null && buscarOcurrencias != null) {
@@ -186,7 +191,7 @@ fun DialogoActividad(
         .sorted()
     val puedeGuardar = childId != null && descripcion.isNotBlank() && horasValidas && fechasAGuardar.isNotEmpty()
 
-    fun guardar(aplicarATodaLaSerie: Boolean = false) {
+    fun guardar(aplicarATodaLaSerie: Boolean = false, soloDias: Set<DayOfWeek>? = null) {
         val id = childId ?: return
         // Solo esta: se guarda esta actividad (y las fechas extra que se hayan marcado en
         // "Repetir"), manteniendo el grupo de la serie a la que ya pertenecía. Toda la
@@ -199,9 +204,13 @@ fun DialogoActividad(
             // Las fechas que se hayan marcado en «Repetir» y todavía no estén en la serie
             // (p. ej. un día que se borró y se quiere recuperar) se añaden a la serie con
             // la misma actividad; antes se ignoraban al guardar la serie completa.
-            val fechasSerie = ocurrenciasSerie.map { it.fecha }
-            val fechasNuevas = if (repetirActivo) fechasAGuardar.filter { it !in fechasSerie } else emptyList()
-            val ids = (ocurrenciasSerie.map { it.id } + fechasNuevas.map { CoverageNeedId(UUID.randomUUID().toString()) }).iterator()
+            // Con [soloDias] solo se tocan las ocurrencias de esos días de la semana (y la que se
+            // está editando); el resto de la serie queda como estaba.
+            val afectadas = if (soloDias == null) ocurrenciasSerie
+            else ocurrenciasSerie.filter { it.fecha.dayOfWeek in soloDias || it.id == actividad.id }
+            val fechasSerie = afectadas.map { it.fecha }
+            val fechasNuevas = if (repetirActivo && soloDias == null) fechasAGuardar.filter { it !in fechasSerie } else emptyList()
+            val ids = (afectadas.map { it.id } + fechasNuevas.map { CoverageNeedId(UUID.randomUUID().toString()) }).iterator()
             onGuardar(
                 crearActividades(
                     fechas = fechasSerie + fechasNuevas,
@@ -524,7 +533,9 @@ fun DialogoActividad(
                         fondo = fondoGuardar,
                         tinta = onAcentoHoja,
                         habilitado = puedeGuardar,
-                        onClick = { confirmarGuardadoSerie = true }
+                        // Con días de la semana marcados en «Repetir», antes se pregunta si el cambio
+                        // es solo para esos días (p. ej. todos los lunes) o para toda la serie.
+                        onClick = { if (repetirActivo && diasSemanaRepetir.isNotEmpty()) confirmarSoloDias = true else confirmarGuardadoSerie = true }
                     )
                 }
             }
@@ -539,6 +550,28 @@ fun DialogoActividad(
             onConfirmar = { confirmarGuardadoSerie = null; guardar(serieCompleta); onCerrar() },
             onCancelar = { confirmarGuardadoSerie = null },
             serie = serieCompleta
+        )
+    }
+
+    if (confirmarSoloDias) {
+        val nombresDias = diasSemanaRepetir.sortedBy { it.value }
+            .joinToString(", ") { it.getDisplayName(TextStyle.FULL, Locale.getDefault()) }
+        AvisoHoja(
+            icono = Icons.Default.Save,
+            iconoContenido = { tinta -> IconoVariosDisquetes(tinta) },
+            peligro = false,
+            titulo = stringResource(R.string.guardar_solo_dias_titulo, nombresDias),
+            texto = stringResource(R.string.guardar_solo_dias_detalle),
+            acciones = listOf(
+                AccionAvisoHoja(stringResource(R.string.guardar_solo_dias_si), EstiloAccionAviso.PRIMARIO) {
+                    confirmarSoloDias = false; guardar(true, diasSemanaRepetir); onCerrar()
+                },
+                AccionAvisoHoja(stringResource(R.string.guardar_solo_dias_no), EstiloAccionAviso.SUAVE) {
+                    confirmarSoloDias = false; confirmarGuardadoSerie = true
+                },
+                AccionAvisoHoja(stringResource(R.string.comun_cancelar), EstiloAccionAviso.BORDE) { confirmarSoloDias = false }
+            ),
+            onCerrar = { confirmarSoloDias = false }
         )
     }
 

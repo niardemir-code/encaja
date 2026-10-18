@@ -409,6 +409,10 @@
     <string name="guardar_serie_detalle">The changes will apply to every time this activity repeats.</string>
     <string name="guardar_solo_esta">Save only this one</string>
     <string name="guardar_toda_serie">Save the whole series</string>
+    <string name="guardar_solo_dias_titulo">Save the changes only on these weekdays (%1$s)?</string>
+    <string name="guardar_solo_dias_detalle">Yes: only those weekdays of the series are changed. No: the whole series is changed.</string>
+    <string name="guardar_solo_dias_si">Yes, only those days</string>
+    <string name="guardar_solo_dias_no">No, the whole series</string>
     <string name="guia_error_titulo">Couldn\'t load the guide</string>
     <string name="guia_sin_ninos">No children have been added to the family yet.</string>
     <string name="guia_nueva_actividad">New activity</string>

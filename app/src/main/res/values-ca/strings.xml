@@ -409,6 +409,10 @@
     <string name="guardar_serie_detalle">Els canvis s\'aplicaran a totes les vegades que es repeteix aquesta activitat.</string>
     <string name="guardar_solo_esta">Desa només aquesta</string>
     <string name="guardar_toda_serie">Desa tota la sèrie</string>
+    <string name="guardar_solo_dias_titulo">Vols desar els canvis només en aquests dies de la setmana (%1$s)?</string>
+    <string name="guardar_solo_dias_detalle">Sí: només es canvien aquests dies de la setmana de la sèrie. No: es canvia tota la sèrie.</string>
+    <string name="guardar_solo_dias_si">Sí, només aquests dies</string>
+    <string name="guardar_solo_dias_no">No, tota la sèrie</string>
     <string name="guia_error_titulo">No s\'ha pogut carregar la guia</string>
     <string name="guia_sin_ninos">Encara no hi ha cap nen donat d\'alta a la família.</string>
     <string name="guia_nueva_actividad">Nova activitat</string>

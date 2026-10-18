@@ -410,6 +410,10 @@
     <string name="guardar_serie_detalle">Los cambios se aplicarán a todas las veces que se repite esta actividad.</string>
     <string name="guardar_solo_esta">Guardar solo esta</string>
     <string name="guardar_toda_serie">Guardar toda la serie</string>
+    <string name="guardar_solo_dias_titulo">¿Guardar los cambios solo en estos días de la semana (%1$s)?</string>
+    <string name="guardar_solo_dias_detalle">Sí: solo se cambian esos días de la semana de la serie. No: se cambia toda la serie.</string>
+    <string name="guardar_solo_dias_si">Sí, solo esos días</string>
+    <string name="guardar_solo_dias_no">No, toda la serie</string>
     <string name="guia_error_titulo">No se pudo cargar la guía</string>
     <string name="guia_sin_ninos">Todavía no hay niños dados de alta en la familia.</string>
     <string name="guia_nueva_actividad">Nueva actividad</string>

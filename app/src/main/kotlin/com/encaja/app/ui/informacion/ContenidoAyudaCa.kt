@@ -95,7 +95,7 @@ internal val SECCIONES_AYUDA_CA: List<SeccionAyuda> = listOf(
                     "Avisos al mòbil: tria quant abans de començar i d'acabar vols que soni l'avís (de 5 minuts a 2 hores). Funcionen encara que l'activitat no requereixi acompanyament.",
                     "Repeteix en altres dies: marca dies solts al calendari o «cada setmana en» certs dies fins a una data. Es crea una activitat per dia."
                 ),
-                nota = "Quan una activitat es repeteix, en editar-la pots triar «Desa només aquesta» o «Desa tota la sèrie»: la sèrie copia els canvis (tot menys la data) a totes les vegades que es repeteix. «Esborra» elimina només aquella activitat."
+                nota = "Quan una activitat es repeteix, en editar-la pots triar «Desa només aquesta» o «Desa tota la sèrie»: la sèrie copia els canvis (tot menys la data) a totes les vegades que es repeteix. Per canviar només certs dies de la setmana (p. ex. només els dilluns): activa «Repeteix en altres dies», marca aquests dies a la fila L M X J V S D i prem «Desa tota la sèrie»; l'app preguntarà si el canvi és només per a aquests dies o per a tota la sèrie. «Esborra» elimina només aquella activitat."
             ),
             TemaAyuda(
                 titulo = "Família: quan algú no pot",

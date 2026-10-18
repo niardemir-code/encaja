@@ -80,6 +80,24 @@ class AvailabilityRepositoryImpl @Inject constructor(
         dao.guardar(AvailabilityBlockEntity.desdeDominio(familyId.value, bloque))
     }
 
+    override suspend fun guardarBloques(familyId: FamilyId, bloques: List<AvailabilityBlock>) {
+        if (bloques.isEmpty()) return
+        val coleccion = coleccion(familyId)
+        // Un batch por cada 500 bloques (el máximo de Firestore) en vez de una escritura
+        // esperada una a una: con unos 200 días eso es una sola ida y vuelta al servidor.
+        bloques.chunked(500).forEach { tanda ->
+            val batch = firestore.batch()
+            tanda.forEach {
+                batch.set(
+                    coleccion.document(idDocumento(it.caregiverId, it.fecha, it.horaInicio)),
+                    AvailabilityBlockFirestoreMapper.aDocumento(it)
+                )
+            }
+            batch.commit().await()
+        }
+        dao.guardarTodos(bloques.map { AvailabilityBlockEntity.desdeDominio(familyId.value, it) })
+    }
+
     override suspend fun eliminarBloque(familyId: FamilyId, caregiverId: CaregiverId, fecha: LocalDate, horaInicio: LocalTime) {
         val id = idDocumento(caregiverId, fecha, horaInicio)
         coleccion(familyId).document(id).delete().await()

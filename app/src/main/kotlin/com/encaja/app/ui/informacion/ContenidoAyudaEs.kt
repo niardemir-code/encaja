@@ -92,7 +92,7 @@ internal val SECCIONES_AYUDA_ES: List<SeccionAyuda> = listOf(
                     "Avisos en el móvil: elige cuánto antes de empezar y de terminar quieres que suene el aviso (de 5 minutos a 2 horas). Funcionan aunque la actividad no requiera acompañamiento.",
                     "Repetir en otros días: marca días sueltos en el calendario o «cada semana en» ciertos días hasta una fecha. Se crea una actividad por día."
                 ),
-                nota = "Cuando una actividad se repite, al editarla puedes elegir «Guardar solo esta» o «Guardar toda la serie»: la serie copia los cambios (todo menos la fecha) a todas las veces que se repite. «Borrar» elimina solo esa actividad."
+                nota = "Cuando una actividad se repite, al editarla puedes elegir «Guardar solo esta» o «Guardar toda la serie»: la serie copia los cambios (todo menos la fecha) a todas las veces que se repite. Para cambiar solo ciertos días de la semana (p. ej. solo los lunes): activa «Repetir en otros días», marca esos días en la fila L M X J V S D y pulsa «Guardar toda la serie»; la app preguntará si el cambio es solo para esos días o para toda la serie. «Borrar» elimina solo esa actividad."
             ),
             TemaAyuda(
                 titulo = "Familia: cuándo no puede alguien",

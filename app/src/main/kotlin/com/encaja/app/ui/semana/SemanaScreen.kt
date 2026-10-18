@@ -370,6 +370,7 @@ fun SemanaScreen(
                     dia = dia,
                     cuidadores = cuidadores,
                     ninos = ninos,
+                    onEditar = { need -> diaInfoAbierto = null; actividadEnEdicion = need },
                     onCerrar = { diaInfoAbierto = null }
                 )
             }
@@ -949,6 +950,7 @@ private fun DialogoInfoDia(
     dia: DiaSemaforo,
     cuidadores: List<Caregiver>,
     ninos: List<Child>,
+    onEditar: (CoverageNeed) -> Unit,
     onCerrar: () -> Unit
 ) {
     AvisoHoja(
@@ -967,7 +969,12 @@ private fun DialogoInfoDia(
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     dia.needs.sortedBy { it.horaInicio }.forEach { need ->
-                        Column {
+                        // Tocar la actividad abre su edición (con su serie, borrado, etc.).
+                        Row(
+                            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { onEditar(need) },
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(need.descripcion, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                             val nombreNino = ninos.firstOrNull { it.id == need.childId }?.nombre
                             Text(
@@ -995,10 +1002,16 @@ private fun DialogoInfoDia(
                                 )
                             }
                         }
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = stringResource(R.string.comun_editar),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(start = 8.dp).size(20.dp)
+                        )
+                        }
                     }
                 }
             }
-        
         }
     )
 }

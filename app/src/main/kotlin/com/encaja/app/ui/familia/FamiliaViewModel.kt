@@ -295,13 +295,14 @@ class FamiliaViewModel @Inject constructor(
                 familyId,
                 aBorrar.distinctBy { Triple(it.caregiverId, it.fecha, it.horaInicio) }
             )
-            caregiverIds.forEach { caregiverId ->
-                fechasAGuardar.sorted().forEach { fecha ->
-                    availabilityRepository.guardarBloque(
-                        familyId, bloqueDeCategoria(categoria, caregiverId, fecha, inicio, fin, etiqueta, null)
-                    )
+            // Todos los bloques nuevos de una vez (en tandas), no uno a uno: de lunes a viernes
+            // durante meses son cientos de días y esperar cada escritura tardaba como un minuto.
+            val nuevos = caregiverIds.flatMap { caregiverId ->
+                fechasAGuardar.sorted().map { fecha ->
+                    bloqueDeCategoria(categoria, caregiverId, fecha, inicio, fin, etiqueta, null)
                 }
             }
+            availabilityRepository.guardarBloques(familyId, nuevos)
             cargarDatos(mostrarCargando = false)
         }
     }
@@ -340,7 +341,7 @@ class FamiliaViewModel @Inject constructor(
         lanzarSeguro {
             val existentes = availabilityRepository.obtenerDisponibilidad(familyId, bloque.fecha, bloque.fecha)
                 .filter { it.caregiverId in caregiverIds && it.mismaOcupacionQue(bloque) }
-            existentes.forEach { availabilityRepository.eliminarBloque(familyId, it.caregiverId, it.fecha, it.horaInicio) }
+            availabilityRepository.eliminarBloques(familyId, existentes)
             cargarDatos(mostrarCargando = false)
         }
     }

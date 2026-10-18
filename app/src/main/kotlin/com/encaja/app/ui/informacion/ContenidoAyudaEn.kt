@@ -95,7 +95,7 @@ internal val SECCIONES_AYUDA_EN: List<SeccionAyuda> = listOf(
                     "Phone alerts: choose how long before it starts and ends you want the alert to sound (from 5 minutes to 2 hours). They work even if the activity doesn't need accompaniment.",
                     "Repeat on other days: mark individual days on the calendar or \"every week on\" certain days until a date. One activity is created per day."
                 ),
-                nota = "When an activity repeats, when editing it you can choose \"Save only this one\" or \"Save the whole series\": the series copies the changes (everything except the date) to every time it repeats. \"Delete\" removes only that activity."
+                nota = "When an activity repeats, when editing it you can choose \"Save only this one\" or \"Save the whole series\": the series copies the changes (everything except the date) to every time it repeats. To change only certain weekdays (e.g. only Mondays): turn on \"Repeat on other days\", mark those days in the M T W T F S S row and tap \"Save the whole series\"; the app will ask whether the change is only for those days or for the whole series. \"Delete\" removes only that activity."
             ),
             TemaAyuda(
                 titulo = "Family: when someone can't",

@@ -201,6 +201,6 @@ class EncajaAppViewModel @Inject constructor(
         val limite = hoy.minusMonths(1)
         val antiguas = availabilityRepository.obtenerDisponibilidad(familyId, hoy.minusYears(2), limite.minusDays(1))
             .filter { it.fecha.isBefore(limite) }
-        antiguas.forEach { availabilityRepository.eliminarBloque(familyId, it.caregiverId, it.fecha, it.horaInicio) }
+        availabilityRepository.eliminarBloques(familyId, antiguas)
     }
 }
